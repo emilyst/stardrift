@@ -52,6 +52,7 @@ features = [
 [features]
 dev = [
     "bevy/asset_processor",
+    "bevy/default_font",
     "bevy/dynamic_linking",
     "bevy/file_watcher",
 ]
