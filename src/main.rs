@@ -21,8 +21,8 @@ use rand::Rng;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-const G: Scalar = 0.01;
-const NUM_BODIES: usize = 3;
+const G: Scalar = 0.1;
+const NUM_BODIES: usize = 100;
 
 #[derive(Resource, Deref, DerefMut)]
 pub(crate) struct SimulationRng(ChaCha8Rng);
@@ -43,7 +43,7 @@ struct Barycenter {
 struct BodyBundle {
     collider: Collider,
     gravity_scale: GravityScale,
-    mass: Mass,
+    // mass: Mass,
     material3d: MeshMaterial3d<StandardMaterial>,
     mesh3d: Mesh3d,
     position: Transform,
@@ -69,7 +69,7 @@ impl BodyBundle {
         Self {
             collider: Collider::sphere(radius),
             gravity_scale: GravityScale(0.0),
-            mass: Mass(100.0), // TODO: scale with collider radius
+            // mass: Mass(100.0), // TODO: scale with collider radius
             material3d: MeshMaterial3d(material),
             mesh3d: Mesh3d(mesh.clone()),
             position,
@@ -100,7 +100,7 @@ fn main() {
     );
     app.add_systems(FixedUpdate, apply_gravitation);
     app.add_systems(FixedUpdate, update_barycenter.after(apply_gravitation));
-    app.add_systems(FixedUpdate, follow_barycenter.after(apply_gravitation));
+    app.add_systems(FixedUpdate, follow_barycenter.after(update_barycenter));
 
     app.run();
 }
@@ -112,7 +112,7 @@ fn spawn_camera(mut commands: Commands /*, asset_server: Res<AssetServer>*/) {
             touch_controls: TouchControls::TwoFingerOrbit,
             trackpad_behavior: TrackpadBehavior::blender_default(),
             focus: Vec3::ZERO,
-            radius: Some(250.0), // TODO: scale proportional to G
+            radius: Some(500.0), // TODO: scale proportional to G
             ..default()
         },
         Camera {
@@ -144,14 +144,14 @@ fn spawn_bodies(
 }
 
 fn random_translation_within_radius(rng: &mut SimulationRng, radius: Scalar) -> Vector {
-    Vector::new(
+    let v = Vector::new(
         rng.random_range(-radius..radius),
         rng.random_range(-radius..radius),
         rng.random_range(-radius..radius),
-    )
+    );
 
     // TODO: normalize to sphere with radius
-    // v.normalize() * libm::cbrt(rng.random_range(0.0..radius)) * 15.0 // ???
+    v.normalize() * libm::cbrt(rng.random_range(0.0..radius)) * 15.0 // ???
 }
 
 fn apply_initial_impulses(

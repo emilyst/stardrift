@@ -1,5 +1,5 @@
 [package]
-name = "many_body_simulation_toy"
+name = "many_body_simulation"
 version = "0.1.0"
 edition = "2024"
 
@@ -24,9 +24,10 @@ lto = "thin"
 strip = true
 
 [dependencies]
-bevy_panorbit_camera = "0.26.0"
-rand = "*"
-rand_chacha = "*"
+bevy_panorbit_camera = "0.*"
+rand = "0.9.*"
+rand_chacha = "0.9.*"
+libm = "0.2.15"
 
 [dependencies.avian3d]
 version = "*"
