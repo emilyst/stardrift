@@ -1,0 +1,56 @@
+[package]
+name = "many_body_simulation_toy"
+version = "0.1.0"
+edition = "2024"
+
+[profile.dev]
+debug = 2
+opt-level = 0 # Switch to 1 for more runtime performance
+#overflow-checks = false # Uncomment for better math performance
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+debug = 0
+opt-level = 3
+panic = "abort"
+strip = "debuginfo"
+
+[profile.distribution]
+inherits = "release"
+codegen-units = 1
+lto = "thin"
+strip = true
+
+[dependencies]
+bevy_panorbit_camera = "0.26.0"
+rand = "*"
+rand_chacha = "*"
+
+[dependencies.avian3d]
+version = "*"
+default-features = false
+features = [
+    "3d",
+    "bevy_diagnostic",
+    "collider-from-mesh",
+    "debug-plugin",
+    "diagnostic_ui",
+    "f64",
+    "parallel",
+    "parry-f64",
+]
+
+[dependencies.bevy]
+version = "0.16.*"
+features = [
+    "libm",
+]
+
+[features]
+dev = [
+    "bevy/asset_processor",
+    "bevy/dynamic_linking",
+    "bevy/file_watcher",
+]
