@@ -22,9 +22,6 @@ use rand::Rng;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-const G: Scalar = 0.1;
-const NUM_BODIES: usize = 100;
-
 #[derive(Resource, Deref, DerefMut)]
 pub(crate) struct SimulationRng(ChaCha8Rng);
 
@@ -34,7 +31,25 @@ impl Default for SimulationRng {
     }
 }
 
-#[derive(Resource, Copy, Clone, PartialEq, Debug)]
+#[derive(Resource, Deref, DerefMut, Copy, Clone, PartialEq, Debug)]
+struct G(Scalar);
+
+impl Default for G {
+    fn default() -> Self {
+        Self(1.0)
+    }
+}
+
+#[derive(Resource, Deref, DerefMut, Copy, Clone, PartialEq, Debug)]
+struct BodyCount(usize);
+
+impl Default for BodyCount {
+    fn default() -> Self {
+        Self(100)
+    }
+}
+
+#[derive(Resource, Deref, DerefMut, Copy, Clone, PartialEq, Debug)]
 struct HudRefreshPeriod(Scalar);
 
 impl Default for HudRefreshPeriod {
@@ -43,23 +58,22 @@ impl Default for HudRefreshPeriod {
     }
 }
 
-#[derive(Resource, Copy, Clone, Default, PartialEq, Debug)]
+#[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
 struct PreviousHudRefreshTime(Scalar);
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
 struct FpsHud;
 
-#[derive(Resource, Copy, Clone, Default, PartialEq, Debug)]
+#[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
 struct CurrentBarycenterPosition(Vector);
 
-#[derive(Resource, Copy, Clone, Default, PartialEq, Debug)]
+#[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
 struct PreviousBarycenterPosition(Vector);
 
 #[derive(Bundle, Clone, Debug, Default)]
 struct BodyBundle {
     collider: Collider,
     gravity_scale: GravityScale,
-    // mass: Mass,
     material3d: MeshMaterial3d<StandardMaterial>,
     mesh3d: Mesh3d,
     position: Transform,
@@ -107,11 +121,13 @@ fn main() {
         },
     ));
 
-    app.insert_resource(SimulationRng::default());
+    app.insert_resource(BodyCount::default());
     app.insert_resource(CurrentBarycenterPosition::default());
+    app.insert_resource(G::default());
+    app.insert_resource(HudRefreshPeriod::default());
     app.insert_resource(PreviousBarycenterPosition::default());
     app.insert_resource(PreviousHudRefreshTime::default());
-    app.insert_resource(HudRefreshPeriod::default());
+    app.insert_resource(SimulationRng::default());
 
     app.add_systems(Startup, (spawn_camera, spawn_bodies, spawn_hud));
 
@@ -156,14 +172,17 @@ fn spawn_bodies(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut rng: ResMut<SimulationRng>,
+    body_count: Res<BodyCount>,
 ) {
     // TODO: scale positions proportional to G
-    for _ in 0..NUM_BODIES {
+    let BodyCount(body_count) = *body_count;
+
+    for _ in 0..body_count {
         commands.spawn(BodyBundle::new(
             &mut materials,
             &mut meshes,
             Transform::from_translation(random_translation_within_radius(&mut *rng, 20.0).f32()),
-            rng.random_range(0.5..=2.0),
+            rng.random_range(0.1..=1.0),
         ));
     }
 }
@@ -243,15 +262,17 @@ fn refresh_fps_hud(
 
 fn apply_gravitation(
     time: ResMut<Time>,
+    g: Res<G>,
     mut bodies: Query<RigidBodyQuery, Without<RigidBodyDisabled>>,
 ) {
     // TODO: test
     let delta_time = time.delta_secs_f64();
+    let G(g) = *g;
     let mut body_pairs = bodies.iter_combinations_mut();
 
     while let Some([mut body1, mut body2]) = body_pairs.fetch_next() {
         let direction = body2.position.0 - body1.position.0;
-        let force = G * body1.mass.value() * body2.mass.value() / direction.length_squared() / 2.0;
+        let force = g * body1.mass.value() * body2.mass.value() / direction.length_squared() / 2.0;
 
         body1.linear_velocity.0 += force * direction * delta_time;
         body2.linear_velocity.0 -= force * direction * delta_time;
@@ -279,7 +300,6 @@ fn update_barycenter(
 
 fn follow_barycenter(
     mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
-    // camera_transform: Single<&mut Transform, With<Camera>>,
     mut gizmos: Gizmos,
     current_barycenter_position: Res<CurrentBarycenterPosition>,
 ) {

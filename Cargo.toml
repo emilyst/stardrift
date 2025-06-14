@@ -25,9 +25,9 @@ strip = true
 
 [dependencies]
 bevy_panorbit_camera = "0.*"
+libm = "0.2.15"
 rand = "0.9.*"
 rand_chacha = "0.9.*"
-libm = "0.2.15"
 
 [dependencies.avian3d]
 version = "*"
@@ -47,6 +47,7 @@ features = [
 version = "0.16.*"
 features = [
     "libm",
+    "multi_threaded",
 ]
 
 [features]
