@@ -130,7 +130,7 @@ fn main() {
     app.run();
 }
 
-fn spawn_camera(mut commands: Commands /*, asset_server: Res<AssetServer>*/) {
+fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::new("Main Camera"),
         PanOrbitCamera {
