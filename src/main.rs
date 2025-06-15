@@ -46,20 +46,38 @@ impl Default for BodyCount {
     }
 }
 
-#[derive(Resource, Deref, DerefMut, Copy, Clone, PartialEq, Debug)]
-struct HudRefreshPeriod(Scalar);
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct FpsHudLabel;
 
-impl Default for HudRefreshPeriod {
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct FpsHudValue;
+
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct BarycenterHudLabel;
+
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct BarycenterHudValue;
+
+#[derive(Resource, Debug, Reflect)]
+#[reflect(Resource, Debug)]
+pub struct SimulationDiagnosticsUiSettings {
+    pub enabled: bool,
+}
+
+impl Default for SimulationDiagnosticsUiSettings {
     fn default() -> Self {
-        Self(0.1)
+        Self { enabled: true }
     }
 }
 
-#[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
-struct PreviousHudRefreshTime(Scalar);
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct SimulationHud;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct FpsHud;
+struct SimulationHudGroup;
+
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct SimulationHudRow;
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
 struct CurrentBarycenter(Position);
@@ -116,15 +134,15 @@ fn main() {
             smoothing_factor: 0.5,
             ..default()
         },
+        PhysicsDiagnosticsPlugin,
     ));
 
     app.insert_resource(BodyCount::default());
     app.insert_resource(CurrentBarycenter::default());
     app.insert_resource(G::default());
-    app.insert_resource(HudRefreshPeriod::default());
     app.insert_resource(PreviousBarycenter::default());
-    app.insert_resource(PreviousHudRefreshTime::default());
     app.insert_resource(SimulationRng::default());
+    app.insert_resource(SimulationDiagnosticsUiSettings::default());
 
     app.edit_schedule(Update, |schedule| {
         schedule.set_build_settings(ScheduleBuildSettings {
@@ -141,7 +159,8 @@ fn main() {
             apply_gravitation,
             update_barycenter,
             follow_barycenter,
-            refresh_fps_hud,
+            refresh_fps_hud_value,
+            refresh_barycenter_hud_value,
         )
             .chain(),
     );
@@ -213,54 +232,132 @@ fn apply_initial_impulses(
     }
 }
 
-fn spawn_hud(mut commands: Commands) {
+// liberally borrowed from avian3d physics diagnostics
+fn spawn_hud(
+    mut commands: Commands,
+    settings: Res<SimulationDiagnosticsUiSettings>,
+    asset_server: Res<AssetServer>,
+) {
+    let ui_monospace: Handle<Font> = asset_server.load("fonts/BerkeleyMono-Retina.otf");
+
     commands
         .spawn((
-            Text::new("FPS: "),
-            TextFont {
-                font_size: 16.0,
-                ..default()
-            },
+            Name::new("Simulation HUD"),
+            SimulationHud,
             Node {
                 position_type: PositionType::Absolute,
                 top: Val::Px(5.0),
-                right: Val::Px(15.0),
+                right: Val::Px(5.0),
+                padding: UiRect::all(Val::Px(5.0)),
+                display: if settings.enabled {
+                    Display::Flex
+                } else {
+                    Display::None
+                },
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(1.0),
                 ..default()
             },
+            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.75)),
+            BorderRadius::all(Val::Px(5.0)),
         ))
-        .with_child((
-            TextSpan::default(),
-            (
-                TextFont {
-                    font_size: 16.0,
-                    ..default()
-                },
-                TextColor(css::WHITE.into()),
-            ),
-            FpsHud,
-        ));
-}
+        .with_children(|commands| {
+            commands
+                .spawn((
+                    SimulationHudGroup,
+                    Node {
+                        display: Display::Flex,
+                        flex_direction: FlexDirection::Column,
+                        row_gap: Val::Px(1.0),
+                        ..default()
+                    },
+                ))
+                .with_children(|commands| {
+                    commands
+                        .spawn((
+                            SimulationHudRow,
+                            Node {
+                                display: Display::Flex,
+                                justify_content: JustifyContent::SpaceBetween,
+                                column_gap: Val::Px(10.0),
+                                ..default()
+                            },
+                        ))
+                        .with_children(|commands| {
+                            commands.spawn((
+                                FpsHudLabel,
+                                Text::new("FPS"),
+                                TextFont {
+                                    font: ui_monospace.clone(),
+                                    font_size: 10.0,
+                                    line_height: Default::default(),
+                                    font_smoothing: Default::default(),
+                                },
+                            ));
 
-fn refresh_fps_hud(
-    diagnostics: Res<DiagnosticsStore>,
-    hud_refresh_period: Res<HudRefreshPeriod>,
-    previous_hud_refresh_time: ResMut<PreviousHudRefreshTime>,
-    mut query: Query<&mut TextSpan, With<FpsHud>>,
-    time: Res<Time>,
-) {
-    let PreviousHudRefreshTime(previous_hud_refresh_time) = previous_hud_refresh_time.into_inner();
+                            commands.spawn(Node::default()).with_children(|commands| {
+                                commands.spawn((
+                                    FpsHudValue,
+                                    Text::new("-"),
+                                    TextFont {
+                                        font: ui_monospace.clone(),
+                                        font_size: 10.0,
+                                        line_height: Default::default(),
+                                        font_smoothing: Default::default(),
+                                    },
+                                ));
+                            });
+                        });
+                });
 
-    if time.elapsed_secs_f64() - *previous_hud_refresh_time >= **hud_refresh_period {
-        for mut span in &mut query {
-            if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
-                if let Some(value) = fps.smoothed() {
-                    **span = format!("{value:.2}");
-                }
-            }
-        }
+            commands
+                .spawn((
+                    SimulationHudGroup,
+                    Node {
+                        display: Display::Flex,
+                        flex_direction: FlexDirection::Column,
+                        row_gap: Val::Px(1.0),
+                        ..default()
+                    },
+                ))
+                .with_children(|commands| {
+                    commands
+                        .spawn((
+                            SimulationHudRow,
+                            Node {
+                                display: Display::Flex,
+                                justify_content: JustifyContent::SpaceBetween,
+                                column_gap: Val::Px(20.0),
+                                ..default()
+                            },
+                        ))
+                        .with_children(|commands| {
+                            commands.spawn((
+                                BarycenterHudLabel,
+                                Text::new("Barycenter"),
+                                TextFont {
+                                    font: ui_monospace.clone(),
+                                    font_size: 10.0,
+                                    line_height: Default::default(),
+                                    font_smoothing: Default::default(),
+                                },
+                            ));
 
-        *previous_hud_refresh_time = time.elapsed_secs_f64();
-    }
+                            commands.spawn(Node::default()).with_children(|commands| {
+                                commands.spawn((
+                                    BarycenterHudValue,
+                                    Text::new("-"),
+                                    TextFont {
+                                        font: ui_monospace.clone(),
+                                        font_size: 10.0,
+                                        line_height: Default::default(),
+                                        font_smoothing: Default::default(),
+                                    },
+                                ));
+                            });
+                        });
+                });
+        });
 }
 
 // TODO: test
@@ -304,4 +401,23 @@ fn follow_barycenter(
 ) {
     pan_orbit_camera.target_focus = current_barycenter.as_vec3(); // TODO: fix move jitter?
     gizmos.cross(current_barycenter.as_vec3(), 5.0, css::WHITE);
+}
+
+fn refresh_fps_hud_value(
+    diagnostics: Res<DiagnosticsStore>,
+    mut fps_hud_value: Single<&mut Text, With<FpsHudValue>>,
+) {
+    if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
+        if let Some(value) = fps.smoothed() {
+            ***fps_hud_value = format!("{value:.2}");
+        }
+    }
+}
+
+fn refresh_barycenter_hud_value(
+    current_barycenter: Res<CurrentBarycenter>,
+    mut barycenter_hud_value: Single<&mut Text, With<BarycenterHudValue>>,
+) {
+    let value = ***current_barycenter;
+    ***barycenter_hud_value = format!("{value:.2}");
 }
