@@ -1,23 +1,20 @@
-#![allow(dead_code)]
-#![allow(unused_assignments)]
-#![allow(unused_doc_comments)]
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_parens)]
-#![allow(unused_variables)]
-
 use avian3d::math::AsF32;
-use avian3d::math::{Scalar, Vector};
+use avian3d::math::Scalar;
+use avian3d::math::Vector;
 use avian3d::prelude::*;
 use bevy::color::palettes::css;
 use bevy::core_pipeline::bloom::Bloom;
 use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
+use bevy::diagnostic::DiagnosticsStore;
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+use bevy::ecs::schedule::LogLevel;
+use bevy::ecs::schedule::ScheduleBuildSettings;
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCamera;
+use bevy_panorbit_camera::PanOrbitCameraPlugin;
 use bevy_panorbit_camera::TouchControls;
-use bevy_panorbit_camera::{PanOrbitCameraPlugin, TrackpadBehavior};
+use bevy_panorbit_camera::TrackpadBehavior;
 use rand::Rng;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -36,7 +33,7 @@ struct G(Scalar);
 
 impl Default for G {
     fn default() -> Self {
-        Self(1.0)
+        Self(10.0)
     }
 }
 
@@ -65,10 +62,10 @@ struct PreviousHudRefreshTime(Scalar);
 struct FpsHud;
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
-struct CurrentBarycenterPosition(Vector);
+struct CurrentBarycenter(Position);
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
-struct PreviousBarycenterPosition(Vector);
+struct PreviousBarycenter(Position);
 
 #[derive(Bundle, Clone, Debug, Default)]
 struct BodyBundle {
@@ -116,32 +113,38 @@ fn main() {
         PanOrbitCameraPlugin,
         PhysicsPlugins::default(),
         FrameTimeDiagnosticsPlugin {
-            smoothing_factor: 0.25,
+            smoothing_factor: 0.5,
             ..default()
         },
     ));
 
     app.insert_resource(BodyCount::default());
-    app.insert_resource(CurrentBarycenterPosition::default());
+    app.insert_resource(CurrentBarycenter::default());
     app.insert_resource(G::default());
     app.insert_resource(HudRefreshPeriod::default());
-    app.insert_resource(PreviousBarycenterPosition::default());
+    app.insert_resource(PreviousBarycenter::default());
     app.insert_resource(PreviousHudRefreshTime::default());
     app.insert_resource(SimulationRng::default());
 
-    app.add_systems(Startup, (spawn_camera, spawn_bodies, spawn_hud));
+    app.edit_schedule(Update, |schedule| {
+        schedule.set_build_settings(ScheduleBuildSettings {
+            ambiguity_detection: LogLevel::Warn,
+            ..default()
+        });
+    });
 
+    app.add_systems(Startup, (spawn_camera, spawn_bodies, spawn_hud));
     app.add_systems(
         FixedUpdate,
         (
-            apply_initial_impulses
-                .after(spawn_bodies)
-                .before(apply_gravitation), // TODO: add to correct schedule
-            (apply_gravitation, update_barycenter, follow_barycenter).chain(),
-        ),
+            apply_initial_impulses,
+            apply_gravitation,
+            update_barycenter,
+            follow_barycenter,
+            refresh_fps_hud,
+        )
+            .chain(),
     );
-
-    app.add_systems(Update, (refresh_fps_hud));
 
     app.run();
 }
@@ -167,6 +170,7 @@ fn spawn_camera(mut commands: Commands) {
     ));
 }
 
+// TODO: scale positions proportional to G
 fn spawn_bodies(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -174,15 +178,14 @@ fn spawn_bodies(
     mut rng: ResMut<SimulationRng>,
     body_count: Res<BodyCount>,
 ) {
-    // TODO: scale positions proportional to G
     let BodyCount(body_count) = *body_count;
 
     for _ in 0..body_count {
         commands.spawn(BodyBundle::new(
             &mut materials,
             &mut meshes,
-            Transform::from_translation(random_translation_within_radius(&mut *rng, 20.0).f32()),
-            rng.random_range(0.1..=1.0),
+            Transform::from_translation(random_translation_within_radius(&mut *rng, 50.0).f32()),
+            rng.random_range(0.5..=1.0),
         ));
     }
 }
@@ -210,7 +213,7 @@ fn apply_initial_impulses(
     }
 }
 
-fn spawn_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn spawn_hud(mut commands: Commands) {
     commands
         .spawn((
             Text::new("FPS: "),
@@ -241,15 +244,15 @@ fn spawn_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
 fn refresh_fps_hud(
     diagnostics: Res<DiagnosticsStore>,
     hud_refresh_period: Res<HudRefreshPeriod>,
-    mut previous_hud_update_time: ResMut<PreviousHudRefreshTime>,
+    previous_hud_refresh_time: ResMut<PreviousHudRefreshTime>,
     mut query: Query<&mut TextSpan, With<FpsHud>>,
     time: Res<Time>,
 ) {
-    let PreviousHudRefreshTime(previous_hud_refresh_time) = previous_hud_update_time.into_inner();
+    let PreviousHudRefreshTime(previous_hud_refresh_time) = previous_hud_refresh_time.into_inner();
 
-    if time.elapsed_secs_f64() - *previous_hud_refresh_time >= hud_refresh_period.0 {
+    if time.elapsed_secs_f64() - *previous_hud_refresh_time >= **hud_refresh_period {
         for mut span in &mut query {
-            if let Some(mut fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
+            if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
                 if let Some(value) = fps.smoothed() {
                     **span = format!("{value:.2}");
                 }
@@ -260,51 +263,45 @@ fn refresh_fps_hud(
     }
 }
 
+// TODO: test
 fn apply_gravitation(
     time: ResMut<Time>,
     g: Res<G>,
     mut bodies: Query<RigidBodyQuery, Without<RigidBodyDisabled>>,
 ) {
-    // TODO: test
+    let g = **g;
     let delta_time = time.delta_secs_f64();
-    let G(g) = *g;
+
     let mut body_pairs = bodies.iter_combinations_mut();
-
     while let Some([mut body1, mut body2]) = body_pairs.fetch_next() {
-        let direction = body2.position.0 - body1.position.0;
-        let force = g * body1.mass.value() * body2.mass.value() / direction.length_squared() / 2.0;
+        let direction = **body2.position - **body1.position;
+        let mass1 = *Mass::from(*body1.mass) as Scalar;
+        let mass2 = *Mass::from(*body2.mass) as Scalar;
+        let force = g * mass1 * mass2 / direction.length_squared() / 2.0;
 
-        body1.linear_velocity.0 += force * direction * delta_time;
-        body2.linear_velocity.0 -= force * direction * delta_time;
+        **body1.linear_velocity += force * direction * delta_time;
+        **body2.linear_velocity -= force * direction * delta_time;
     }
 }
 
+// TODO: test
 fn update_barycenter(
     bodies: Query<RigidBodyQueryReadOnly, Without<RigidBodyDisabled>>,
-    mut current_barycenter_position: ResMut<CurrentBarycenterPosition>,
-    mut previous_barycenter_position: ResMut<PreviousBarycenterPosition>,
+    mut current_barycenter: ResMut<CurrentBarycenter>,
+    mut previous_barycenter: ResMut<PreviousBarycenter>,
 ) {
-    // TODO: reduce
-    // TODO: test
-    let mut mass_position_accumulator = Vector::ZERO;
-    let mut mass_accumulator: Scalar = 0.0;
-    for body in bodies {
-        mass_position_accumulator += body.position.0 * body.mass.value();
-        mass_accumulator += body.mass.value();
-    }
-    mass_position_accumulator /= mass_accumulator;
+    let pos_acc: Vector = bodies.iter().map(|b| **b.position).sum();
+    let mass_acc: Scalar = bodies.iter().map(|b| *Mass::from(*b.mass) as Scalar).sum();
 
-    previous_barycenter_position.0 = current_barycenter_position.0;
-    current_barycenter_position.0 = mass_position_accumulator;
+    **previous_barycenter = **current_barycenter;
+    **current_barycenter = Position::from(pos_acc / mass_acc);
 }
 
 fn follow_barycenter(
     mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
     mut gizmos: Gizmos,
-    current_barycenter_position: Res<CurrentBarycenterPosition>,
+    current_barycenter: Res<CurrentBarycenter>,
 ) {
-    let current_barycenter = current_barycenter_position.0.as_vec3();
-
-    pan_orbit_camera.target_focus = current_barycenter; // TODO: fix move jitter?
-    gizmos.cross(current_barycenter, 5.0, css::WHITE);
+    pan_orbit_camera.target_focus = current_barycenter.as_vec3(); // TODO: fix move jitter?
+    gizmos.cross(current_barycenter.as_vec3(), 5.0, css::WHITE);
 }

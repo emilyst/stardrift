@@ -46,6 +46,8 @@ features = [
 [dependencies.bevy]
 version = "0.16.*"
 features = [
+    "default_font",
+    "default_no_std",
     "libm",
     "multi_threaded",
 ]
