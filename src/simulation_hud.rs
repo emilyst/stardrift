@@ -18,7 +18,7 @@ static BERKELEY_MONO_BOLD_OBLIQUE_OTF: &[u8] =
 
 #[derive(Resource, Reflect, Deref, DerefMut, Debug)]
 #[reflect(Resource, Debug)]
-pub(crate) struct SimulationHudSettings {
+struct SimulationHudSettings {
     pub enabled: bool,
 }
 
@@ -29,25 +29,25 @@ impl Default for SimulationHudSettings {
 }
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-pub(crate) struct FpsHudLabel;
+struct FpsHudLabel;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-pub(crate) struct FpsHudValue;
+struct FpsHudValue;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-pub(crate) struct BarycenterHudLabel;
+struct BarycenterHudLabel;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-pub(crate) struct BarycenterHudValue;
+struct BarycenterHudValue;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-pub(crate) struct SimulationHud;
+struct SimulationHud;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-pub(crate) struct SimulationHudGroup;
+struct SimulationHudGroup;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-pub(crate) struct SimulationHudRow;
+struct SimulationHudRow;
 
 pub(crate) struct SimulationHudPlugin;
 
@@ -96,14 +96,7 @@ fn spawn_hud(
     settings: Res<SimulationHudSettings>,
     asset_server: Res<AssetServer>,
 ) {
-    let path = Path::new("fonts/BerkeleyMono-Regular");
-    let source = AssetSourceId::from("embedded");
-    let asset_path = AssetPath::from_path(&path).with_source(source);
-    let hud_text_font = TextFont {
-        font: asset_server.load(asset_path),
-        font_size: 10.0,
-        ..default()
-    };
+    let hud_text_font = hud_text_font(&asset_server);
 
     commands
         .spawn((
@@ -201,7 +194,19 @@ fn spawn_hud(
         });
 }
 
-pub(crate) fn refresh_fps_hud_value(
+fn hud_text_font(asset_server: &AssetServer) -> TextFont {
+    let path = Path::new("fonts/BerkeleyMono-Regular");
+    let source = AssetSourceId::from("embedded");
+    let asset_path = AssetPath::from_path(&path).with_source(source);
+
+    TextFont {
+        font: asset_server.load(asset_path),
+        font_size: 12.0,
+        ..default()
+    }
+}
+
+fn refresh_fps_hud_value(
     diagnostics: Res<DiagnosticsStore>,
     mut fps_hud_value: Single<&mut Text, With<FpsHudValue>>,
 ) {
@@ -212,7 +217,7 @@ pub(crate) fn refresh_fps_hud_value(
     }
 }
 
-pub(crate) fn refresh_barycenter_hud_value(
+fn refresh_barycenter_hud_value(
     current_barycenter: Res<CurrentBarycenter>,
     mut barycenter_hud_value: Single<&mut Text, With<BarycenterHudValue>>,
 ) {
