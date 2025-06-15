@@ -97,6 +97,7 @@ fn spawn_hud(
     asset_server: Res<AssetServer>,
 ) {
     let hud_text_font = hud_text_font(&asset_server);
+    let hud_bold_text_font = hud_bold_text_font(&asset_server);
 
     commands
         .spawn((
@@ -142,7 +143,11 @@ fn spawn_hud(
                             },
                         ))
                         .with_children(|commands| {
-                            commands.spawn((FpsHudLabel, Text::new("FPS"), hud_text_font.clone()));
+                            commands.spawn((
+                                FpsHudLabel,
+                                Text::new("FPS"),
+                                hud_bold_text_font.clone(),
+                            ));
 
                             commands.spawn(Node::default()).with_children(|commands| {
                                 commands.spawn((
@@ -179,7 +184,7 @@ fn spawn_hud(
                             commands.spawn((
                                 BarycenterHudLabel,
                                 Text::new("Barycenter"),
-                                hud_text_font.clone(),
+                                hud_bold_text_font.clone(),
                             ));
 
                             commands.spawn(Node::default()).with_children(|commands| {
@@ -196,6 +201,18 @@ fn spawn_hud(
 
 fn hud_text_font(asset_server: &AssetServer) -> TextFont {
     let path = Path::new("fonts/BerkeleyMono-Regular");
+    let source = AssetSourceId::from("embedded");
+    let asset_path = AssetPath::from_path(&path).with_source(source);
+
+    TextFont {
+        font: asset_server.load(asset_path),
+        font_size: 12.0,
+        ..default()
+    }
+}
+
+fn hud_bold_text_font(asset_server: &AssetServer) -> TextFont {
+    let path = Path::new("fonts/BerkeleyMono-Bold");
     let source = AssetSourceId::from("embedded");
     let asset_path = AssetPath::from_path(&path).with_source(source);
 
