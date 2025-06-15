@@ -24,8 +24,8 @@ lto = "thin"
 strip = true
 
 [dependencies]
-bevy_panorbit_camera = "0.*"
-libm = "0.2.15"
+bevy_panorbit_camera = "*"
+libm = "*"
 rand = "0.9.*"
 rand_chacha = "0.9.*"
 
@@ -53,8 +53,10 @@ features = [
 ]
 
 [features]
+fonts = []
 dev = [
     "bevy/asset_processor",
+    "bevy/embedded_watcher",
     "bevy/default_font",
     "bevy/dynamic_linking",
     "bevy/file_watcher",

@@ -1,3 +1,10 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+
+mod simulation_hud;
+
+use crate::simulation_hud::SimulationHudPlugin;
 use avian3d::math::AsF32;
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
@@ -5,7 +12,6 @@ use avian3d::prelude::*;
 use bevy::color::palettes::css;
 use bevy::core_pipeline::bloom::Bloom;
 use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::diagnostic::DiagnosticsStore;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::ecs::schedule::LogLevel;
 use bevy::ecs::schedule::ScheduleBuildSettings;
@@ -19,8 +25,8 @@ use rand::Rng;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-#[derive(Resource, Deref, DerefMut)]
-pub(crate) struct SimulationRng(ChaCha8Rng);
+#[derive(Resource, Deref, DerefMut, Debug, Clone, PartialEq)]
+struct SimulationRng(ChaCha8Rng);
 
 impl Default for SimulationRng {
     fn default() -> Self {
@@ -45,39 +51,6 @@ impl Default for BodyCount {
         Self(100)
     }
 }
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct FpsHudLabel;
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct FpsHudValue;
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct BarycenterHudLabel;
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct BarycenterHudValue;
-
-#[derive(Resource, Debug, Reflect)]
-#[reflect(Resource, Debug)]
-pub struct SimulationDiagnosticsUiSettings {
-    pub enabled: bool,
-}
-
-impl Default for SimulationDiagnosticsUiSettings {
-    fn default() -> Self {
-        Self { enabled: true }
-    }
-}
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct SimulationHud;
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct SimulationHudGroup;
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct SimulationHudRow;
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
 struct CurrentBarycenter(Position);
@@ -135,23 +108,24 @@ fn main() {
             ..default()
         },
         PhysicsDiagnosticsPlugin,
+        SimulationHudPlugin,
     ));
 
-    app.insert_resource(BodyCount::default());
-    app.insert_resource(CurrentBarycenter::default());
-    app.insert_resource(G::default());
-    app.insert_resource(PreviousBarycenter::default());
-    app.insert_resource(SimulationRng::default());
-    app.insert_resource(SimulationDiagnosticsUiSettings::default());
+    app.init_resource::<SimulationRng>();
+    app.init_resource::<G>();
+    app.init_resource::<BodyCount>();
 
-    app.edit_schedule(Update, |schedule| {
+    app.init_resource::<CurrentBarycenter>();
+    app.init_resource::<PreviousBarycenter>();
+
+    app.edit_schedule(FixedUpdate, |schedule| {
         schedule.set_build_settings(ScheduleBuildSettings {
             ambiguity_detection: LogLevel::Warn,
             ..default()
         });
     });
 
-    app.add_systems(Startup, (spawn_camera, spawn_bodies, spawn_hud));
+    app.add_systems(Startup, (spawn_camera, spawn_bodies));
     app.add_systems(
         FixedUpdate,
         (
@@ -159,8 +133,6 @@ fn main() {
             apply_gravitation,
             update_barycenter,
             follow_barycenter,
-            refresh_fps_hud_value,
-            refresh_barycenter_hud_value,
         )
             .chain(),
     );
@@ -220,144 +192,16 @@ fn random_translation_within_radius(rng: &mut SimulationRng, radius: Scalar) -> 
     v.normalize() * libm::cbrt(rng.random_range(0.0..radius)) * 15.0 // ???
 }
 
+// TODO: scale forces proportional to G
 fn apply_initial_impulses(
     mut rng: ResMut<SimulationRng>,
     mut bodies: Query<RigidBodyQuery, Without<RigidBodyDisabled>>,
 ) {
     for mut body in &mut bodies {
-        if body.linear_velocity.0 == Vector::ZERO {
-            // TODO: scale forces proportional to G
-            body.linear_velocity.0 = random_translation_within_radius(&mut rng, 15.0);
+        if **body.linear_velocity == Vector::ZERO {
+            **body.linear_velocity = random_translation_within_radius(&mut rng, 15.0);
         }
     }
-}
-
-// liberally borrowed from avian3d physics diagnostics
-fn spawn_hud(
-    mut commands: Commands,
-    settings: Res<SimulationDiagnosticsUiSettings>,
-    asset_server: Res<AssetServer>,
-) {
-    let ui_monospace: Handle<Font> = asset_server.load("fonts/BerkeleyMono-Retina.otf");
-
-    commands
-        .spawn((
-            Name::new("Simulation HUD"),
-            SimulationHud,
-            Node {
-                position_type: PositionType::Absolute,
-                top: Val::Px(5.0),
-                right: Val::Px(5.0),
-                padding: UiRect::all(Val::Px(5.0)),
-                display: if settings.enabled {
-                    Display::Flex
-                } else {
-                    Display::None
-                },
-                flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(1.0),
-                ..default()
-            },
-            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.75)),
-            BorderRadius::all(Val::Px(5.0)),
-        ))
-        .with_children(|commands| {
-            commands
-                .spawn((
-                    SimulationHudGroup,
-                    Node {
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Column,
-                        row_gap: Val::Px(1.0),
-                        ..default()
-                    },
-                ))
-                .with_children(|commands| {
-                    commands
-                        .spawn((
-                            SimulationHudRow,
-                            Node {
-                                display: Display::Flex,
-                                justify_content: JustifyContent::SpaceBetween,
-                                column_gap: Val::Px(10.0),
-                                ..default()
-                            },
-                        ))
-                        .with_children(|commands| {
-                            commands.spawn((
-                                FpsHudLabel,
-                                Text::new("FPS"),
-                                TextFont {
-                                    font: ui_monospace.clone(),
-                                    font_size: 10.0,
-                                    line_height: Default::default(),
-                                    font_smoothing: Default::default(),
-                                },
-                            ));
-
-                            commands.spawn(Node::default()).with_children(|commands| {
-                                commands.spawn((
-                                    FpsHudValue,
-                                    Text::new("-"),
-                                    TextFont {
-                                        font: ui_monospace.clone(),
-                                        font_size: 10.0,
-                                        line_height: Default::default(),
-                                        font_smoothing: Default::default(),
-                                    },
-                                ));
-                            });
-                        });
-                });
-
-            commands
-                .spawn((
-                    SimulationHudGroup,
-                    Node {
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Column,
-                        row_gap: Val::Px(1.0),
-                        ..default()
-                    },
-                ))
-                .with_children(|commands| {
-                    commands
-                        .spawn((
-                            SimulationHudRow,
-                            Node {
-                                display: Display::Flex,
-                                justify_content: JustifyContent::SpaceBetween,
-                                column_gap: Val::Px(20.0),
-                                ..default()
-                            },
-                        ))
-                        .with_children(|commands| {
-                            commands.spawn((
-                                BarycenterHudLabel,
-                                Text::new("Barycenter"),
-                                TextFont {
-                                    font: ui_monospace.clone(),
-                                    font_size: 10.0,
-                                    line_height: Default::default(),
-                                    font_smoothing: Default::default(),
-                                },
-                            ));
-
-                            commands.spawn(Node::default()).with_children(|commands| {
-                                commands.spawn((
-                                    BarycenterHudValue,
-                                    Text::new("-"),
-                                    TextFont {
-                                        font: ui_monospace.clone(),
-                                        font_size: 10.0,
-                                        line_height: Default::default(),
-                                        font_smoothing: Default::default(),
-                                    },
-                                ));
-                            });
-                        });
-                });
-        });
 }
 
 // TODO: test
@@ -366,15 +210,14 @@ fn apply_gravitation(
     g: Res<G>,
     mut bodies: Query<RigidBodyQuery, Without<RigidBodyDisabled>>,
 ) {
-    let g = **g;
     let delta_time = time.delta_secs_f64();
-
     let mut body_pairs = bodies.iter_combinations_mut();
+
     while let Some([mut body1, mut body2]) = body_pairs.fetch_next() {
         let direction = **body2.position - **body1.position;
         let mass1 = *Mass::from(*body1.mass) as Scalar;
         let mass2 = *Mass::from(*body2.mass) as Scalar;
-        let force = g * mass1 * mass2 / direction.length_squared() / 2.0;
+        let force = **g * mass1 * mass2 / direction.length_squared() / 2.0;
 
         **body1.linear_velocity += force * direction * delta_time;
         **body2.linear_velocity -= force * direction * delta_time;
@@ -387,10 +230,11 @@ fn update_barycenter(
     mut current_barycenter: ResMut<CurrentBarycenter>,
     mut previous_barycenter: ResMut<PreviousBarycenter>,
 ) {
+    **previous_barycenter = **current_barycenter;
+
     let pos_acc: Vector = bodies.iter().map(|b| **b.position).sum();
     let mass_acc: Scalar = bodies.iter().map(|b| *Mass::from(*b.mass) as Scalar).sum();
 
-    **previous_barycenter = **current_barycenter;
     **current_barycenter = Position::from(pos_acc / mass_acc);
 }
 
@@ -401,23 +245,4 @@ fn follow_barycenter(
 ) {
     pan_orbit_camera.target_focus = current_barycenter.as_vec3(); // TODO: fix move jitter?
     gizmos.cross(current_barycenter.as_vec3(), 5.0, css::WHITE);
-}
-
-fn refresh_fps_hud_value(
-    diagnostics: Res<DiagnosticsStore>,
-    mut fps_hud_value: Single<&mut Text, With<FpsHudValue>>,
-) {
-    if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
-        if let Some(value) = fps.smoothed() {
-            ***fps_hud_value = format!("{value:.2}");
-        }
-    }
-}
-
-fn refresh_barycenter_hud_value(
-    current_barycenter: Res<CurrentBarycenter>,
-    mut barycenter_hud_value: Single<&mut Text, With<BarycenterHudValue>>,
-) {
-    let value = ***current_barycenter;
-    ***barycenter_hud_value = format!("{value:.2}");
 }
