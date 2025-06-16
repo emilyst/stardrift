@@ -231,10 +231,10 @@ fn update_barycenter(
 ) {
     **previous_barycenter = **current_barycenter;
 
-    let pos_acc: Vector = bodies.iter().map(|b| **b.position).sum();
-    let mass_acc: Scalar = bodies.iter().map(|b| *Mass::from(*b.mass) as Scalar).sum();
+    let positions: Vector = bodies.iter().map(|b| **b.position).sum();
+    let masses: Scalar = bodies.iter().map(|b| b.mass.value()).sum();
 
-    **current_barycenter = Position::from(pos_acc / mass_acc);
+    **current_barycenter = Position::from(positions / masses);
 }
 
 fn follow_barycenter(
