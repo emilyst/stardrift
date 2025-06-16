@@ -1,10 +1,8 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
+mod diagnostics;
+mod diagnostics_hud;
 
-mod simulation_hud;
-
-use crate::simulation_hud::SimulationHudPlugin;
+use crate::diagnostics::SimulationDiagnosticsPlugin;
+use crate::diagnostics_hud::DiagnosticsHudPlugin;
 use avian3d::math::AsF32;
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
@@ -13,6 +11,7 @@ use bevy::color::palettes::css;
 use bevy::core_pipeline::bloom::Bloom;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::ecs::schedule::LogLevel;
 use bevy::ecs::schedule::ScheduleBuildSettings;
 use bevy::pbr::MeshMaterial3d;
@@ -101,14 +100,13 @@ fn main() {
 
     app.add_plugins((
         DefaultPlugins,
+        DiagnosticsHudPlugin,
+        FrameTimeDiagnosticsPlugin::default(),
+        LogDiagnosticsPlugin::default(),
         PanOrbitCameraPlugin,
-        PhysicsPlugins::default(),
-        FrameTimeDiagnosticsPlugin {
-            smoothing_factor: 0.5,
-            ..default()
-        },
         PhysicsDiagnosticsPlugin,
-        SimulationHudPlugin,
+        PhysicsPlugins::default(),
+        SimulationDiagnosticsPlugin::default(),
     ));
 
     app.init_resource::<SimulationRng>();
@@ -129,6 +127,7 @@ fn main() {
     app.add_systems(
         FixedUpdate,
         (
+            // TODO: move these systems into a Simulation struct
             apply_initial_impulses,
             apply_gravitation,
             update_barycenter,

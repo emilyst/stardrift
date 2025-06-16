@@ -1,0 +1,84 @@
+use crate::CurrentBarycenter;
+use bevy::diagnostic::Diagnostic;
+use bevy::diagnostic::DiagnosticPath;
+use bevy::diagnostic::Diagnostics;
+use bevy::diagnostic::RegisterDiagnostic;
+use bevy::diagnostic::DEFAULT_MAX_HISTORY_LENGTH;
+use bevy::prelude::*;
+use std::time::Duration;
+
+#[derive(Resource)]
+pub struct SimulationDiagnosticsState {
+    update_timer: Timer,
+}
+
+pub struct SimulationDiagnosticsPlugin {
+    max_history_length: usize,
+    smoothing_factor: f64,
+    update_interval: Duration,
+}
+
+impl Default for SimulationDiagnosticsPlugin {
+    fn default() -> Self {
+        Self {
+            max_history_length: DEFAULT_MAX_HISTORY_LENGTH,
+            smoothing_factor: 0.1,
+            update_interval: Duration::from_secs_f64(0.1),
+        }
+    }
+}
+
+impl SimulationDiagnosticsPlugin {
+    pub const BARYCENTER_X_PATH: DiagnosticPath = DiagnosticPath::const_new("barycenter/x");
+    pub const BARYCENTER_Y_PATH: DiagnosticPath = DiagnosticPath::const_new("barycenter/y");
+    pub const BARYCENTER_Z_PATH: DiagnosticPath = DiagnosticPath::const_new("barycenter/z");
+
+    fn update_timer_ticks(mut state: ResMut<SimulationDiagnosticsState>, time: Res<Time>) {
+        state.update_timer.tick(time.delta());
+    }
+
+    fn update_barycenter_diagnostics(
+        barycenter: Res<CurrentBarycenter>,
+        mut diagnostics: Diagnostics,
+        state: ResMut<SimulationDiagnosticsState>,
+    ) {
+        if state.update_timer.finished() {
+            diagnostics.add_measurement(&Self::BARYCENTER_X_PATH, || barycenter.x);
+            diagnostics.add_measurement(&Self::BARYCENTER_Y_PATH, || barycenter.y);
+            diagnostics.add_measurement(&Self::BARYCENTER_Z_PATH, || barycenter.z);
+        }
+    }
+}
+
+impl Plugin for SimulationDiagnosticsPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(SimulationDiagnosticsState {
+            update_timer: Timer::new(self.update_interval, TimerMode::Repeating),
+        });
+
+        app.register_diagnostic(
+            Diagnostic::new(Self::BARYCENTER_X_PATH)
+                .with_max_history_length(self.max_history_length)
+                .with_smoothing_factor(self.smoothing_factor),
+        );
+        app.register_diagnostic(
+            Diagnostic::new(Self::BARYCENTER_Y_PATH)
+                .with_max_history_length(self.max_history_length)
+                .with_smoothing_factor(self.smoothing_factor),
+        );
+        app.register_diagnostic(
+            Diagnostic::new(Self::BARYCENTER_Z_PATH)
+                .with_max_history_length(self.max_history_length)
+                .with_smoothing_factor(self.smoothing_factor),
+        );
+
+        app.add_systems(
+            FixedPostUpdate,
+            (
+                Self::update_timer_ticks,
+                Self::update_barycenter_diagnostics,
+            )
+                .chain(),
+        );
+    }
+}
