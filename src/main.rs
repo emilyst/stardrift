@@ -135,7 +135,7 @@ fn main() {
         )
             .chain(),
     );
-    app.add_systems(Update, quit_on_escape);
+    app.add_systems(Update, (quit_on_escape, pause_physics_on_space));
 
     app.run();
 }
@@ -257,5 +257,22 @@ fn follow_barycenter(
 fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit>) {
     if keys.just_pressed(KeyCode::Escape) {
         exit.write_default();
+    }
+}
+
+fn pause_physics_on_space(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands,
+    enabled_rigid_bodies: Query<(Entity, RigidBodyQuery), Without<RigidBodyDisabled>>,
+    disabled_rigid_bodies: Query<(Entity, RigidBodyQuery), With<RigidBodyDisabled>>,
+) {
+    if keys.just_pressed(KeyCode::Space) {
+        for (entity, _) in &enabled_rigid_bodies {
+            commands.entity(entity).insert(RigidBodyDisabled);
+        }
+
+        for (entity, _) in &disabled_rigid_bodies {
+            commands.entity(entity).remove::<RigidBodyDisabled>();
+        }
     }
 }
