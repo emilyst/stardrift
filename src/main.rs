@@ -186,14 +186,15 @@ fn spawn_bodies(
 }
 
 fn random_translation_within_radius(rng: &mut SimulationRng, radius: Scalar) -> Vector {
-    let v = Vector::new(
-        rng.random_range(-radius..radius),
-        rng.random_range(-radius..radius),
-        rng.random_range(-radius..radius),
-    );
+    let theta = rng.random_range(0.0..2.0 * std::f64::consts::PI);
+    let phi = libm::acos(rng.random_range(-1.0..1.0));
+    let r = radius * libm::cbrt(rng.random_range(0.0..1.0));
 
-    // TODO: normalize to sphere with radius
-    v.normalize() * libm::cbrt(rng.random_range(0.0..radius)) * 15.0 // ???
+    Vector::new(
+        r * libm::sin(phi) * libm::cos(theta),
+        r * libm::sin(phi) * libm::sin(theta),
+        r * libm::cos(phi),
+    )
 }
 
 // TODO: scale forces proportional to G
