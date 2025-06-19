@@ -37,6 +37,25 @@ impl SimulationDiagnosticsPlugin {
     pub const CAMERA_Y_PATH: DiagnosticPath = DiagnosticPath::const_new("camera/y");
     pub const CAMERA_Z_PATH: DiagnosticPath = DiagnosticPath::const_new("camera/z");
 
+    const DIAGNOSTIC_PATHS: &'static [DiagnosticPath] = &[
+        Self::BARYCENTER_X_PATH,
+        Self::BARYCENTER_Y_PATH,
+        Self::BARYCENTER_Z_PATH,
+        Self::CAMERA_X_PATH,
+        Self::CAMERA_Y_PATH,
+        Self::CAMERA_Z_PATH,
+    ];
+
+    fn register_diagnostics(&self, app: &mut App) {
+        for path in Self::DIAGNOSTIC_PATHS {
+            app.register_diagnostic(
+                Diagnostic::new(path.clone())
+                    .with_max_history_length(self.max_history_length)
+                    .with_smoothing_factor(self.smoothing_factor),
+            );
+        }
+    }
+
     fn update_timer_ticks(mut state: ResMut<SimulationDiagnosticsState>, time: Res<Time>) {
         state.update_timer.tick(time.delta());
     }
@@ -78,37 +97,7 @@ impl Plugin for SimulationDiagnosticsPlugin {
             update_timer: Timer::new(self.update_interval, TimerMode::Repeating),
         });
 
-        app.register_diagnostic(
-            Diagnostic::new(Self::BARYCENTER_X_PATH)
-                .with_max_history_length(self.max_history_length)
-                .with_smoothing_factor(self.smoothing_factor),
-        );
-        app.register_diagnostic(
-            Diagnostic::new(Self::BARYCENTER_Y_PATH)
-                .with_max_history_length(self.max_history_length)
-                .with_smoothing_factor(self.smoothing_factor),
-        );
-        app.register_diagnostic(
-            Diagnostic::new(Self::BARYCENTER_Z_PATH)
-                .with_max_history_length(self.max_history_length)
-                .with_smoothing_factor(self.smoothing_factor),
-        );
-
-        app.register_diagnostic(
-            Diagnostic::new(Self::CAMERA_X_PATH)
-                .with_max_history_length(self.max_history_length)
-                .with_smoothing_factor(self.smoothing_factor),
-        );
-        app.register_diagnostic(
-            Diagnostic::new(Self::CAMERA_Y_PATH)
-                .with_max_history_length(self.max_history_length)
-                .with_smoothing_factor(self.smoothing_factor),
-        );
-        app.register_diagnostic(
-            Diagnostic::new(Self::CAMERA_Z_PATH)
-                .with_max_history_length(self.max_history_length)
-                .with_smoothing_factor(self.smoothing_factor),
-        );
+        self.register_diagnostics(app);
 
         app.add_systems(
             FixedPostUpdate,
