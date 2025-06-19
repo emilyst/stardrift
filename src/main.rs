@@ -29,7 +29,7 @@ struct SimulationRng(ChaCha8Rng);
 
 impl Default for SimulationRng {
     fn default() -> Self {
-        Self(ChaCha8Rng::from_os_rng())
+        Self(ChaCha8Rng::seed_from_u64(0))
     }
 }
 
@@ -135,6 +135,7 @@ fn main() {
         )
             .chain(),
     );
+    app.add_systems(Update, quit_on_escape);
 
     app.run();
 }
@@ -153,10 +154,11 @@ fn spawn_camera(mut commands: Commands) {
         Bloom::NATURAL,
         Msaa::default(),
         PanOrbitCamera {
-            touch_controls: TouchControls::TwoFingerOrbit,
-            trackpad_behavior: TrackpadBehavior::blender_default(),
             focus: Vec3::ZERO,
             radius: Some(500.0), // TODO: scale proportional to G
+            touch_controls: TouchControls::TwoFingerOrbit,
+            trackpad_behavior: TrackpadBehavior::blender_default(),
+            trackpad_pinch_to_zoom_enabled: true,
             ..default()
         },
     ));
@@ -244,6 +246,14 @@ fn follow_barycenter(
     mut gizmos: Gizmos,
     current_barycenter: Res<CurrentBarycenter>,
 ) {
-    pan_orbit_camera.target_focus = current_barycenter.as_vec3(); // TODO: fix move jitter?
-    gizmos.cross(current_barycenter.as_vec3(), 5.0, css::WHITE);
+    if !current_barycenter.is_nan() {
+        pan_orbit_camera.target_focus = current_barycenter.as_vec3(); // TODO: fix move jitter?
+        gizmos.cross(current_barycenter.as_vec3(), 5.0, css::WHITE);
+    }
+}
+
+fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit>) {
+    if keys.just_pressed(KeyCode::Escape) {
+        exit.write_default();
+    }
 }
