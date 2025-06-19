@@ -142,6 +142,16 @@ fn main() {
 fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::new("Main Camera"),
+        Transform::from_translation(Vec3::NEG_Z * 500.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Camera {
+            hdr: true,
+            clear_color: ClearColorConfig::Custom(Color::BLACK),
+            ..default()
+        },
+        Camera3d::default(),
+        Tonemapping::TonyMcMapface,
+        Bloom::NATURAL,
+        Msaa::default(),
         PanOrbitCamera {
             touch_controls: TouchControls::TwoFingerOrbit,
             trackpad_behavior: TrackpadBehavior::blender_default(),
@@ -149,14 +159,6 @@ fn spawn_camera(mut commands: Commands) {
             radius: Some(500.0), // TODO: scale proportional to G
             ..default()
         },
-        Camera {
-            hdr: true,
-            clear_color: ClearColorConfig::Custom(Color::BLACK),
-            ..default()
-        },
-        Tonemapping::TonyMcMapface,
-        Bloom::NATURAL,
-        Msaa::default(),
     ));
 }
 
@@ -231,7 +233,7 @@ fn update_barycenter(
 ) {
     **previous_barycenter = **current_barycenter;
 
-    let positions: Vector = bodies.iter().map(|b| **b.position).sum();
+    let positions: Vector = bodies.iter().map(|b| **b.position * b.mass.value()).sum();
     let masses: Scalar = bodies.iter().map(|b| b.mass.value()).sum();
 
     **current_barycenter = Position::from(positions / masses);

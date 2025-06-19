@@ -6,7 +6,7 @@ edition = "2024"
 [profile.dev]
 debug = 2
 opt-level = 0 # Switch to 1 for more runtime performance
-#overflow-checks = false # Uncomment for better math performance
+overflow-checks = false # Uncomment for better math performance
 
 [profile.dev.package."*"]
 opt-level = 2
