@@ -9,10 +9,13 @@ use std::path::Path;
 use std::time::Duration;
 
 static REGULAR_OTF_BYTES: &[u8] = include_bytes!("../assets/fonts/BerkeleyMono-Regular.otf");
-static OBLIQUE_OTF_BYTES: &[u8] = include_bytes!("../assets/fonts/BerkeleyMono-Oblique.otf");
 static BOLD_OTF_BYTES: &[u8] = include_bytes!("../assets/fonts/BerkeleyMono-Bold.otf");
-static BOLD_OBLIQUE_OTF_BYTES: &[u8] =
-    include_bytes!("../assets/fonts/BerkeleyMono-Bold-Oblique.otf");
+
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct FpsValueText;
+
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct BarycenterValueText;
 
 // TODO: change detection
 #[derive(Resource, Reflect, Debug)]
@@ -51,30 +54,18 @@ pub struct DiagnosticsHudPlugin;
 
 impl DiagnosticsHudPlugin {
     fn insert_font_assets(world: &mut World) {
-        let embedded = world.resource_mut::<EmbeddedAssetRegistry>();
+        let embedded_asset_registry = world.resource_mut::<EmbeddedAssetRegistry>();
 
-        embedded.insert_asset(
+        embedded_asset_registry.insert_asset(
             Path::new("fonts/BerkeleyMono-Regular").into(),
             Path::new("fonts/BerkeleyMono-Regular"),
             REGULAR_OTF_BYTES,
         );
 
-        embedded.insert_asset(
+        embedded_asset_registry.insert_asset(
             Path::new("fonts/BerkeleyMono-Bold").into(),
             Path::new("fonts/BerkeleyMono-Bold"),
             BOLD_OTF_BYTES,
-        );
-
-        embedded.insert_asset(
-            Path::new("fonts/BerkeleyMono-Oblique").into(),
-            Path::new("fonts/BerkeleyMono-Oblique"),
-            OBLIQUE_OTF_BYTES,
-        );
-
-        embedded.insert_asset(
-            Path::new("fonts/BerkeleyMono-Bold-Oblique").into(),
-            Path::new("fonts/BerkeleyMono-Bold-Oblique"),
-            BOLD_OBLIQUE_OTF_BYTES,
         );
     }
 
@@ -83,133 +74,69 @@ impl DiagnosticsHudPlugin {
         asset_server: Res<AssetServer>,
         settings: Res<DiagnosticsHudSettings>,
     ) {
-        commands
-            .spawn((
-                Name::new("Diagnostics HUD"),
-                Node {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(5.0),
-                    right: Val::Px(5.0),
-                    padding: UiRect::all(Val::Px(5.0)),
-                    display: if settings.enabled {
-                        Display::Flex
-                    } else {
-                        Display::None
-                    },
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(1.0),
-                    ..default()
+        let embedded_asset_source = &AssetSourceId::from("embedded");
+
+        let regular_font_path = &Path::new("fonts/BerkeleyMono-Regular");
+        let regular_font_asset_path =
+            AssetPath::from_path(regular_font_path).with_source(embedded_asset_source);
+        let regular_font = asset_server.load(regular_font_asset_path);
+        let regular_text_font = TextFont::from_font(regular_font).with_font_size(12.0);
+
+        let bold_font_path = &Path::new("fonts/BerkeleyMono-Regular");
+        let bold_font_asset_path =
+            AssetPath::from_path(bold_font_path).with_source(embedded_asset_source);
+        let bold_font = asset_server.load(bold_font_asset_path);
+        let bold_text_font = TextFont::from_font(bold_font).with_font_size(12.0);
+
+        commands.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(5.0),
+                right: Val::Px(5.0),
+                padding: UiRect::all(Val::Px(5.0)),
+                display: if settings.enabled {
+                    Display::Flex
+                } else {
+                    Display::None
                 },
-                DiagnosticsHudNode,
-                BorderRadius::all(Val::Px(5.0)),
-                BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
-            ))
-            .with_children(|commands| {
-                commands
-                    .spawn((
-                        DiagnosticsHudGroupNode,
-                        Node {
-                            display: Display::Flex,
-                            flex_direction: FlexDirection::Column,
-                            row_gap: Val::Px(1.0),
-                            ..default()
-                        },
-                    ))
-                    .with_children(|commands| {
-                        commands
-                            .spawn((
-                                DiagnosticsHudRowNode,
-                                Node {
-                                    display: Display::Flex,
-                                    justify_content: JustifyContent::SpaceBetween,
-                                    column_gap: Val::Px(20.0),
-                                    ..default()
-                                },
-                            ))
-                            .with_children(|commands| {
-                                commands.spawn(Node::default()).with_children(|commands| {
-                                    commands.spawn((
-                                        Text::new("FPS"),
-                                        Self::hud_bold_text_font(&asset_server),
-                                    ));
-                                });
-                                commands.spawn(Node::default()).with_children(|commands| {
-                                    commands.spawn((
-                                        FpsValueTextNode,
-                                        Text::new("-"),
-                                        Self::hud_regular_text_font(&asset_server),
-                                    ));
-                                });
-                            });
-                    });
-
-                commands
-                    .spawn((
-                        DiagnosticsHudGroupNode,
-                        Node {
-                            display: Display::Flex,
-                            flex_direction: FlexDirection::Column,
-                            row_gap: Val::Px(1.0),
-                            ..default()
-                        },
-                    ))
-                    .with_children(|commands| {
-                        commands
-                            .spawn((
-                                DiagnosticsHudRowNode,
-                                Node {
-                                    display: Display::Flex,
-                                    justify_content: JustifyContent::SpaceBetween,
-                                    column_gap: Val::Px(20.0),
-                                    ..default()
-                                },
-                            ))
-                            .with_children(|commands| {
-                                commands.spawn(Node::default()).with_children(|commands| {
-                                    commands.spawn((
-                                        Text::new("Barycenter"),
-                                        Self::hud_bold_text_font(&asset_server),
-                                    ));
-                                });
-                                commands.spawn(Node::default()).with_children(|commands| {
-                                    commands.spawn((
-                                        BarycenterValueTextNode,
-                                        Text::new("-"),
-                                        Self::hud_regular_text_font(&asset_server),
-                                    ));
-                                });
-                            });
-                    });
-            });
-    }
-
-    fn hud_regular_text_font(asset_server: &AssetServer) -> TextFont {
-        let path = Path::new("fonts/BerkeleyMono-Regular");
-        let source = AssetSourceId::from("embedded");
-        let asset_path = AssetPath::from_path(&path).with_source(source);
-
-        TextFont {
-            font: asset_server.load(asset_path),
-            font_size: 12.0,
-            ..default()
-        }
-    }
-
-    fn hud_bold_text_font(asset_server: &AssetServer) -> TextFont {
-        let path = Path::new("fonts/BerkeleyMono-Bold");
-        let source = AssetSourceId::from("embedded");
-        let asset_path = AssetPath::from_path(&path).with_source(source);
-
-        TextFont {
-            font: asset_server.load(asset_path),
-            font_size: 12.0,
-            ..default()
-        }
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(1.0),
+                ..default()
+            },
+            BorderRadius::all(Val::Px(5.0)),
+            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
+            children![
+                (
+                    Node {
+                        display: Display::Flex,
+                        justify_content: JustifyContent::SpaceBetween,
+                        column_gap: Val::Px(20.0),
+                        ..default()
+                    },
+                    children![
+                        (Text::new("FPS"), bold_text_font.clone()),
+                        (FpsValueText, Text::new("-"), regular_text_font.clone())
+                    ],
+                ),
+                (
+                    Node {
+                        display: Display::Flex,
+                        justify_content: JustifyContent::SpaceBetween,
+                        column_gap: Val::Px(20.0),
+                        ..default()
+                    },
+                    children![
+                        (Text::new("Barycenter"), bold_text_font),
+                        (BarycenterValueText, Text::new("-"), regular_text_font)
+                    ],
+                )
+            ],
+        ));
     }
 
     fn update_barycenter_value(
         diagnostics: Res<DiagnosticsStore>,
-        mut barycenter_value_text: Single<&mut Text, With<BarycenterValueTextNode>>,
+        mut barycenter_value_text: Single<&mut Text, With<BarycenterValueText>>,
         state: Res<DiagnosticsHudState>,
     ) {
         if state.refresh_timer.finished() {
@@ -234,7 +161,7 @@ impl DiagnosticsHudPlugin {
 
     fn update_fps_value(
         diagnostics: Res<DiagnosticsStore>,
-        mut fps_hud_value: Single<&mut Text, With<FpsValueTextNode>>,
+        mut fps_hud_value: Single<&mut Text, With<FpsValueText>>,
         state: Res<DiagnosticsHudState>,
     ) {
         if state.refresh_timer.finished() {
@@ -255,8 +182,6 @@ impl Plugin for DiagnosticsHudPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(DiagnosticsHudSettings::default());
         app.insert_resource(DiagnosticsHudState::default());
-        // app.insert_resource(BarycenterNameValuePair::default());
-        // app.insert_resource(FpsNameValuePair::default());
 
         app.add_systems(
             Startup,
@@ -270,50 +195,5 @@ impl Plugin for DiagnosticsHudPlugin {
                 Self::advance_refresh_timer,
             ),
         );
-    }
-}
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct DiagnosticsHudNode;
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct DiagnosticsHudGroupNode;
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct DiagnosticsHudRowNode;
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct FpsValueTextNode;
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct BarycenterValueTextNode;
-
-#[derive(Resource, Debug)]
-struct FpsNameValuePair {
-    name: String,
-    value: String,
-}
-
-impl Default for FpsNameValuePair {
-    fn default() -> Self {
-        Self {
-            name: String::from("FPS"),
-            value: String::from("-"),
-        }
-    }
-}
-
-#[derive(Resource, Debug)]
-struct BarycenterNameValuePair {
-    name: String,
-    value: String,
-}
-
-impl Default for BarycenterNameValuePair {
-    fn default() -> Self {
-        Self {
-            name: String::from("Barycenter"),
-            value: String::from("-"),
-        }
     }
 }
