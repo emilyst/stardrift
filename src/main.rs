@@ -231,7 +231,7 @@ fn apply_gravitation(
 
 // TODO: test
 fn update_barycenter(
-    bodies: Query<RigidBodyQueryReadOnly, Without<RigidBodyDisabled>>,
+    bodies: Query<RigidBodyQueryReadOnly>,
     mut current_barycenter: ResMut<CurrentBarycenter>,
     mut previous_barycenter: ResMut<PreviousBarycenter>,
 ) {
