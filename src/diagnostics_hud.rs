@@ -17,6 +17,9 @@ struct FpsValueText;
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
 struct BarycenterValueText;
 
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct CameraValueText;
+
 // TODO: change detection
 #[derive(Resource, Reflect, Debug)]
 #[reflect(Resource, Debug)]
@@ -29,7 +32,7 @@ impl Default for DiagnosticsHudSettings {
     fn default() -> Self {
         Self {
             enabled: true,
-            refresh_interval: Duration::from_secs_f64(0.5),
+            refresh_interval: Duration::from_secs_f64(1.0 / 6.0),
         }
     }
 }
@@ -126,15 +129,49 @@ impl DiagnosticsHudPlugin {
                         ..default()
                     },
                     children![
-                        (Text::new("Barycenter"), bold_text_font),
-                        (BarycenterValueText, Text::new("-"), regular_text_font)
+                        (Text::new("Barycenter"), bold_text_font.clone()),
+                        (
+                            BarycenterValueText,
+                            Text::new("-"),
+                            regular_text_font.clone()
+                        )
+                    ],
+                ),
+                (
+                    Node {
+                        display: Display::Flex,
+                        justify_content: JustifyContent::SpaceBetween,
+                        column_gap: Val::Px(20.0),
+                        ..default()
+                    },
+                    children![
+                        (Text::new("Camera"), bold_text_font),
+                        (CameraValueText, Text::new("-"), regular_text_font)
                     ],
                 )
             ],
         ));
     }
 
-    fn update_barycenter_value(
+    fn advance_refresh_timer(mut state: ResMut<DiagnosticsHudState>, time: Res<Time>) {
+        state.refresh_timer.tick(time.delta());
+    }
+
+    fn update_fps_value_text(
+        diagnostics: Res<DiagnosticsStore>,
+        mut fps_hud_value: Single<&mut Text, With<FpsValueText>>,
+        state: Res<DiagnosticsHudState>,
+    ) {
+        if state.refresh_timer.finished() {
+            if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
+                if let Some(fps) = fps.smoothed() {
+                    ***fps_hud_value = format!("{fps:.2}");
+                }
+            }
+        }
+    }
+
+    fn update_barycenter_value_text(
         diagnostics: Res<DiagnosticsStore>,
         mut barycenter_value_text: Single<&mut Text, With<BarycenterValueText>>,
         state: Res<DiagnosticsHudState>,
@@ -159,22 +196,29 @@ impl DiagnosticsHudPlugin {
         }
     }
 
-    fn update_fps_value(
+    fn update_camera_value_text(
         diagnostics: Res<DiagnosticsStore>,
-        mut fps_hud_value: Single<&mut Text, With<FpsValueText>>,
+        mut camera_value_text: Single<&mut Text, With<CameraValueText>>,
         state: Res<DiagnosticsHudState>,
     ) {
         if state.refresh_timer.finished() {
-            if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
-                if let Some(fps) = fps.smoothed() {
-                    ***fps_hud_value = format!("{fps:.2}");
+            if let (Some(camera_x), Some(camera_y), Some(camera_z)) = (
+                diagnostics.get(&SimulationDiagnosticsPlugin::CAMERA_X_PATH),
+                diagnostics.get(&SimulationDiagnosticsPlugin::CAMERA_Y_PATH),
+                diagnostics.get(&SimulationDiagnosticsPlugin::CAMERA_Z_PATH),
+            ) {
+                if let (Some(camera_x), Some(camera_y), Some(camera_z)) = (
+                    camera_x.smoothed(),
+                    camera_y.smoothed(),
+                    camera_z.smoothed(),
+                ) {
+                    ***camera_value_text = format!(
+                        "(X: {:.2}, Y: {:.2}, Z: {:.2})",
+                        camera_x, camera_y, camera_z,
+                    );
                 }
             }
         }
-    }
-
-    fn advance_refresh_timer(mut state: ResMut<DiagnosticsHudState>, time: Res<Time>) {
-        state.refresh_timer.tick(time.delta());
     }
 }
 
@@ -190,9 +234,10 @@ impl Plugin for DiagnosticsHudPlugin {
         app.add_systems(
             Update,
             (
-                Self::update_fps_value,
-                Self::update_barycenter_value,
                 Self::advance_refresh_timer,
+                Self::update_fps_value_text,
+                Self::update_barycenter_value_text,
+                Self::update_camera_value_text,
             ),
         );
     }
