@@ -218,20 +218,24 @@ fn apply_gravitation(
     let delta_time = time.delta_secs_f64();
     let mut body_pairs = bodies.iter_combinations_mut();
 
+    // Configuration constants
+    const MIN_DISTANCE: Scalar = 0.5; // Minimum allowed distance between bodies
+    const MAX_FORCE: Scalar = 1000.0; // Maximum force magnitude to prevent numerical explosions
+    const MIN_DISTANCE_SQUARED: Scalar = MIN_DISTANCE * MIN_DISTANCE;
+
     while let Some([mut body1, mut body2]) = body_pairs.fetch_next() {
         let direction = **body2.position - **body1.position;
         let distance_squared = direction.length_squared();
 
-        if distance_squared < Scalar::EPSILON {
+        if distance_squared < MIN_DISTANCE_SQUARED {
             continue;
         }
 
-        let mass1 = *Mass::from(*body1.mass) as Scalar;
-        let mass2 = *Mass::from(*body2.mass) as Scalar;
-
-        let force_magnitude = **g * mass1 * mass2 / distance_squared;
-        let direction_normalized = direction / distance_squared.sqrt();
-
+        let mass1 = body1.mass.value();
+        let mass2 = body2.mass.value();
+        let distance = distance_squared.sqrt();
+        let direction_normalized = direction / distance;
+        let force_magnitude = (**g * mass1 * mass2 / distance_squared).min(MAX_FORCE);
         let acceleration1 = force_magnitude * direction_normalized / mass1;
         let acceleration2 = -force_magnitude * direction_normalized / mass2;
 
