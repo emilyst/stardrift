@@ -246,7 +246,7 @@ fn follow_barycenter(
     mut gizmos: Gizmos,
     current_barycenter: Res<CurrentBarycenter>,
 ) {
-    if !current_barycenter.is_nan() {
+    if current_barycenter.is_finite() {
         pan_orbit_camera.target_focus = current_barycenter.as_vec3(); // TODO: fix move jitter?
         gizmos.cross(current_barycenter.as_vec3(), 5.0, css::WHITE);
     }
