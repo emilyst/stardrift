@@ -20,6 +20,7 @@ use bevy_panorbit_camera::PanOrbitCamera;
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
 use bevy_panorbit_camera::TouchControls;
 use bevy_panorbit_camera::TrackpadBehavior;
+use rand::distr::weighted::Weight;
 use rand::Rng;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -237,10 +238,16 @@ fn update_barycenter(
 ) {
     **previous_barycenter = **current_barycenter;
 
-    let weighted_positions: Vector = bodies.iter().map(|b| **b.position * b.mass.value()).sum();
-    let masses: Scalar = bodies.iter().map(|b| b.mass.value()).sum();
+    let (weighted_positions, total_mass): (Vector, Scalar) = bodies
+        .iter()
+        .map(|b| (**b.position * b.mass.value(), b.mass.value()))
+        .fold((Vector::ZERO, 0.0), |(pos_acc, mass_acc), (pos, mass)| {
+            (pos_acc + pos, mass_acc + mass)
+        });
 
-    **current_barycenter = Position::from(weighted_positions / masses);
+    if total_mass > Scalar::ZERO {
+        **current_barycenter = Position::from(weighted_positions / total_mass);
+    }
 }
 
 fn follow_barycenter(
