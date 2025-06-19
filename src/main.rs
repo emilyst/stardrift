@@ -113,7 +113,6 @@ fn main() {
     app.init_resource::<SimulationRng>();
     app.init_resource::<G>();
     app.init_resource::<BodyCount>();
-
     app.init_resource::<CurrentBarycenter>();
     app.init_resource::<PreviousBarycenter>();
 
