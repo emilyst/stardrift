@@ -155,6 +155,7 @@ fn spawn_camera(mut commands: Commands) {
         Msaa::default(),
         PanOrbitCamera {
             focus: Vec3::ZERO,
+            pan_smoothness: 0.0,
             radius: Some(500.0), // TODO: scale proportional to G
             touch_controls: TouchControls::TwoFingerOrbit,
             trackpad_behavior: TrackpadBehavior::blender_default(),
@@ -235,10 +236,10 @@ fn update_barycenter(
 ) {
     **previous_barycenter = **current_barycenter;
 
-    let positions: Vector = bodies.iter().map(|b| **b.position * b.mass.value()).sum();
+    let weighted_positions: Vector = bodies.iter().map(|b| **b.position * b.mass.value()).sum();
     let masses: Scalar = bodies.iter().map(|b| b.mass.value()).sum();
 
-    **current_barycenter = Position::from(positions / masses);
+    **current_barycenter = Position::from(weighted_positions / masses);
 }
 
 fn follow_barycenter(
@@ -247,7 +248,8 @@ fn follow_barycenter(
     current_barycenter: Res<CurrentBarycenter>,
 ) {
     if current_barycenter.is_finite() {
-        pan_orbit_camera.target_focus = current_barycenter.as_vec3(); // TODO: fix move jitter?
+        pan_orbit_camera.force_update = true;
+        pan_orbit_camera.target_focus = current_barycenter.as_vec3();
         gizmos.cross(current_barycenter.as_vec3(), 5.0, css::WHITE);
     }
 }
