@@ -39,7 +39,7 @@ struct G(Scalar);
 
 impl Default for G {
     fn default() -> Self {
-        Self(10.0)
+        Self(50.0)
     }
 }
 
@@ -221,12 +221,23 @@ fn apply_gravitation(
 
     while let Some([mut body1, mut body2]) = body_pairs.fetch_next() {
         let direction = **body2.position - **body1.position;
+        let distance_squared = direction.length_squared();
+
+        if distance_squared < Scalar::EPSILON {
+            continue;
+        }
+
         let mass1 = *Mass::from(*body1.mass) as Scalar;
         let mass2 = *Mass::from(*body2.mass) as Scalar;
-        let force = **g * mass1 * mass2 / direction.length_squared() / 2.0;
 
-        **body1.linear_velocity += force * direction * delta_time;
-        **body2.linear_velocity -= force * direction * delta_time;
+        let force_magnitude = **g * mass1 * mass2 / distance_squared;
+        let direction_normalized = direction / distance_squared.sqrt();
+
+        let acceleration1 = force_magnitude * direction_normalized / mass1;
+        let acceleration2 = -force_magnitude * direction_normalized / mass2;
+
+        **body1.linear_velocity += acceleration1 * delta_time;
+        **body2.linear_velocity += acceleration2 * delta_time;
     }
 }
 
