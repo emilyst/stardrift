@@ -27,9 +27,10 @@ use rand_chacha::ChaCha8Rng;
 #[derive(Resource, Deref, DerefMut, Debug, Clone, PartialEq)]
 struct SimulationRng(ChaCha8Rng);
 
+// TODO: use a seedable RNG and make the seed configurable
 impl Default for SimulationRng {
     fn default() -> Self {
-        Self(ChaCha8Rng::seed_from_u64(0))
+        Self(ChaCha8Rng::from_rng(&mut rand::rng()))
     }
 }
 
