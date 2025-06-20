@@ -38,7 +38,7 @@ struct G(Scalar);
 
 impl Default for G {
     fn default() -> Self {
-        Self(100.0)
+        Self(1000.0)
     }
 }
 
@@ -61,8 +61,8 @@ struct PreviousBarycenter(Position);
 struct BodyBundle {
     collider: Collider,
     gravity_scale: GravityScale,
-    transform: Transform,
     rigid_body: RigidBody,
+    transform: Transform,
 }
 
 impl BodyBundle {
@@ -143,7 +143,6 @@ fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
     ));
 }
 
-// TODO: scale positions proportional to G
 fn spawn_bodies(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -181,39 +180,48 @@ fn random_unit_vector(rng: &mut SimulationRng) -> Vector {
 fn apply_gravitation(
     time: ResMut<Time>,
     g: Res<G>,
-    mut bodies: Query<RigidBodyQuery, Without<RigidBodyDisabled>>,
+    mut bodies: Query<
+        (&Transform, &ComputedMass, &mut LinearVelocity),
+        (With<RigidBody>, Without<RigidBodyDisabled>),
+    >,
 ) {
     let delta_time = time.delta_secs_f64();
     let mut body_pairs = bodies.iter_combinations_mut();
 
-    const MIN_DISTANCE: Scalar = 0.5;
+    const MIN_DISTANCE: Scalar = 1.0;
     const MAX_FORCE: Scalar = 100000.0;
     const MIN_DISTANCE_SQUARED: Scalar = MIN_DISTANCE * MIN_DISTANCE;
 
-    while let Some([mut body1, mut body2]) = body_pairs.fetch_next() {
-        let direction = **body2.position - **body1.position;
-        let distance_squared = direction.length_squared();
+    while let Some(
+        [
+            (transform1, computed_mass1, mut linear_velocity1),
+            (transform2, computed_mass2, mut linear_velocity2),
+        ],
+    ) = body_pairs.fetch_next()
+    {
+        let direction = Vector::from(transform2.translation) - Vector::from(transform1.translation);
+        let distance_squared = direction.length_squared() as Scalar;
 
         if distance_squared < MIN_DISTANCE_SQUARED {
             continue;
         }
 
-        let mass1 = body1.mass.value();
-        let mass2 = body2.mass.value();
         let distance = distance_squared.sqrt();
         let direction_normalized = direction / distance;
-        let force_magnitude = (**g * mass1 * mass2 / distance_squared).min(MAX_FORCE);
-        let acceleration1 = force_magnitude * direction_normalized / mass1;
-        let acceleration2 = -force_magnitude * direction_normalized / mass2;
+        let force_magnitude = (**g * computed_mass1.value() * computed_mass2.value()
+            / distance_squared)
+            .min(MAX_FORCE);
+        let acceleration1 = force_magnitude * direction_normalized * computed_mass1.inverse();
+        let acceleration2 = -force_magnitude * direction_normalized * computed_mass2.inverse();
 
-        **body1.linear_velocity += acceleration1 * delta_time;
-        **body2.linear_velocity += acceleration2 * delta_time;
+        **linear_velocity1 += acceleration1 * delta_time;
+        **linear_velocity2 += acceleration2 * delta_time;
     }
 }
 
 // TODO: test
 fn update_barycenter(
-    bodies: Query<RigidBodyQueryReadOnly>,
+    bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Without<RigidBodyDisabled>)>,
     mut current_barycenter: ResMut<CurrentBarycenter>,
     mut previous_barycenter: ResMut<PreviousBarycenter>,
 ) {
@@ -221,7 +229,10 @@ fn update_barycenter(
 
     let (weighted_positions, total_mass): (Vector, Scalar) = bodies
         .iter()
-        .map(|b| (**b.position * b.mass.value(), b.mass.value()))
+        .map(|(transform, mass)| {
+            let mass = mass.value();
+            (Vector::from(transform.translation) * mass, mass)
+        })
         .fold((Vector::ZERO, 0.0), |(pos_acc, mass_acc), (pos, mass)| {
             (pos_acc + pos, mass_acc + mass)
         });
@@ -257,15 +268,15 @@ fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit
 fn pause_physics_on_space(
     keys: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
-    enabled_rigid_bodies: Query<(Entity, RigidBodyQuery), Without<RigidBodyDisabled>>,
-    disabled_rigid_bodies: Query<(Entity, RigidBodyQuery), With<RigidBodyDisabled>>,
+    enabled_rigid_bodies: Query<Entity, (With<RigidBody>, Without<RigidBodyDisabled>)>,
+    disabled_rigid_bodies: Query<Entity, (With<RigidBody>, With<RigidBodyDisabled>)>,
 ) {
     if keys.just_pressed(KeyCode::Space) {
-        for (entity, _) in &enabled_rigid_bodies {
+        for entity in &enabled_rigid_bodies {
             commands.entity(entity).insert(RigidBodyDisabled);
         }
 
-        for (entity, _) in &disabled_rigid_bodies {
+        for entity in &disabled_rigid_bodies {
             commands.entity(entity).remove::<RigidBodyDisabled>();
         }
     }
