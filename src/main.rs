@@ -169,11 +169,12 @@ fn spawn_bodies(
 fn random_unit_vector(rng: &mut SimulationRng) -> Vector {
     let theta = rng.random_range(0.0..2.0 * std::f64::consts::PI);
     let phi = libm::acos(rng.random_range(-1.0..1.0));
+    let r = 1.0;
 
     Vector::new(
-        1.0 * libm::sin(phi) * libm::cos(theta),
-        1.0 * libm::sin(phi) * libm::sin(theta),
-        1.0 * libm::cos(phi),
+        r * libm::sin(phi) * libm::cos(theta),
+        r * libm::sin(phi) * libm::sin(theta),
+        r * libm::cos(phi),
     )
 }
 
