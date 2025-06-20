@@ -186,9 +186,8 @@ fn apply_gravitation(
     let delta_time = time.delta_secs_f64();
     let mut body_pairs = bodies.iter_combinations_mut();
 
-    // Configuration constants
-    const MIN_DISTANCE: Scalar = 0.5; // Minimum allowed distance between bodies
-    const MAX_FORCE: Scalar = 1000.0; // Maximum force magnitude to prevent numerical explosions
+    const MIN_DISTANCE: Scalar = 0.5;
+    const MAX_FORCE: Scalar = 100000.0;
     const MIN_DISTANCE_SQUARED: Scalar = MIN_DISTANCE * MIN_DISTANCE;
 
     while let Some([mut body1, mut body2]) = body_pairs.fetch_next() {
