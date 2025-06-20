@@ -3,7 +3,6 @@ mod diagnostics_hud;
 
 use crate::diagnostics::SimulationDiagnosticsPlugin;
 use crate::diagnostics_hud::DiagnosticsHudPlugin;
-use avian3d::math::AsF32;
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use avian3d::prelude::*;
@@ -39,7 +38,7 @@ struct G(Scalar);
 
 impl Default for G {
     fn default() -> Self {
-        Self(50.0)
+        Self(100.0)
     }
 }
 
@@ -62,36 +61,17 @@ struct PreviousBarycenter(Position);
 struct BodyBundle {
     collider: Collider,
     gravity_scale: GravityScale,
-    material3d: MeshMaterial3d<StandardMaterial>,
-    mesh3d: Mesh3d,
-    position: Transform,
+    transform: Transform,
     rigid_body: RigidBody,
 }
 
 impl BodyBundle {
-    fn new(
-        materials: &mut ResMut<Assets<StandardMaterial>>,
-        meshes: &mut ResMut<Assets<Mesh>>,
-        position: Transform,
-        radius: Scalar,
-    ) -> Self {
-        // TODO: black body curve based on mass/temp
-        let color = Color::LinearRgba(LinearRgba::rgb(10000.0, 0.0, 100.0));
-        let mesh = meshes.add(Sphere::new(radius as f32));
-        let material = materials.add(StandardMaterial {
-            base_color: color,
-            // emissive: color.to_linear(),
-            ..default()
-        });
-
+    fn new(transform: Transform, radius: Scalar) -> Self {
         Self {
             collider: Collider::sphere(radius),
             gravity_scale: GravityScale(0.0),
-            // mass: Mass(100.0), // TODO: scale with collider radius
-            material3d: MeshMaterial3d(material),
-            mesh3d: Mesh3d(mesh.clone()),
-            position,
             rigid_body: RigidBody::Dynamic,
+            transform,
         }
     }
 }
@@ -128,7 +108,6 @@ fn main() {
         FixedUpdate,
         (
             // TODO: move these systems into a Simulation struct
-            apply_initial_impulses,
             apply_gravitation,
             update_barycenter,
             follow_barycenter,
@@ -140,10 +119,9 @@ fn main() {
     app.run();
 }
 
-fn spawn_camera(mut commands: Commands) {
+fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
     commands.spawn((
         Name::new("Main Camera"),
-        Transform::from_translation(Vec3::NEG_Z * 500.0).looking_at(Vec3::ZERO, Vec3::Y),
         Camera {
             hdr: true,
             clear_color: ClearColorConfig::Custom(Color::BLACK),
@@ -156,7 +134,7 @@ fn spawn_camera(mut commands: Commands) {
         PanOrbitCamera {
             focus: Vec3::ZERO,
             pan_smoothness: 0.0,
-            radius: Some(500.0), // TODO: scale proportional to G
+            radius: Some((**body_count * **body_count / 3) as f32),
             touch_controls: TouchControls::TwoFingerOrbit,
             trackpad_behavior: TrackpadBehavior::blender_default(),
             trackpad_pinch_to_zoom_enabled: true,
@@ -173,40 +151,30 @@ fn spawn_bodies(
     mut rng: ResMut<SimulationRng>,
     body_count: Res<BodyCount>,
 ) {
-    let BodyCount(body_count) = *body_count;
+    for _ in 0..**body_count {
+        let position = random_unit_vector(&mut *rng) * (**body_count * **body_count / 10) as f64;
+        let transform = Transform::from_translation(position.as_vec3());
+        let radius = rng.random_range(0.5..=4.0);
 
-    for _ in 0..body_count {
-        commands.spawn(BodyBundle::new(
-            &mut materials,
-            &mut meshes,
-            Transform::from_translation(random_translation_within_radius(&mut *rng, 50.0).f32()),
-            rng.random_range(0.5..=1.0),
-        ));
+        let material = MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::LinearRgba(LinearRgba::rgb(10000.0, 0.0, 100.0)),
+            ..default()
+        }));
+        let mesh = Mesh3d(meshes.add(Sphere::new(radius as f32)));
+
+        commands.spawn((BodyBundle::new(transform, radius), material, mesh));
     }
 }
 
-fn random_translation_within_radius(rng: &mut SimulationRng, radius: Scalar) -> Vector {
+fn random_unit_vector(rng: &mut SimulationRng) -> Vector {
     let theta = rng.random_range(0.0..2.0 * std::f64::consts::PI);
     let phi = libm::acos(rng.random_range(-1.0..1.0));
-    let r = radius * libm::cbrt(rng.random_range(0.0..1.0));
 
     Vector::new(
-        r * libm::sin(phi) * libm::cos(theta),
-        r * libm::sin(phi) * libm::sin(theta),
-        r * libm::cos(phi),
+        1.0 * libm::sin(phi) * libm::cos(theta),
+        1.0 * libm::sin(phi) * libm::sin(theta),
+        1.0 * libm::cos(phi),
     )
-}
-
-// TODO: scale forces proportional to G
-fn apply_initial_impulses(
-    mut rng: ResMut<SimulationRng>,
-    mut bodies: Query<RigidBodyQuery, Without<RigidBodyDisabled>>,
-) {
-    for mut body in &mut bodies {
-        if **body.linear_velocity == Vector::ZERO {
-            **body.linear_velocity = random_translation_within_radius(&mut rng, 15.0);
-        }
-    }
 }
 
 // TODO: test
@@ -268,11 +236,16 @@ fn follow_barycenter(
     mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
     mut gizmos: Gizmos,
     current_barycenter: Res<CurrentBarycenter>,
+    body_count: Res<BodyCount>,
 ) {
     if current_barycenter.is_finite() {
         pan_orbit_camera.force_update = true;
         pan_orbit_camera.target_focus = current_barycenter.as_vec3();
-        gizmos.cross(current_barycenter.as_vec3(), 5.0, css::WHITE);
+        gizmos.cross(
+            current_barycenter.as_vec3(),
+            libm::cbrtf((**body_count * **body_count / 3) as f32),
+            css::WHITE,
+        );
     }
 }
 
