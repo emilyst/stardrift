@@ -1,0 +1,213 @@
+# Many Body Simulation
+
+A high-performance 3D gravitational many-body simulation built with Rust, Bevy game engine, and Avian3D physics. This
+project simulates the gravitational interactions between multiple celestial bodies with real-time visualization and
+interactive camera controls.
+
+## Features
+
+### Core Simulation
+
+- **N-body gravitational physics**: Accurate gravitational force calculations between all bodies
+- **High precision**: Uses f64 floating-point precision for enhanced accuracy
+- **Deterministic simulation**: Physics use enhanced determinism for reproducible results
+- **Parallel processing**: Multi-threaded physics calculations for optimal performance
+- **Dynamic barycenter tracking**: Real-time calculation and visualization of the system's center of mass
+
+### Visualization & Controls
+
+- **3D real-time rendering**: Smooth 3D visualization with Bevy's rendering pipeline
+- **Interactive camera**: Pan, orbit, and zoom controls
+- **Touch support**: Touch controls for mobile and tablet devices
+- **Visual effects**: Bloom effects and tone mapping for enhanced visual quality
+- **Barycenter visualization**: Cross-hair indicator showing the system's center of mass
+
+### User Interface
+
+- **Real-time diagnostics HUD**: On-screen display showing:
+    - Frame rate (FPS)
+    - Frame count
+    - Barycenter coordinates (X, Y, Z)
+    - Camera position (X, Y, Z)
+- **Pause/Resume functionality**: Space bar to pause and resume the simulation
+
+### Platform Support
+
+- **Native desktop**: Windows, macOS, and Linux support
+- **WebAssembly (WASM)**: Browser-based version with WebGL2 support
+
+## Installation
+
+### Prerequisites
+
+- **Rust**: Install from [rustup.rs](https://rustup.rs/)
+- **Git**: For cloning the repository
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/emilyst/many_body_simulation.git
+cd many_body_simulation
+```
+
+### Native Build
+
+```bash
+# Development build (faster compilation)
+cargo run --features dev
+
+# Release build (optimized performance)
+cargo run --release
+```
+
+### WebAssembly Build
+
+The project includes a convenient build script for WASM deployment:
+
+```bash
+# Make the script executable (Unix/Linux/macOS)
+chmod +x build_wasm.sh
+
+# Run the build script
+./build_wasm.sh
+```
+
+The script will:
+
+1. Install the `wasm32-unknown-unknown` target
+2. Install `wasm-bindgen-cli` if not present
+3. Build the project with WASM optimizations
+4. Generate web bindings
+5. Compress the WASM file with gzip
+6. Copy the HTML file to the output directory
+
+After building, serve the `out/` directory with any HTTP server:
+
+```bash
+# Using Python
+python -m http.server 8000 --directory out
+
+# Using Node.js (if you have http-server installed)
+npx http-server out
+
+# Then open http://localhost:8000 in your browser
+```
+
+## Usage
+
+### Controls
+
+| Key/Action      | Function                                   |
+|-----------------|--------------------------------------------|
+| **Mouse**       | Pan and orbit camera around the simulation |
+| **Mouse Wheel** | Zoom in/out                                |
+| **Space**       | Pause/Resume simulation                    |
+| **Escape**      | Quit application                           |
+| **Touch**       | Pan, orbit, and zoom (mobile/tablet)       |
+
+### Camera Behavior
+
+- The camera automatically follows the barycenter (center of mass) of the system
+- Pan and orbit controls allow you to explore the simulation from different angles
+- The camera smoothly tracks the movement of the gravitational system
+
+### Simulation Parameters
+
+The simulation can be customized by modifying the constants in the source code:
+
+- **Body count**: Number of bodies in the simulation (default: configurable)
+- **Gravitational constant**: Strength of gravitational interactions
+
+## Technical Details
+
+### Architecture
+
+- **Engine**: Bevy 0.16.* (Entity Component System game engine)
+- **Physics**: Avian3D with f64 precision and parallel processing
+- **Rendering**: Bevy's PBR (Physically Based Rendering) pipeline
+- **Random Number Generation**: ChaCha8 algorithm for efficient PRNG
+
+### Performance Optimizations
+
+- **Build Profiles**:
+    - Development: Fast compilation with basic optimizations
+    - Release: Full optimizations with debug info stripped
+    - Distribution: Link-time optimization (LTO) and single codegen unit
+    - WASM: Size-optimized build for web deployment
+- **Parallel Processing**: Multi-threaded physics calculations
+- **Memory Efficiency**: Optimized data structures and minimal allocations
+- **Rendering Optimizations**: Efficient mesh and material management
+
+### Dependencies
+
+#### Core Dependencies
+
+- **bevy**: Game engine and rendering framework
+- **avian3d**: 3D physics engine with gravitational simulation support
+- **bevy_panorbit_camera**: Advanced camera controls with touch support
+- **libm**: Mathematical functions for no-std environments
+- **rand**: Random number generation
+- **rand_chacha**: ChaCha random number generator
+
+#### WASM-Specific Dependencies
+
+- **wasm-bindgen**: Rust-WASM bindings
+- **web-sys**: Web API bindings
+- **getrandom**: With `wasm_js` backend
+
+### Browser Requirements (WASM Version)
+
+- **WebGL2 & WebAssembly support**: Required for 3D rendering and application execution
+- **Minimum browser versions**:
+    - Chrome 57+ (WebAssembly requirement)
+    - Firefox 52+ (WebAssembly requirement)
+    - Safari 15+ (WebGL2 requirement)
+    - Edge 79+ (Modern Chromium-based Edge)
+- **Hardware acceleration**: Required for optimal performance
+
+## Development
+
+### Development Features
+
+Enable development features for enhanced debugging:
+
+```bash
+cargo run --features dev
+```
+
+Development features include:
+
+- Asset hot-reloading
+- File watching
+- Enhanced debugging information
+- Dynamic linking for faster compilation
+
+## Troubleshooting
+
+### Common Issues
+
+**WASM build fails**: Ensure you have the latest version of `wasm-bindgen-cli`:
+
+```bash
+cargo install wasm-bindgen-cli --force
+```
+
+**WebGL2 not supported**: Use a modern browser or enable hardware acceleration in browser settings.
+
+**Poor performance**: Try the native build for better performance, or reduce the number of bodies in the simulation.
+
+**Build errors**: Ensure you have the latest Rust toolchain:
+
+```bash
+rustup update
+```
+
+## License
+
+License TBD
+
+## Acknowledgments
+
+- Built with [Bevy](https://bevyengine.org/) game engine
+- Physics simulation powered by [Avian3D](https://github.com/Jondolf/avian)
+- Camera controls provided by [bevy_panorbit_camera](https://github.com/johanhelsing/bevy_panorbit_camera)
