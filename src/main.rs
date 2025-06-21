@@ -61,25 +61,6 @@ struct CurrentBarycenter(Vector);
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
 struct PreviousBarycenter(Vector);
 
-#[derive(Bundle, Clone, Debug, Default)]
-struct BodyBundle {
-    collider: Collider,
-    gravity_scale: GravityScale,
-    rigid_body: RigidBody,
-    transform: Transform,
-}
-
-impl BodyBundle {
-    fn new(transform: Transform, radius: Scalar) -> Self {
-        Self {
-            collider: Collider::sphere(radius),
-            gravity_scale: GravityScale(0.0),
-            rigid_body: RigidBody::Dynamic,
-            transform,
-        }
-    }
-}
-
 fn main() {
     let mut app = App::new();
 
@@ -159,20 +140,27 @@ fn spawn_bodies(
     mut rng: ResMut<SimulationRng>,
     body_count: Res<BodyCount>,
 ) {
+    let material = materials.add(StandardMaterial {
+        base_color: Color::LinearRgba(LinearRgba::rgb(10000.0, 0.0, 100.0)),
+        ..default()
+    });
+
     for _ in 0..**body_count {
         let body_distribution_sphere_radius =
             min_sphere_radius_for_surface_distribution(**body_count, 100.0, 0.001);
         let position = random_unit_vector(&mut *rng) * body_distribution_sphere_radius;
         let transform = Transform::from_translation(position.as_vec3());
-        let body_radius = rng.random_range(2.0..=3.0);
+        let radius = rng.random_range(2.0..=3.0);
+        let mesh = meshes.add(Sphere::new(radius as f32));
 
-        let material = MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::LinearRgba(LinearRgba::rgb(10000.0, 0.0, 100.0)),
-            ..default()
-        }));
-        let mesh = Mesh3d(meshes.add(Sphere::new(body_radius as f32)));
-
-        commands.spawn((BodyBundle::new(transform, body_radius), material, mesh));
+        commands.spawn((
+            transform,
+            Collider::sphere(radius),
+            GravityScale(0.0),
+            RigidBody::Dynamic,
+            MeshMaterial3d(material.clone()),
+            Mesh3d(mesh),
+        ));
     }
 }
 
