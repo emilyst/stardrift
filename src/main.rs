@@ -154,7 +154,7 @@ fn spawn_bodies(
     for _ in 0..**body_count {
         let position = random_unit_vector(&mut *rng) * (**body_count * **body_count / 10) as f64;
         let transform = Transform::from_translation(position.as_vec3());
-        let radius = rng.random_range(0.5..=4.0);
+        let radius = rng.random_range(0.5..=10.0);
 
         let material = MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::LinearRgba(LinearRgba::rgb(10000.0, 0.0, 100.0)),
@@ -167,15 +167,21 @@ fn spawn_bodies(
 }
 
 fn random_unit_vector(rng: &mut SimulationRng) -> Vector {
-    let theta = rng.random_range(0.0..2.0 * std::f64::consts::PI);
-    let phi = libm::acos(rng.random_range(-1.0..1.0));
-    let r = 1.0;
+    // Use Box-Muller transform to generate normally distributed values
+    let u1: f64 = rng.random::<f64>();
+    let u2: f64 = rng.random::<f64>();
+    let u3: f64 = rng.random::<f64>();
+    let u4: f64 = rng.random::<f64>();
 
-    Vector::new(
-        r * libm::sin(phi) * libm::cos(theta),
-        r * libm::sin(phi) * libm::sin(theta),
-        r * libm::cos(phi),
-    )
+    // Box-Muller transform for first two normal values
+    let z1 = libm::sqrt(-2.0 * libm::log(u1)) * libm::cos(2.0 * std::f64::consts::PI * u2);
+    let z2 = libm::sqrt(-2.0 * libm::log(u1)) * libm::sin(2.0 * std::f64::consts::PI * u2);
+
+    // Box-Muller transform for third normal value
+    let z3 = libm::sqrt(-2.0 * libm::log(u3)) * libm::cos(2.0 * std::f64::consts::PI * u4);
+
+    // Normalize to unit sphere
+    Vector::new(z1, z2, z3) / libm::sqrt(z1 * z1 + z2 * z2 + z3 * z3)
 }
 
 // TODO: test
@@ -280,6 +286,65 @@ fn pause_physics_on_space(
 
         for entity in &disabled_rigid_bodies {
             commands.entity(entity).remove::<RigidBodyDisabled>();
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use statrs::distribution::{ChiSquared, ContinuousCDF};
+
+    #[test]
+    fn test_chi_square_uniformity_of_random_unit_vector() {
+        let mut rng = SimulationRng(ChaCha8Rng::seed_from_u64(0));
+        let count_of_samples = 100_000;
+        let count_of_bins = 10;
+
+        let mut bins = vec![0; count_of_bins];
+
+        for _ in 0..count_of_samples {
+            let v = random_unit_vector(&mut rng);
+            let bin_index = ((v.z + 1.0) * count_of_bins as f64 / 2.0).floor() as usize;
+            let bin_index = bin_index.min(count_of_bins - 1);
+            bins[bin_index] += 1;
+        }
+
+        let expected_count_per_bin = count_of_samples as f64 / count_of_bins as f64;
+        let chi_square: f64 = bins
+            .iter()
+            .map(|&observed| {
+                let diff = observed as f64 - expected_count_per_bin;
+                diff * diff / expected_count_per_bin
+            })
+            .sum();
+
+        let degrees_of_freedom = (count_of_bins - 1) as f64;
+        let chi_squared_distribution = ChiSquared::new(degrees_of_freedom).unwrap();
+        let p_value = 1.0 - chi_squared_distribution.cdf(chi_square);
+
+        assert!(
+            p_value > 0.01,
+            "P-value too low: {:.4}. Chi-square: {:.4}, degrees of freedom: {}",
+            p_value,
+            chi_square,
+            degrees_of_freedom
+        );
+    }
+
+    #[test]
+    fn test_random_unit_vector_properties() {
+        let mut rng = SimulationRng(ChaCha8Rng::seed_from_u64(0));
+
+        for _ in 0..100000 {
+            let v = random_unit_vector(&mut rng);
+            let length = libm::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+
+            assert!(
+                (length - 1.0).abs() < 1e-10,
+                "Vector length should be 1, but was: {}",
+                length
+            );
         }
     }
 }

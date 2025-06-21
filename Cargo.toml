@@ -29,6 +29,9 @@ libm = "*"
 rand = "0.9.*"
 rand_chacha = "0.9.*"
 
+[dev-dependencies]
+statrs = "*"
+
 [dependencies.avian3d]
 version = "*"
 default-features = false
