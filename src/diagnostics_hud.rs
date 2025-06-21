@@ -11,13 +11,16 @@ static REGULAR_OTF_BYTES: &[u8] = include_bytes!("../assets/fonts/BerkeleyMono-R
 static BOLD_OTF_BYTES: &[u8] = include_bytes!("../assets/fonts/BerkeleyMono-Bold.otf");
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct FpsValueText;
+struct FrameCountTextNode;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct BarycenterValueText;
+struct FpsTextNode;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct CameraValueText;
+struct BarycenterTextNode;
+
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct CameraTextNode;
 
 // TODO: change detection
 #[derive(Resource, Reflect, Debug)]
@@ -115,7 +118,23 @@ impl DiagnosticsHudPlugin {
                     },
                     children![
                         (Text::new("FPS"), bold_text_font.clone()),
-                        (FpsValueText, Text::new("-"), regular_text_font.clone())
+                        (FpsTextNode, Text::new("-"), regular_text_font.clone())
+                    ],
+                ),
+                (
+                    Node {
+                        display: Display::Flex,
+                        justify_content: JustifyContent::SpaceBetween,
+                        column_gap: Val::Px(20.0),
+                        ..default()
+                    },
+                    children![
+                        (Text::new("Frame count"), bold_text_font.clone()),
+                        (
+                            FrameCountTextNode,
+                            Text::new("-"),
+                            regular_text_font.clone()
+                        )
                     ],
                 ),
                 (
@@ -128,7 +147,7 @@ impl DiagnosticsHudPlugin {
                     children![
                         (Text::new("Barycenter"), bold_text_font.clone()),
                         (
-                            BarycenterValueText,
+                            BarycenterTextNode,
                             Text::new("-"),
                             regular_text_font.clone()
                         )
@@ -143,7 +162,7 @@ impl DiagnosticsHudPlugin {
                     },
                     children![
                         (Text::new("Camera"), bold_text_font),
-                        (CameraValueText, Text::new("-"), regular_text_font)
+                        (CameraTextNode, Text::new("-"), regular_text_font)
                     ],
                 )
             ],
@@ -154,23 +173,37 @@ impl DiagnosticsHudPlugin {
         state.refresh_timer.tick(time.delta());
     }
 
-    fn update_fps_value_text(
+    fn update_frame_count_text(
         diagnostics: Res<DiagnosticsStore>,
-        mut fps_hud_value: Single<&mut Text, With<FpsValueText>>,
-        state: Res<DiagnosticsHudState>,
+        mut frame_count_text: Single<&mut Text, With<FrameCountTextNode>>,
+        state: ResMut<DiagnosticsHudState>,
     ) {
         if state.refresh_timer.finished() {
-            if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
-                if let Some(fps) = fps.smoothed() {
-                    ***fps_hud_value = format!("{fps:.2}");
+            if let Some(frame_count) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FRAME_COUNT) {
+                if let Some(fps) = frame_count.smoothed() {
+                    ***frame_count_text = format!("{fps}");
                 }
             }
         }
     }
 
-    fn update_barycenter_value_text(
+    fn update_fps_text(
         diagnostics: Res<DiagnosticsStore>,
-        mut barycenter_value_text: Single<&mut Text, With<BarycenterValueText>>,
+        mut fps_text: Single<&mut Text, With<FpsTextNode>>,
+        state: Res<DiagnosticsHudState>,
+    ) {
+        if state.refresh_timer.finished() {
+            if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
+                if let Some(fps) = fps.smoothed() {
+                    ***fps_text = format!("{fps:.2}");
+                }
+            }
+        }
+    }
+
+    fn update_barycenter_text(
+        diagnostics: Res<DiagnosticsStore>,
+        mut barycenter_text: Single<&mut Text, With<BarycenterTextNode>>,
         state: Res<DiagnosticsHudState>,
     ) {
         if state.refresh_timer.finished() {
@@ -184,7 +217,7 @@ impl DiagnosticsHudPlugin {
                     barycenter_y.smoothed(),
                     barycenter_z.smoothed(),
                 ) {
-                    ***barycenter_value_text = format!(
+                    ***barycenter_text = format!(
                         "(X: {:.2}, Y: {:.2}, Z: {:.2})",
                         barycenter_x, barycenter_y, barycenter_z,
                     );
@@ -193,9 +226,9 @@ impl DiagnosticsHudPlugin {
         }
     }
 
-    fn update_camera_value_text(
+    fn update_camera_text(
         diagnostics: Res<DiagnosticsStore>,
-        mut camera_value_text: Single<&mut Text, With<CameraValueText>>,
+        mut camera_text: Single<&mut Text, With<CameraTextNode>>,
         state: Res<DiagnosticsHudState>,
     ) {
         if state.refresh_timer.finished() {
@@ -209,7 +242,7 @@ impl DiagnosticsHudPlugin {
                     camera_y.smoothed(),
                     camera_z.smoothed(),
                 ) {
-                    ***camera_value_text = format!(
+                    ***camera_text = format!(
                         "(X: {:.2}, Y: {:.2}, Z: {:.2})",
                         camera_x, camera_y, camera_z,
                     );
@@ -232,9 +265,10 @@ impl Plugin for DiagnosticsHudPlugin {
             Update,
             (
                 Self::advance_refresh_timer,
-                Self::update_fps_value_text,
-                Self::update_barycenter_value_text,
-                Self::update_camera_value_text,
+                Self::update_frame_count_text,
+                Self::update_fps_text,
+                Self::update_barycenter_text,
+                Self::update_camera_text,
             ),
         );
     }
