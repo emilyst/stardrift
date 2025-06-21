@@ -123,7 +123,7 @@ impl DiagnosticsHudPlugin {
                     hud_row_node.clone(),
                     children![
                         (Text::new("FPS"), bold_text_font.clone()),
-                        (FpsTextNode, Text::new("-"), regular_text_font.clone())
+                        (FpsTextNode, Text::new("-"), regular_text_font.clone()),
                     ],
                 ),
                 (
@@ -134,7 +134,7 @@ impl DiagnosticsHudPlugin {
                             FrameCountTextNode,
                             Text::new("-"),
                             regular_text_font.clone()
-                        )
+                        ),
                     ],
                 ),
                 (
@@ -145,14 +145,14 @@ impl DiagnosticsHudPlugin {
                             BarycenterTextNode,
                             Text::new("-"),
                             regular_text_font.clone()
-                        )
+                        ),
                     ],
                 ),
                 (
                     hud_row_node.clone(),
                     children![
                         (Text::new("Camera"), bold_text_font),
-                        (CameraTextNode, Text::new("-"), regular_text_font)
+                        (CameraTextNode, Text::new("-"), regular_text_font),
                     ],
                 )
             ],
@@ -208,7 +208,7 @@ impl DiagnosticsHudPlugin {
                     barycenter_z.smoothed(),
                 ) {
                     ***barycenter_text = format!(
-                        "(X: {:.2}, Y: {:.2}, Z: {:.2})",
+                        "({:.2}, {:.2}, {:.2})",
                         barycenter_x, barycenter_y, barycenter_z,
                     );
                 }
@@ -232,10 +232,8 @@ impl DiagnosticsHudPlugin {
                     camera_y.smoothed(),
                     camera_z.smoothed(),
                 ) {
-                    ***camera_text = format!(
-                        "(X: {:.2}, Y: {:.2}, Z: {:.2})",
-                        camera_x, camera_y, camera_z,
-                    );
+                    ***camera_text =
+                        format!("({:.2}, {:.2}, {:.2})", camera_x, camera_y, camera_z,);
                 }
             }
         }
