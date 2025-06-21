@@ -21,34 +21,24 @@ strip = "debuginfo"
 inherits = "release"
 codegen-units = 1
 lto = true
-opt-level = "z"
 strip = true
 
 [profile.wasm]
-inherits = "release"
-codegen-units = 1
-debug = 0
-lto = true
-opt-level = "z"
-strip = true
+inherits = "distribution"
 
 [dependencies]
+bevy = { version = "0.16.*", features = ["default_no_std"] }
 bevy_panorbit_camera = "*"
+libm = "0.2.15"
 rand = "0.9.*"
 rand_chacha = "0.9.*"
-libm = "0.2.15"
 
-[dev-dependencies]
-statrs = "*"
-
-# Native-specific avian3d with parallel processing
 [dependencies.avian3d]
 version = "*"
 default-features = false
 features = [
     "3d",
     "bevy_diagnostic",
-    "collider-from-mesh",
     "debug-plugin",
     "diagnostic_ui",
     "enhanced-determinism",
@@ -57,9 +47,8 @@ features = [
     "parry-f64",
 ]
 
-[dependencies.bevy]
-version = "0.16.*"
-features = ["libm", "default_no_std"]
+[dev-dependencies]
+statrs = "*"
 
 [target.wasm32-unknown-unknown.dependencies]
 wasm-bindgen = "0.*"
