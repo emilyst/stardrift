@@ -114,7 +114,7 @@ const BLUE_LOG_OFFSET: f64 = 10.0;
 ///     4.0
 /// );
 /// ```
-pub fn create_emissive_material_from_temperature(
+pub(crate) fn create_emissive_material_from_temperature(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     temperature: f64,
     bloom_intensity: f64,
@@ -155,7 +155,7 @@ pub fn create_emissive_material_from_temperature(
 /// // Create a subtle bloom for warm light
 /// let warm_bloom = kelvin_to_bloom_color(2700.0, 1.5);
 /// ```
-pub fn kelvin_to_bloom_color(temperature: f64, bloom_intensity: f64) -> Color {
+fn kelvin_to_bloom_color(temperature: f64, bloom_intensity: f64) -> Color {
     let base_rgb = kelvin_to_rgb(temperature);
     let (r, g, b) = intensify_for_bloom(base_rgb, bloom_intensity);
     Color::LinearRgba(LinearRgba::rgb(r as f32, g as f32, b as f32))
@@ -194,7 +194,7 @@ pub fn kelvin_to_bloom_color(temperature: f64, bloom_intensity: f64) -> Color {
 /// // Enhance a dim red color
 /// let enhanced = intensify_for_bloom((0.3, 0.1, 0.1), 2.0);
 /// ```
-pub fn intensify_for_bloom(rgb: (f64, f64, f64), intensity: f64) -> (f64, f64, f64) {
+fn intensify_for_bloom(rgb: (f64, f64, f64), intensity: f64) -> (f64, f64, f64) {
     let (r, g, b) = rgb;
 
     // Scale based on luminance with ITU-R BT.601 color shifting
@@ -231,7 +231,7 @@ pub fn intensify_for_bloom(rgb: (f64, f64, f64), intensity: f64) -> (f64, f64, f
 /// // Get the color of a cool LED
 /// let cool_white = kelvin_to_bevy_color(6500.0);
 /// ```
-pub fn kelvin_to_bevy_color(temperature: f64) -> Color {
+fn kelvin_to_bevy_color(temperature: f64) -> Color {
     let (r, g, b) = kelvin_to_rgb(temperature);
     Color::LinearRgba(LinearRgba::rgb(r as f32, g as f32, b as f32))
 }
@@ -297,7 +297,7 @@ pub fn kelvin_to_bevy_color(temperature: f64) -> Color {
 /// accurate color temperature conversion for the range 1000K - 40000K.
 ///
 /// See https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html.
-pub fn kelvin_to_rgb(temperature: f64) -> (f64, f64, f64) {
+fn kelvin_to_rgb(temperature: f64) -> (f64, f64, f64) {
     let temp = temperature.clamp(MIN_TEMPERATURE, MAX_TEMPERATURE);
     let temp_100 = temp / TEMP_DIVISOR;
 
