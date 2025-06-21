@@ -150,7 +150,7 @@ fn spawn_bodies(
         let mesh = meshes.add(Sphere::new(radius as f32));
 
         let temperature = rng.random_range(2500.0..=20000.0);
-        let bloom_intensity = 250.0;
+        let bloom_intensity = 100.0;
 
         let material = color::create_emissive_material_from_temperature(
             &mut materials,
