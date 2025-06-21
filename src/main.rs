@@ -197,7 +197,6 @@ fn min_sphere_radius_for_surface_distribution(
             _ => minimum_radius,
         }
     };
-
     let mut corrected_minimum_radius = minimum_radius.max(spherical_correction);
 
     // Iterative refinement using the sphere cap
@@ -227,8 +226,8 @@ fn min_sphere_radius_for_surface_distribution(
 }
 
 fn random_unit_vector(rng: &mut SimulationRng) -> Vector {
-    let theta = rng.random_range(0.0..2.0 * math::PI);
-    let phi = libm::acos(rng.random_range(-1.0..1.0));
+    let theta = rng.random_range(0.0..=2.0 * math::PI);
+    let phi = libm::acos(rng.random_range(-1.0..=1.0));
     let r = 1.0;
 
     Vector::new(
@@ -347,28 +346,29 @@ fn pause_physics_on_space(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use statrs::distribution::{ChiSquared, ContinuousCDF};
+    use statrs::distribution::ChiSquared;
+    use statrs::distribution::ContinuousCDF;
 
     #[test]
     fn test_chi_square_uniformity_of_random_unit_vector() {
         let count_of_samples = 100_000;
-        let count_of_bins = 10;
+        let count_of_bins = 20;
 
-        let mut bins = vec![0; count_of_bins];
+        let mut bins = vec![0.0; count_of_bins];
 
         for _ in 0..count_of_samples {
             let v = random_unit_vector(&mut SimulationRng::default());
             let bin_index = libm::floor((v.z + 1.0) * count_of_bins as Scalar / 2.0) as usize;
             let bin_index = bin_index.min(count_of_bins - 1);
-            bins[bin_index] += 1;
+            bins[bin_index] += 1.0;
         }
 
-        let expected_count_per_bin = count_of_samples / count_of_bins;
-        let chi_square: Scalar = bins
+        let expected_count_per_bin = count_of_samples as f64 / count_of_bins as f64;
+        let chi_square: f64 = bins
             .iter()
             .map(|&observed| {
                 let diff = observed - expected_count_per_bin;
-                diff as Scalar * diff as Scalar / expected_count_per_bin as Scalar
+                diff * diff / expected_count_per_bin
             })
             .sum();
 
