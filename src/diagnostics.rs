@@ -5,7 +5,7 @@ use bevy::diagnostic::Diagnostics;
 use bevy::diagnostic::RegisterDiagnostic;
 use bevy::diagnostic::DEFAULT_MAX_HISTORY_LENGTH;
 use bevy::prelude::*;
-use std::time::Duration;
+use core::time::Duration;
 
 #[derive(Resource)]
 pub struct SimulationDiagnosticsState {
@@ -23,7 +23,7 @@ impl Default for SimulationDiagnosticsPlugin {
         Self {
             max_history_length: DEFAULT_MAX_HISTORY_LENGTH,
             smoothing_factor: 0.1,
-            update_interval: Duration::from_secs_f64(1.0 / 60.0),
+            update_interval: Duration::from_secs_f64(1_f64 / 60_f64),
         }
     }
 }

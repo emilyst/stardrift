@@ -5,8 +5,7 @@ use bevy::asset::AssetPath;
 use bevy::diagnostic::DiagnosticsStore;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
-use std::path::Path;
-use std::time::Duration;
+use core::time::Duration;
 
 static REGULAR_OTF_BYTES: &[u8] = include_bytes!("../assets/fonts/BerkeleyMono-Regular.otf");
 static BOLD_OTF_BYTES: &[u8] = include_bytes!("../assets/fonts/BerkeleyMono-Bold.otf");
@@ -32,7 +31,7 @@ impl Default for DiagnosticsHudSettings {
     fn default() -> Self {
         Self {
             enabled: true,
-            refresh_interval: Duration::from_secs_f64(1.0 / 6.0),
+            refresh_interval: Duration::from_secs_f64(1_f64 / 6_f64),
         }
     }
 }
@@ -60,14 +59,14 @@ impl DiagnosticsHudPlugin {
         let embedded_asset_registry = world.resource_mut::<EmbeddedAssetRegistry>();
 
         embedded_asset_registry.insert_asset(
-            Path::new("fonts/BerkeleyMono-Regular").into(),
-            Path::new("fonts/BerkeleyMono-Regular"),
+            "fonts/BerkeleyMono-Regular".into(),
+            "fonts/BerkeleyMono-Regular".as_ref(),
             REGULAR_OTF_BYTES,
         );
 
         embedded_asset_registry.insert_asset(
-            Path::new("fonts/BerkeleyMono-Bold").into(),
-            Path::new("fonts/BerkeleyMono-Bold"),
+            "fonts/BerkeleyMono-Bold".into(),
+            "fonts/BerkeleyMono-Bold".as_ref(),
             BOLD_OTF_BYTES,
         );
     }
@@ -79,15 +78,13 @@ impl DiagnosticsHudPlugin {
     ) {
         let embedded_asset_source = &AssetSourceId::from("embedded");
 
-        let regular_font_path = &Path::new("fonts/BerkeleyMono-Regular");
         let regular_font_asset_path =
-            AssetPath::from_path(regular_font_path).with_source(embedded_asset_source);
+            AssetPath::parse("fonts/BerkeleyMono-Regular").with_source(embedded_asset_source);
         let regular_font = asset_server.load(regular_font_asset_path);
         let regular_text_font = TextFont::from_font(regular_font).with_font_size(12.0);
 
-        let bold_font_path = &Path::new("fonts/BerkeleyMono-Regular");
         let bold_font_asset_path =
-            AssetPath::from_path(bold_font_path).with_source(embedded_asset_source);
+            AssetPath::parse("fonts/BerkeleyMono-Bold").with_source(embedded_asset_source);
         let bold_font = asset_server.load(bold_font_asset_path);
         let bold_text_font = TextFont::from_font(bold_font).with_font_size(12.0);
 
