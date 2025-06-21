@@ -334,42 +334,92 @@ fn pause_physics_on_space(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use statrs::distribution::ChiSquared;
-    use statrs::distribution::ContinuousCDF;
 
+    // Alternative simpler test using coordinate moments
     #[test]
-    fn test_chi_square_uniformity_of_random_unit_vector() {
+    fn test_coordinate_moments_uniformity() {
         let count_of_samples = 100_000;
-        let count_of_bins = 20;
+        let mut rng = SimulationRng::default();
 
-        let mut bins = vec![0; count_of_bins];
+        let mut sum_x = 0.0;
+        let mut sum_y = 0.0;
+        let mut sum_z = 0.0;
+        let mut sum_x2 = 0.0;
+        let mut sum_y2 = 0.0;
+        let mut sum_z2 = 0.0;
+        let mut sum_xy = 0.0;
+        let mut sum_xz = 0.0;
+        let mut sum_yz = 0.0;
 
         for _ in 0..count_of_samples {
-            let v = random_unit_vector(&mut SimulationRng::default());
-            let bin_index = libm::floor((v.z + 1.0) * count_of_bins as Scalar / 2.0) as usize;
-            let bin_index = bin_index.min(count_of_bins - 1);
-            bins[bin_index] += 1;
+            let v = random_unit_vector(&mut rng);
+            sum_x += v.x;
+            sum_y += v.y;
+            sum_z += v.z;
+            sum_x2 += v.x * v.x;
+            sum_y2 += v.y * v.y;
+            sum_z2 += v.z * v.z;
+            sum_xy += v.x * v.y;
+            sum_xz += v.x * v.z;
+            sum_yz += v.y * v.z;
         }
 
-        let expected_count_per_bin = (count_of_samples / count_of_bins) as f64;
-        let chi_square = bins
-            .iter()
-            .map(|&observed| {
-                let diff = observed as f64 - expected_count_per_bin;
-                diff * diff / expected_count_per_bin
-            })
-            .sum::<f64>();
+        let n = count_of_samples as f64;
+        let tolerance = 3.0 / n.sqrt(); // 3-sigma tolerance
 
-        let degrees_of_freedom = count_of_bins - 1;
-        let chi_squared_distribution = ChiSquared::new(degrees_of_freedom as f64).unwrap();
-        let p_value = 1.0 - chi_squared_distribution.cdf(chi_square.into());
-
+        // First moments should be ~0 (center of mass at origin)
         assert!(
-            p_value > 0.01,
-            "P-value too low: {:.4}. Chi-square: {:.4}, degrees of freedom: {}",
-            p_value,
-            chi_square,
-            degrees_of_freedom,
+            (sum_x / n).abs() < tolerance,
+            "X coordinate mean too far from 0: {:.6}",
+            sum_x / n
+        );
+        assert!(
+            (sum_y / n).abs() < tolerance,
+            "Y coordinate mean too far from 0: {:.6}",
+            sum_y / n
+        );
+        assert!(
+            (sum_z / n).abs() < tolerance,
+            "Z coordinate mean too far from 0: {:.6}",
+            sum_z / n
+        );
+
+        // Second moments should be ~1/3 (uniform on unit sphere)
+        let expected_second_moment = 1.0 / 3.0;
+        assert!(
+            ((sum_x2 / n) - expected_second_moment).abs() < tolerance,
+            "X² moment deviation: {:.6}, expected: {:.6}",
+            sum_x2 / n,
+            expected_second_moment
+        );
+        assert!(
+            ((sum_y2 / n) - expected_second_moment).abs() < tolerance,
+            "Y² moment deviation: {:.6}, expected: {:.6}",
+            sum_y2 / n,
+            expected_second_moment
+        );
+        assert!(
+            ((sum_z2 / n) - expected_second_moment).abs() < tolerance,
+            "Z² moment deviation: {:.6}, expected: {:.6}",
+            sum_z2 / n,
+            expected_second_moment
+        );
+
+        // Cross moments should be ~0 (no correlation)
+        assert!(
+            (sum_xy / n).abs() < tolerance,
+            "XY correlation too high: {:.6}",
+            sum_xy / n
+        );
+        assert!(
+            (sum_xz / n).abs() < tolerance,
+            "XZ correlation too high: {:.6}",
+            sum_xz / n
+        );
+        assert!(
+            (sum_yz / n).abs() < tolerance,
+            "YZ correlation too high: {:.6}",
+            sum_yz / n
         );
     }
 
