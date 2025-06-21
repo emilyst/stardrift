@@ -1,3 +1,49 @@
+//! Diagnostics HUD (Heads-Up Display) module.
+//!
+//! This module provides a visual overlay that displays real-time diagnostic information
+//! for the many-body simulation. The HUD shows key performance and simulation metrics
+//! in an easy-to-read format overlaid on the main simulation view.
+//!
+//! # Displayed Information
+//!
+//! The HUD displays the following diagnostic data:
+//!
+//! - **Frame Count**: Total number of frames rendered since application start
+//! - **FPS (Frames Per Second)**: Current rendering performance
+//! - **Barycenter Position**: Real-time coordinates of the system's center of mass
+//! - **Camera Position**: Current 3D position of the simulation camera
+//!
+//! # Features
+//!
+//! - **Configurable refresh rate**: Control how often the HUD updates to balance
+//!   performance with information freshness
+//! - **Toggle visibility**: Enable or disable the HUD display (TBD)
+//! - **Custom font**: Uses embedded Berkeley Mono fonts for consistent appearance
+//! - **Responsive layout**: Positioned in the top-right corner with proper spacing
+//!
+//! # Main Components
+//!
+//! - [`DiagnosticsHudPlugin`]: The main plugin that sets up the HUD system
+//! - [`DiagnosticsHudSettings`]: Configuration resource for HUD behavior
+//! - [`DiagnosticsHudState`]: Runtime state management for refresh timing
+//!
+//! # Usage
+//!
+//! Add the plugin to your Bevy app to enable the diagnostics HUD:
+//!
+//! ```rust,ignore
+//! app.add_plugins(DiagnosticsHudPlugin);
+//! ```
+//!
+//! The HUD can be configured by modifying the [`DiagnosticsHudSettings`] resource:
+//!
+//! ```rust,ignore
+//! app.insert_resource(DiagnosticsHudSettings {
+//!     enabled: true,
+//!     refresh_interval: Duration::from_secs_f64(1.0 / 10.0), // 10 Hz refresh rate
+//! });
+//! ```
+
 use crate::diagnostics::SimulationDiagnosticsPlugin;
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::asset::io::AssetSourceId;
