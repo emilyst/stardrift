@@ -342,25 +342,25 @@ mod tests {
         let count_of_samples = 100_000;
         let count_of_bins = 20;
 
-        let mut bins = vec![0.0; count_of_bins];
+        let mut bins = vec![0; count_of_bins];
 
         for _ in 0..count_of_samples {
             let v = random_unit_vector(&mut SimulationRng::default());
             let bin_index = libm::floor((v.z + 1.0) * count_of_bins as Scalar / 2.0) as usize;
             let bin_index = bin_index.min(count_of_bins - 1);
-            bins[bin_index] += 1.0;
+            bins[bin_index] += 1;
         }
 
-        let expected_count_per_bin = count_of_samples as f64 / count_of_bins as f64;
-        let chi_square: f64 = bins
+        let expected_count_per_bin = (count_of_samples / count_of_bins) as f64;
+        let chi_square = bins
             .iter()
             .map(|&observed| {
-                let diff = observed - expected_count_per_bin;
+                let diff = observed as f64 - expected_count_per_bin;
                 diff * diff / expected_count_per_bin
             })
-            .sum();
+            .sum::<f64>();
 
-        let degrees_of_freedom = (count_of_bins - 1) as Scalar;
+        let degrees_of_freedom = count_of_bins - 1;
         let chi_squared_distribution = ChiSquared::new(degrees_of_freedom as f64).unwrap();
         let p_value = 1.0 - chi_squared_distribution.cdf(chi_square.into());
 
@@ -369,7 +369,7 @@ mod tests {
             "P-value too low: {:.4}. Chi-square: {:.4}, degrees of freedom: {}",
             p_value,
             chi_square,
-            degrees_of_freedom
+            degrees_of_freedom,
         );
     }
 
