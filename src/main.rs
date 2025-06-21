@@ -1,5 +1,6 @@
 #![no_std]
 
+mod color;
 mod diagnostics;
 mod diagnostics_hud;
 
@@ -140,11 +141,6 @@ fn spawn_bodies(
     mut rng: ResMut<SimulationRng>,
     body_count: Res<BodyCount>,
 ) {
-    let material = materials.add(StandardMaterial {
-        base_color: Color::LinearRgba(LinearRgba::rgb(10000.0, 0.0, 100.0)),
-        ..default()
-    });
-
     for _ in 0..**body_count {
         let body_distribution_sphere_radius =
             min_sphere_radius_for_surface_distribution(**body_count, 100.0, 0.001);
@@ -152,6 +148,15 @@ fn spawn_bodies(
         let transform = Transform::from_translation(position.as_vec3());
         let radius = rng.random_range(2.0..=3.0);
         let mesh = meshes.add(Sphere::new(radius as f32));
+
+        let temperature = rng.random_range(2500.0..=20000.0);
+        let bloom_intensity = 250.0;
+
+        let material = color::create_emissive_material_from_temperature(
+            &mut materials,
+            temperature,
+            bloom_intensity,
+        );
 
         commands.spawn((
             transform,
