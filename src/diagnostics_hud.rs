@@ -34,7 +34,7 @@ impl Default for DiagnosticsHudSettings {
     fn default() -> Self {
         Self {
             enabled: true,
-            refresh_interval: Duration::from_secs_f64(1_f64 / 6_f64),
+            refresh_interval: Duration::from_secs_f64(1.0 / 6.0),
         }
     }
 }
@@ -244,7 +244,6 @@ impl Plugin for DiagnosticsHudPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(DiagnosticsHudSettings::default());
         app.insert_resource(DiagnosticsHudState::default());
-
         app.add_systems(
             Startup,
             (Self::insert_font_assets, Self::spawn_diagnostics_hud).chain(),
