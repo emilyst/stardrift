@@ -13,6 +13,7 @@ use bevy::color::palettes::css;
 use bevy::core_pipeline::bloom::Bloom;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+#[cfg(not(target_arch = "wasm32"))]
 use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::ecs::schedule::LogLevel;
 use bevy::ecs::schedule::ScheduleBuildSettings;
@@ -86,8 +87,10 @@ fn main() {
         DefaultPlugins,
         DiagnosticsHudPlugin,
         FrameTimeDiagnosticsPlugin::default(),
+        #[cfg(not(target_arch = "wasm32"))]
         LogDiagnosticsPlugin::default(),
         PanOrbitCameraPlugin,
+        #[cfg(not(target_arch = "wasm32"))]
         PhysicsDiagnosticsPlugin,
         PhysicsPlugins::default(),
         SimulationDiagnosticsPlugin::default(),
@@ -160,7 +163,7 @@ fn spawn_bodies(
         let body_distribution_sphere_radius =
             min_sphere_radius_for_surface_distribution(**body_count, 100.0, 0.001);
         let position = random_unit_vector(&mut *rng) * body_distribution_sphere_radius;
-        let transform = Transform::from_translation(position.into());
+        let transform = Transform::from_translation(position.as_vec3());
         let body_radius = rng.random_range(2.0..=3.0);
 
         let material = MeshMaterial3d(materials.add(StandardMaterial {
@@ -178,19 +181,19 @@ fn min_sphere_radius_for_surface_distribution(
     min_distance: Scalar,
     tolerance: Scalar,
 ) -> Scalar {
-    let minimum_radius = min_distance * ops::sqrt(n as Scalar / 4.0);
+    let minimum_radius = min_distance * libm::sqrt(n as Scalar / 4.0);
     let spherical_correction = if n > 4 {
         // Tammes problem approximation
         let solid_angle_per_point = 4.0 * math::PI / n as Scalar;
-        let half_angle = solid_angle_per_point / ops::sqrt(2.0 * math::PI);
-        min_distance / (2.0 * ops::sin(half_angle))
+        let half_angle = solid_angle_per_point / libm::sqrt(2.0 * math::PI);
+        min_distance / (2.0 * libm::sin(half_angle))
     } else {
         // For small N, use exact solutions
         match n {
-            1 => min_distance,                        // Any radius works
-            2 => min_distance / 2.0,                  // Points are antipodal
-            3 => min_distance / ops::sqrt(3.0),       // Equilateral triangle
-            4 => min_distance / ops::sqrt(8.0 / 3.0), // Tetrahedron
+            1 => min_distance,                         // Any radius works
+            2 => min_distance / 2.0,                   // Points are antipodal
+            3 => min_distance / libm::sqrt(3.0),       // Equilateral triangle
+            4 => min_distance / libm::sqrt(8.0 / 3.0), // Tetrahedron
             _ => minimum_radius,
         }
     };
@@ -204,8 +207,8 @@ fn min_sphere_radius_for_surface_distribution(
             * math::PI
             * corrected_minimum_radius
             * corrected_minimum_radius
-            * ops::powf(
-                1.0 - ops::sqrt(1.0 - (cap_radius / corrected_minimum_radius)),
+            * libm::pow(
+                1.0 - libm::sqrt(1.0 - (cap_radius / corrected_minimum_radius)),
                 2.0,
             );
         let total_cap_area = n as Scalar * cap_area;
@@ -225,13 +228,13 @@ fn min_sphere_radius_for_surface_distribution(
 
 fn random_unit_vector(rng: &mut SimulationRng) -> Vector {
     let theta = rng.random_range(0.0..2.0 * math::PI);
-    let phi = ops::acos(rng.random_range(-1.0..1.0));
+    let phi = libm::acos(rng.random_range(-1.0..1.0));
     let r = 1.0;
 
     Vector::new(
-        r * ops::sin(phi) * ops::cos(theta),
-        r * ops::sin(phi) * ops::sin(theta),
-        r * ops::cos(phi),
+        r * libm::sin(phi) * libm::cos(theta),
+        r * libm::sin(phi) * libm::sin(theta),
+        r * libm::cos(phi),
     )
 }
 
@@ -244,7 +247,7 @@ fn apply_gravitation(
         (With<RigidBody>, Without<RigidBodyDisabled>),
     >,
 ) {
-    let delta_time = time.delta_secs();
+    let delta_time = time.delta_secs_f64();
     let mut body_pairs = bodies.iter_combinations_mut();
 
     const MIN_DISTANCE: Scalar = 1.0;
@@ -309,10 +312,10 @@ fn follow_barycenter(
 ) {
     if current_barycenter.is_finite() {
         pan_orbit_camera.force_update = true;
-        pan_orbit_camera.target_focus = *current_barycenter.clone();
+        pan_orbit_camera.target_focus = current_barycenter.clone().as_vec3();
         gizmos.cross(
-            **current_barycenter,
-            ops::cbrt(**body_count as Scalar * **body_count as Scalar / 3.0 as Scalar),
+            current_barycenter.as_vec3(),
+            libm::cbrt(**body_count as Scalar * **body_count as Scalar / 3.0 as Scalar) as f32,
             css::WHITE,
         );
     }
@@ -355,23 +358,23 @@ mod tests {
 
         for _ in 0..count_of_samples {
             let v = random_unit_vector(&mut SimulationRng::default());
-            let bin_index = ops::floor((v.z + 1.0) * count_of_bins as Scalar / 2.0) as usize;
+            let bin_index = libm::floor((v.z + 1.0) * count_of_bins as Scalar / 2.0) as usize;
             let bin_index = bin_index.min(count_of_bins - 1);
             bins[bin_index] += 1;
         }
 
-        let expected_count_per_bin = count_of_samples as Scalar / count_of_bins as Scalar;
-        let chi_square = bins
+        let expected_count_per_bin = count_of_samples / count_of_bins;
+        let chi_square: Scalar = bins
             .iter()
             .map(|&observed| {
-                let diff = observed as Scalar - expected_count_per_bin;
-                diff * diff / expected_count_per_bin
+                let diff = observed - expected_count_per_bin;
+                diff as Scalar * diff as Scalar / expected_count_per_bin as Scalar
             })
             .sum();
 
         let degrees_of_freedom = (count_of_bins - 1) as Scalar;
         let chi_squared_distribution = ChiSquared::new(degrees_of_freedom as f64).unwrap();
-        let p_value = 1.0 - chi_squared_distribution.cdf(chi_square);
+        let p_value = 1.0 - chi_squared_distribution.cdf(chi_square.into());
 
         assert!(
             p_value > 0.01,
@@ -386,7 +389,7 @@ mod tests {
     fn test_random_unit_vector_properties() {
         for _ in 0..100_000 {
             let v = random_unit_vector(&mut SimulationRng::default());
-            let length = ops::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+            let length = libm::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 
             assert!(
                 (length - 1.0).abs() < 1e-10,
