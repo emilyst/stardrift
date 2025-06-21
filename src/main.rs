@@ -1,10 +1,11 @@
+#![no_std]
+
 mod diagnostics;
 mod diagnostics_hud;
 
 use crate::diagnostics::SimulationDiagnosticsPlugin;
 use crate::diagnostics_hud::DiagnosticsHudPlugin;
-use avian3d::math::Scalar;
-use avian3d::math::Vector;
+use avian3d::math;
 use avian3d::prelude::*;
 use bevy::color::palettes::css;
 use bevy::core_pipeline::bloom::Bloom;
@@ -13,7 +14,7 @@ use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::ecs::schedule::LogLevel;
 use bevy::ecs::schedule::ScheduleBuildSettings;
-use bevy::pbr::MeshMaterial3d;
+use bevy::math::*;
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCamera;
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
@@ -35,11 +36,11 @@ impl Default for SimulationRng {
 }
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, PartialEq, Debug)]
-struct G(Scalar);
+struct G(f64);
 
 impl Default for G {
     fn default() -> Self {
-        Self(1000.0)
+        Self(100.0)
     }
 }
 
@@ -67,7 +68,7 @@ struct BodyBundle {
 }
 
 impl BodyBundle {
-    fn new(transform: Transform, radius: Scalar) -> Self {
+    fn new(transform: Transform, radius: f64) -> Self {
         Self {
             collider: Collider::sphere(radius),
             gravity_scale: GravityScale(0.0),
@@ -121,6 +122,9 @@ fn main() {
 }
 
 fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
+    let body_distribution_sphere_radius =
+        min_sphere_radius_for_surface_distribution(**body_count, 100.0, 0.001);
+
     commands.spawn((
         Name::new("Main Camera"),
         Camera {
@@ -135,7 +139,7 @@ fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
         PanOrbitCamera {
             focus: Vec3::ZERO,
             pan_smoothness: 0.0,
-            radius: Some((**body_count * **body_count / 3) as f32),
+            radius: Some((body_distribution_sphere_radius * 3.0) as f32),
             touch_controls: TouchControls::TwoFingerOrbit,
             trackpad_behavior: TrackpadBehavior::blender_default(),
             trackpad_pinch_to_zoom_enabled: true,
@@ -152,36 +156,81 @@ fn spawn_bodies(
     body_count: Res<BodyCount>,
 ) {
     for _ in 0..**body_count {
-        let position = random_unit_vector(&mut *rng) * (**body_count * **body_count / 10) as f64;
+        let body_distribution_sphere_radius =
+            min_sphere_radius_for_surface_distribution(**body_count, 100.0, 0.001);
+        let position = random_unit_vector(&mut *rng) * body_distribution_sphere_radius;
         let transform = Transform::from_translation(position.as_vec3());
-        let radius = rng.random_range(0.5..=10.0);
+        let body_radius = rng.random_range(2.0..=3.0);
 
         let material = MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::LinearRgba(LinearRgba::rgb(10000.0, 0.0, 100.0)),
             ..default()
         }));
-        let mesh = Mesh3d(meshes.add(Sphere::new(radius as f32)));
+        let mesh = Mesh3d(meshes.add(Sphere::new(body_radius as f32)));
 
-        commands.spawn((BodyBundle::new(transform, radius), material, mesh));
+        commands.spawn((BodyBundle::new(transform, body_radius), material, mesh));
     }
 }
 
-fn random_unit_vector(rng: &mut SimulationRng) -> Vector {
-    // Use Box-Muller transform to generate normally distributed values
-    let u1: f64 = rng.random::<f64>();
-    let u2: f64 = rng.random::<f64>();
-    let u3: f64 = rng.random::<f64>();
-    let u4: f64 = rng.random::<f64>();
+fn min_sphere_radius_for_surface_distribution(n: usize, min_distance: f64, tolerance: f64) -> f64 {
+    let minimum_radius = min_distance * libm::sqrt(n as f64 / 4.0);
 
-    // Box-Muller transform for first two normal values
-    let z1 = libm::sqrt(-2.0 * libm::log(u1)) * libm::cos(2.0 * std::f64::consts::PI * u2);
-    let z2 = libm::sqrt(-2.0 * libm::log(u1)) * libm::sin(2.0 * std::f64::consts::PI * u2);
+    let spherical_correction = if n > 4 {
+        // Tammes problem approximation
+        let solid_angle_per_point = 4.0 * math::PI / n as f64;
+        let half_angle = solid_angle_per_point / libm::sqrt(2.0 * math::PI);
+        min_distance / (2.0 * libm::sin(half_angle))
+    } else {
+        // For small N, use exact solutions
+        match n {
+            1 => min_distance,                         // Any radius works
+            2 => min_distance / 2.0,                   // Points are antipodal
+            3 => min_distance / libm::sqrt(3.0),       // Equilateral triangle
+            4 => min_distance / libm::sqrt(8.0 / 3.0), // Tetrahedron
+            _ => minimum_radius,
+        }
+    };
 
-    // Box-Muller transform for third normal value
-    let z3 = libm::sqrt(-2.0 * libm::log(u3)) * libm::cos(2.0 * std::f64::consts::PI * u4);
+    let mut corrected_minimum_radius = minimum_radius.max(spherical_correction);
+
+    // Iterative refinement using the sphere cap
+    for _ in 0..10 {
+        let cap_radius = min_distance / 2.0;
+        let cap_area = 2.0
+            * math::PI
+            * corrected_minimum_radius
+            * corrected_minimum_radius
+            * libm::pow(
+                1.0 - libm::sqrt(1.0 - (cap_radius / corrected_minimum_radius)),
+                2.0,
+            );
+        let total_cap_area = n as f64 * cap_area;
+        let sphere_area = 4.0 * math::PI * corrected_minimum_radius * corrected_minimum_radius;
+
+        if total_cap_area > sphere_area {
+            corrected_minimum_radius *= 1.1;
+        } else if sphere_area - total_cap_area > tolerance * sphere_area {
+            corrected_minimum_radius *= 0.95;
+        } else {
+            break; // Converged
+        }
+    }
+
+    corrected_minimum_radius
+}
+
+fn random_unit_vector(rng: &mut SimulationRng) -> DVec3 {
+    let u1 = rng.random::<f64>();
+    let u2 = rng.random::<f64>();
+    let u3 = rng.random::<f64>();
+    let u4 = rng.random::<f64>();
+
+    let z1 = libm::sqrt(-2.0 * libm::log(u1)) * libm::cos(2.0 * math::PI * u2);
+    let z2 = libm::sqrt(-2.0 * libm::log(u1)) * libm::sin(2.0 * math::PI * u2);
+    let z3 = libm::sqrt(-2.0 * libm::log(u3)) * libm::cos(2.0 * math::PI * u4);
 
     // Normalize to unit sphere
-    Vector::new(z1, z2, z3) / libm::sqrt(z1 * z1 + z2 * z2 + z3 * z3)
+    DVec3::new(z1, z2, z3) / libm::sqrt(z1 * z1 + z2 * z2 + z3 * z3)
 }
 
 // TODO: test
@@ -196,9 +245,9 @@ fn apply_gravitation(
     let delta_time = time.delta_secs_f64();
     let mut body_pairs = bodies.iter_combinations_mut();
 
-    const MIN_DISTANCE: Scalar = 1.0;
-    const MAX_FORCE: Scalar = 100000.0;
-    const MIN_DISTANCE_SQUARED: Scalar = MIN_DISTANCE * MIN_DISTANCE;
+    const MIN_DISTANCE: f64 = 1.0;
+    const MAX_FORCE: f64 = 100000.0;
+    const MIN_DISTANCE_SQUARED: f64 = MIN_DISTANCE * MIN_DISTANCE;
 
     while let Some(
         [
@@ -207,8 +256,8 @@ fn apply_gravitation(
         ],
     ) = body_pairs.fetch_next()
     {
-        let direction = Vector::from(transform2.translation) - Vector::from(transform1.translation);
-        let distance_squared = direction.length_squared() as Scalar;
+        let direction = DVec3::from(transform2.translation) - DVec3::from(transform1.translation);
+        let distance_squared = direction.length_squared();
 
         if distance_squared < MIN_DISTANCE_SQUARED {
             continue;
@@ -216,9 +265,10 @@ fn apply_gravitation(
 
         let distance = distance_squared.sqrt();
         let direction_normalized = direction / distance;
-        let force_magnitude = (**g * computed_mass1.value() * computed_mass2.value()
-            / distance_squared)
-            .min(MAX_FORCE);
+        let force_magnitude = libm::fmin(
+            **g * computed_mass1.value() * computed_mass2.value() / distance_squared,
+            MAX_FORCE,
+        );
         let acceleration1 = force_magnitude * direction_normalized * computed_mass1.inverse();
         let acceleration2 = -force_magnitude * direction_normalized * computed_mass2.inverse();
 
@@ -235,17 +285,18 @@ fn update_barycenter(
 ) {
     **previous_barycenter = **current_barycenter;
 
-    let (weighted_positions, total_mass): (Vector, Scalar) = bodies
+    let (weighted_positions, total_mass): (DVec3, f64) = bodies
         .iter()
         .map(|(transform, mass)| {
             let mass = mass.value();
-            (Vector::from(transform.translation) * mass, mass)
+            (DVec3::from(transform.translation) * mass, mass)
         })
-        .fold((Vector::ZERO, 0.0), |(pos_acc, mass_acc), (pos, mass)| {
-            (pos_acc + pos, mass_acc + mass)
-        });
+        .fold(
+            (DVec3::ZERO, f64::ZERO),
+            |(pos_acc, mass_acc), (pos, mass)| (pos_acc + pos, mass_acc + mass),
+        );
 
-    if total_mass > Scalar::ZERO {
+    if total_mass > f64::ZERO {
         **current_barycenter = Position::from(weighted_positions / total_mass);
     }
 }
@@ -305,13 +356,13 @@ mod tests {
 
         for _ in 0..count_of_samples {
             let v = random_unit_vector(&mut rng);
-            let bin_index = ((v.z + 1.0) * count_of_bins as f64 / 2.0).floor() as usize;
+            let bin_index = libm::floor((v.z + 1.0) * count_of_bins as f64 / 2.0) as usize;
             let bin_index = bin_index.min(count_of_bins - 1);
             bins[bin_index] += 1;
         }
 
         let expected_count_per_bin = count_of_samples as f64 / count_of_bins as f64;
-        let chi_square: f64 = bins
+        let chi_square = bins
             .iter()
             .map(|&observed| {
                 let diff = observed as f64 - expected_count_per_bin;
