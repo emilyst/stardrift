@@ -91,43 +91,43 @@ impl DiagnosticsHudPlugin {
         let bold_font = asset_server.load(bold_font_asset_path);
         let bold_text_font = TextFont::from_font(bold_font).with_font_size(12.0);
 
-        commands.spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                top: Val::Px(5.0),
-                right: Val::Px(5.0),
-                padding: UiRect::all(Val::Px(5.0)),
-                display: if settings.enabled {
-                    Display::Flex
-                } else {
-                    Display::None
-                },
-                flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(1.0),
-                ..default()
+        let border_radius = BorderRadius::all(Val::Px(5.0));
+        let background_color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7));
+        let hud_node = Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(5.0),
+            right: Val::Px(5.0),
+            padding: UiRect::all(Val::Px(5.0)),
+            display: if settings.enabled {
+                Display::Flex
+            } else {
+                Display::None
             },
-            BorderRadius::all(Val::Px(5.0)),
-            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(1.0),
+            ..default()
+        };
+        let hud_row_node = Node {
+            display: Display::Flex,
+            justify_content: JustifyContent::SpaceBetween,
+            column_gap: Val::Px(20.0),
+            ..default()
+        };
+
+        commands.spawn((
+            hud_node,
+            border_radius,
+            background_color,
             children![
                 (
-                    Node {
-                        display: Display::Flex,
-                        justify_content: JustifyContent::SpaceBetween,
-                        column_gap: Val::Px(20.0),
-                        ..default()
-                    },
+                    hud_row_node.clone(),
                     children![
                         (Text::new("FPS"), bold_text_font.clone()),
                         (FpsTextNode, Text::new("-"), regular_text_font.clone())
                     ],
                 ),
                 (
-                    Node {
-                        display: Display::Flex,
-                        justify_content: JustifyContent::SpaceBetween,
-                        column_gap: Val::Px(20.0),
-                        ..default()
-                    },
+                    hud_row_node.clone(),
                     children![
                         (Text::new("Frame count"), bold_text_font.clone()),
                         (
@@ -138,12 +138,7 @@ impl DiagnosticsHudPlugin {
                     ],
                 ),
                 (
-                    Node {
-                        display: Display::Flex,
-                        justify_content: JustifyContent::SpaceBetween,
-                        column_gap: Val::Px(20.0),
-                        ..default()
-                    },
+                    hud_row_node.clone(),
                     children![
                         (Text::new("Barycenter"), bold_text_font.clone()),
                         (
@@ -154,12 +149,7 @@ impl DiagnosticsHudPlugin {
                     ],
                 ),
                 (
-                    Node {
-                        display: Display::Flex,
-                        justify_content: JustifyContent::SpaceBetween,
-                        column_gap: Val::Px(20.0),
-                        ..default()
-                    },
+                    hud_row_node.clone(),
                     children![
                         (Text::new("Camera"), bold_text_font),
                         (CameraTextNode, Text::new("-"), regular_text_font)
