@@ -220,17 +220,15 @@ fn min_sphere_radius_for_surface_distribution(n: usize, min_distance: f64, toler
 }
 
 fn random_unit_vector(rng: &mut SimulationRng) -> DVec3 {
-    let u1 = rng.random::<f64>();
-    let u2 = rng.random::<f64>();
-    let u3 = rng.random::<f64>();
-    let u4 = rng.random::<f64>();
+    let theta = rng.random_range(0.0..2.0 * math::PI);
+    let phi = libm::acos(rng.random_range(-1.0..1.0));
+    let r = 1.0;
 
-    let z1 = libm::sqrt(-2.0 * libm::log(u1)) * libm::cos(2.0 * math::PI * u2);
-    let z2 = libm::sqrt(-2.0 * libm::log(u1)) * libm::sin(2.0 * math::PI * u2);
-    let z3 = libm::sqrt(-2.0 * libm::log(u3)) * libm::cos(2.0 * math::PI * u4);
-
-    // Normalize to unit sphere
-    DVec3::new(z1, z2, z3) / libm::sqrt(z1 * z1 + z2 * z2 + z3 * z3)
+    DVec3::new(
+        r * libm::sin(phi) * libm::cos(theta),
+        r * libm::sin(phi) * libm::sin(theta),
+        r * libm::cos(phi),
+    )
 }
 
 // TODO: test
@@ -348,14 +346,13 @@ mod tests {
 
     #[test]
     fn test_chi_square_uniformity_of_random_unit_vector() {
-        let mut rng = SimulationRng(ChaCha8Rng::seed_from_u64(0));
         let count_of_samples = 100_000;
         let count_of_bins = 10;
 
         let mut bins = vec![0; count_of_bins];
 
         for _ in 0..count_of_samples {
-            let v = random_unit_vector(&mut rng);
+            let v = random_unit_vector(&mut SimulationRng::default());
             let bin_index = libm::floor((v.z + 1.0) * count_of_bins as f64 / 2.0) as usize;
             let bin_index = bin_index.min(count_of_bins - 1);
             bins[bin_index] += 1;
@@ -385,10 +382,8 @@ mod tests {
 
     #[test]
     fn test_random_unit_vector_properties() {
-        let mut rng = SimulationRng(ChaCha8Rng::seed_from_u64(0));
-
-        for _ in 0..100000 {
-            let v = random_unit_vector(&mut rng);
+        for _ in 0..100_000 {
+            let v = random_unit_vector(&mut SimulationRng::default());
             let length = libm::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 
             assert!(
