@@ -244,7 +244,7 @@ fn follow_barycenter(
         pan_orbit_camera.target_focus = current_barycenter.clone().as_vec3();
         gizmos.cross(
             current_barycenter.as_vec3(),
-            libm::cbrt(**body_count as Scalar * **body_count as Scalar / 3.0 as Scalar) as f32,
+            libm::cbrt(**body_count as Scalar * **body_count as Scalar / 3.0) as f32,
             css::WHITE,
         );
     }
