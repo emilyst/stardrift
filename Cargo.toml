@@ -20,47 +20,75 @@ strip = "debuginfo"
 [profile.distribution]
 inherits = "release"
 codegen-units = 1
-lto = "thin"
+lto = true
 strip = true
 
 [dependencies]
+bevy = "0.16.*"
 bevy_panorbit_camera = "*"
-libm = "*"
 rand = "0.9.*"
 rand_chacha = "0.9.*"
 
 [dev-dependencies]
 statrs = "*"
 
-[dependencies.avian3d]
+# Native-specific avian3d with parallel processing
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.avian3d]
 version = "*"
-default-features = false
 features = [
     "3d",
     "bevy_diagnostic",
     "collider-from-mesh",
     "debug-plugin",
     "diagnostic_ui",
-    "f64",
+    "enhanced-determinism",
     "parallel",
-    "parry-f64",
 ]
 
-[dependencies.bevy]
-version = "0.16.*"
+# WASM-specific avian3d
+[target.'cfg(target_arch = "wasm32")'.dependencies.avian3d]
+version = "*"
 features = [
-    "default_font",
-    "default_no_std",
-    "libm",
+    "3d",
+    "bevy_diagnostic",
+    "collider-from-mesh",
+    "default-collider",
+    "diagnostic_ui",
+    "enhanced-determinism",
+    "f32",
+]
+
+# Native-specific features
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.bevy]
+version = "0.16.*"
+default-features = false
+features = [
     "multi_threaded",
 ]
 
+# WASM-specific features
+[target.'cfg(target_arch = "wasm32")'.dependencies.bevy]
+version = "0.16.*"
+default-features = false
+features = [
+    "webgl2",
+]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.*"
+web-sys = "0.*"
+getrandom = { version = "0.*", features = ["wasm_js"] }
+
 [features]
-fonts = []
 dev = [
     "bevy/asset_processor",
     "bevy/embedded_watcher",
     "bevy/default_font",
     "bevy/dynamic_linking",
     "bevy/file_watcher",
+]
+default = []
+diagnostics_hud = [
+    "avian3d/bevy_diagnostic",
+    "avian3d/diagnostic_ui",
 ]

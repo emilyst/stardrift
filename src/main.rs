@@ -6,6 +6,8 @@ mod diagnostics_hud;
 use crate::diagnostics::SimulationDiagnosticsPlugin;
 use crate::diagnostics_hud::DiagnosticsHudPlugin;
 use avian3d::math;
+use avian3d::math::Scalar;
+use avian3d::math::Vector;
 use avian3d::prelude::*;
 use bevy::color::palettes::css;
 use bevy::core_pipeline::bloom::Bloom;
@@ -20,7 +22,6 @@ use bevy_panorbit_camera::PanOrbitCamera;
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
 use bevy_panorbit_camera::TouchControls;
 use bevy_panorbit_camera::TrackpadBehavior;
-use rand::distr::weighted::Weight;
 use rand::Rng;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -36,11 +37,11 @@ impl Default for SimulationRng {
 }
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, PartialEq, Debug)]
-struct G(f64);
+struct G(Scalar);
 
 impl Default for G {
     fn default() -> Self {
-        Self(100.0)
+        Self(100000.0)
     }
 }
 
@@ -54,10 +55,10 @@ impl Default for BodyCount {
 }
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
-struct CurrentBarycenter(Position);
+struct CurrentBarycenter(Vector);
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
-struct PreviousBarycenter(Position);
+struct PreviousBarycenter(Vector);
 
 #[derive(Bundle, Clone, Debug, Default)]
 struct BodyBundle {
@@ -68,7 +69,7 @@ struct BodyBundle {
 }
 
 impl BodyBundle {
-    fn new(transform: Transform, radius: f64) -> Self {
+    fn new(transform: Transform, radius: Scalar) -> Self {
         Self {
             collider: Collider::sphere(radius),
             gravity_scale: GravityScale(0.0),
@@ -159,7 +160,7 @@ fn spawn_bodies(
         let body_distribution_sphere_radius =
             min_sphere_radius_for_surface_distribution(**body_count, 100.0, 0.001);
         let position = random_unit_vector(&mut *rng) * body_distribution_sphere_radius;
-        let transform = Transform::from_translation(position.as_vec3());
+        let transform = Transform::from_translation(position.into());
         let body_radius = rng.random_range(2.0..=3.0);
 
         let material = MeshMaterial3d(materials.add(StandardMaterial {
@@ -172,21 +173,24 @@ fn spawn_bodies(
     }
 }
 
-fn min_sphere_radius_for_surface_distribution(n: usize, min_distance: f64, tolerance: f64) -> f64 {
-    let minimum_radius = min_distance * libm::sqrt(n as f64 / 4.0);
-
+fn min_sphere_radius_for_surface_distribution(
+    n: usize,
+    min_distance: Scalar,
+    tolerance: Scalar,
+) -> Scalar {
+    let minimum_radius = min_distance * ops::sqrt(n as Scalar / 4.0);
     let spherical_correction = if n > 4 {
         // Tammes problem approximation
-        let solid_angle_per_point = 4.0 * math::PI / n as f64;
-        let half_angle = solid_angle_per_point / libm::sqrt(2.0 * math::PI);
-        min_distance / (2.0 * libm::sin(half_angle))
+        let solid_angle_per_point = 4.0 * math::PI / n as Scalar;
+        let half_angle = solid_angle_per_point / ops::sqrt(2.0 * math::PI);
+        min_distance / (2.0 * ops::sin(half_angle))
     } else {
         // For small N, use exact solutions
         match n {
-            1 => min_distance,                         // Any radius works
-            2 => min_distance / 2.0,                   // Points are antipodal
-            3 => min_distance / libm::sqrt(3.0),       // Equilateral triangle
-            4 => min_distance / libm::sqrt(8.0 / 3.0), // Tetrahedron
+            1 => min_distance,                        // Any radius works
+            2 => min_distance / 2.0,                  // Points are antipodal
+            3 => min_distance / ops::sqrt(3.0),       // Equilateral triangle
+            4 => min_distance / ops::sqrt(8.0 / 3.0), // Tetrahedron
             _ => minimum_radius,
         }
     };
@@ -200,11 +204,11 @@ fn min_sphere_radius_for_surface_distribution(n: usize, min_distance: f64, toler
             * math::PI
             * corrected_minimum_radius
             * corrected_minimum_radius
-            * libm::pow(
-                1.0 - libm::sqrt(1.0 - (cap_radius / corrected_minimum_radius)),
+            * ops::powf(
+                1.0 - ops::sqrt(1.0 - (cap_radius / corrected_minimum_radius)),
                 2.0,
             );
-        let total_cap_area = n as f64 * cap_area;
+        let total_cap_area = n as Scalar * cap_area;
         let sphere_area = 4.0 * math::PI * corrected_minimum_radius * corrected_minimum_radius;
 
         if total_cap_area > sphere_area {
@@ -219,15 +223,15 @@ fn min_sphere_radius_for_surface_distribution(n: usize, min_distance: f64, toler
     corrected_minimum_radius
 }
 
-fn random_unit_vector(rng: &mut SimulationRng) -> DVec3 {
+fn random_unit_vector(rng: &mut SimulationRng) -> Vector {
     let theta = rng.random_range(0.0..2.0 * math::PI);
-    let phi = libm::acos(rng.random_range(-1.0..1.0));
+    let phi = ops::acos(rng.random_range(-1.0..1.0));
     let r = 1.0;
 
-    DVec3::new(
-        r * libm::sin(phi) * libm::cos(theta),
-        r * libm::sin(phi) * libm::sin(theta),
-        r * libm::cos(phi),
+    Vector::new(
+        r * ops::sin(phi) * ops::cos(theta),
+        r * ops::sin(phi) * ops::sin(theta),
+        r * ops::cos(phi),
     )
 }
 
@@ -240,12 +244,12 @@ fn apply_gravitation(
         (With<RigidBody>, Without<RigidBodyDisabled>),
     >,
 ) {
-    let delta_time = time.delta_secs_f64();
+    let delta_time = time.delta_secs();
     let mut body_pairs = bodies.iter_combinations_mut();
 
-    const MIN_DISTANCE: f64 = 1.0;
-    const MAX_FORCE: f64 = 100000.0;
-    const MIN_DISTANCE_SQUARED: f64 = MIN_DISTANCE * MIN_DISTANCE;
+    const MIN_DISTANCE: Scalar = 1.0;
+    const MAX_FORCE: Scalar = 10000.0;
+    const MIN_DISTANCE_SQUARED: Scalar = MIN_DISTANCE * MIN_DISTANCE;
 
     while let Some(
         [
@@ -254,19 +258,18 @@ fn apply_gravitation(
         ],
     ) = body_pairs.fetch_next()
     {
-        let direction = DVec3::from(transform2.translation) - DVec3::from(transform1.translation);
+        let direction = Vector::from(transform2.translation) - Vector::from(transform1.translation);
         let distance_squared = direction.length_squared();
 
         if distance_squared < MIN_DISTANCE_SQUARED {
             continue;
         }
 
-        let distance = distance_squared.sqrt();
+        let distance = distance_squared;
         let direction_normalized = direction / distance;
-        let force_magnitude = libm::fmin(
-            **g * computed_mass1.value() * computed_mass2.value() / distance_squared,
-            MAX_FORCE,
-        );
+        let force_magnitude =
+            **g * computed_mass1.value() * computed_mass2.value() / distance_squared;
+        let force_magnitude = force_magnitude.min(MAX_FORCE);
         let acceleration1 = force_magnitude * direction_normalized * computed_mass1.inverse();
         let acceleration2 = -force_magnitude * direction_normalized * computed_mass2.inverse();
 
@@ -283,19 +286,18 @@ fn update_barycenter(
 ) {
     **previous_barycenter = **current_barycenter;
 
-    let (weighted_positions, total_mass): (DVec3, f64) = bodies
+    let (weighted_positions, total_mass): (Vector, Scalar) = bodies
         .iter()
         .map(|(transform, mass)| {
             let mass = mass.value();
-            (DVec3::from(transform.translation) * mass, mass)
+            (Vector::from(transform.translation) * mass, mass)
         })
-        .fold(
-            (DVec3::ZERO, f64::ZERO),
-            |(pos_acc, mass_acc), (pos, mass)| (pos_acc + pos, mass_acc + mass),
-        );
+        .fold((Vector::ZERO, 0.0), |(pos_acc, mass_acc), (pos, mass)| {
+            (pos_acc + pos, mass_acc + mass)
+        });
 
-    if total_mass > f64::ZERO {
-        **current_barycenter = Position::from(weighted_positions / total_mass);
+    if total_mass > 0.0 {
+        **current_barycenter = weighted_positions / total_mass;
     }
 }
 
@@ -307,10 +309,10 @@ fn follow_barycenter(
 ) {
     if current_barycenter.is_finite() {
         pan_orbit_camera.force_update = true;
-        pan_orbit_camera.target_focus = current_barycenter.as_vec3();
+        pan_orbit_camera.target_focus = *current_barycenter.clone();
         gizmos.cross(
-            current_barycenter.as_vec3(),
-            libm::cbrtf((**body_count * **body_count / 3) as f32),
+            **current_barycenter,
+            ops::cbrt(**body_count as Scalar * **body_count as Scalar / 3.0 as Scalar),
             css::WHITE,
         );
     }
@@ -353,22 +355,22 @@ mod tests {
 
         for _ in 0..count_of_samples {
             let v = random_unit_vector(&mut SimulationRng::default());
-            let bin_index = libm::floor((v.z + 1.0) * count_of_bins as f64 / 2.0) as usize;
+            let bin_index = ops::floor((v.z + 1.0) * count_of_bins as Scalar / 2.0) as usize;
             let bin_index = bin_index.min(count_of_bins - 1);
             bins[bin_index] += 1;
         }
 
-        let expected_count_per_bin = count_of_samples as f64 / count_of_bins as f64;
+        let expected_count_per_bin = count_of_samples as Scalar / count_of_bins as Scalar;
         let chi_square = bins
             .iter()
             .map(|&observed| {
-                let diff = observed as f64 - expected_count_per_bin;
+                let diff = observed as Scalar - expected_count_per_bin;
                 diff * diff / expected_count_per_bin
             })
             .sum();
 
-        let degrees_of_freedom = (count_of_bins - 1) as f64;
-        let chi_squared_distribution = ChiSquared::new(degrees_of_freedom).unwrap();
+        let degrees_of_freedom = (count_of_bins - 1) as Scalar;
+        let chi_squared_distribution = ChiSquared::new(degrees_of_freedom as f64).unwrap();
         let p_value = 1.0 - chi_squared_distribution.cdf(chi_square);
 
         assert!(
@@ -384,7 +386,7 @@ mod tests {
     fn test_random_unit_vector_properties() {
         for _ in 0..100_000 {
             let v = random_unit_vector(&mut SimulationRng::default());
-            let length = libm::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+            let length = ops::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 
             assert!(
                 (length - 1.0).abs() < 1e-10,

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Many Body Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100vh;
+        }
+
+        #loading {
+            color: white;
+            text-align: center;
+        }
+
+        #error {
+            color: red;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div id="loading">Loading Many Body Simulation...</div>
+<div id="error">
+    <h2>Error Loading Application</h2>
+    <p>Your browser may not support WebGL2 or WASM.</p>
+    <p>Please try using a modern browser like Chrome, Firefox, or Safari.</p>
+</div>
+
+<script type="module">
+    import init from './many_body_simulation.js';
+
+    async function run() {
+        try {
+            // Check for WebGL2 support
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl2');
+            if (!gl) {
+                throw new Error('WebGL2 not supported');
+            }
+
+            // Initialize the WASM module
+            init();
+
+            // Hide loading message
+            document.getElementById('loading').style.display = 'none';
+
+        } catch (error) {
+            console.error('Failed to initialize application:', error);
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+        }
+    }
+
+    run();
+</script>
+</body>
+</html>
