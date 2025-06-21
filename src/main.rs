@@ -38,9 +38,9 @@ impl Default for SimulationRng {
 }
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, PartialEq, Debug)]
-struct G(Scalar);
+struct GravitationalConstant(Scalar);
 
-impl Default for G {
+impl Default for GravitationalConstant {
     fn default() -> Self {
         Self(100000.0)
     }
@@ -77,7 +77,7 @@ fn main() {
     ));
 
     app.init_resource::<SimulationRng>();
-    app.init_resource::<G>();
+    app.init_resource::<GravitationalConstant>();
     app.init_resource::<BodyCount>();
     app.init_resource::<CurrentBarycenter>();
     app.init_resource::<PreviousBarycenter>();
@@ -170,7 +170,7 @@ fn spawn_bodies(
 // TODO: test
 fn apply_gravitation(
     time: ResMut<Time>,
-    g: Res<G>,
+    g: Res<GravitationalConstant>,
     mut bodies: Query<
         (&Transform, &ComputedMass, &mut LinearVelocity),
         (With<RigidBody>, Without<RigidBodyDisabled>),
