@@ -14,7 +14,6 @@ use bevy::color::palettes::css;
 use bevy::core_pipeline::bloom::Bloom;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-#[cfg(not(target_arch = "wasm32"))]
 use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::ecs::schedule::LogLevel;
 use bevy::ecs::schedule::ScheduleBuildSettings;
@@ -69,7 +68,6 @@ fn main() {
         DefaultPlugins,
         DiagnosticsHudPlugin,
         FrameTimeDiagnosticsPlugin::default(),
-        #[cfg(not(target_arch = "wasm32"))]
         LogDiagnosticsPlugin::default(),
         PanOrbitCameraPlugin,
         #[cfg(not(target_arch = "wasm32"))]
