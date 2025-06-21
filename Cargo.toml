@@ -25,6 +25,7 @@ strip = true
 
 [profile.wasm]
 inherits = "distribution"
+opt-level = "z"
 
 [dependencies]
 bevy = { version = "0.16.*", features = ["default_no_std"] }
