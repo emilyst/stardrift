@@ -106,6 +106,7 @@ fn main() {
 }
 
 fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
+    // TODO: calculate distance at which min sphere radius subtends camera frustum
     let body_distribution_sphere_radius =
         math::min_sphere_radius_for_surface_distribution(**body_count, 100.0, 0.001);
 
