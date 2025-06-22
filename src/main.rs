@@ -28,10 +28,10 @@ use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 #[derive(Resource, Deref, DerefMut, Debug, Clone, PartialEq)]
-struct SimulationRng(ChaCha8Rng);
+struct SharedRng(ChaCha8Rng);
 
 // TODO: use a seedable RNG and make the seed configurable
-impl Default for SimulationRng {
+impl Default for SharedRng {
     fn default() -> Self {
         Self(ChaCha8Rng::from_rng(&mut rand::rng()))
     }
@@ -76,7 +76,7 @@ fn main() {
         SimulationDiagnosticsPlugin::default(),
     ));
 
-    app.init_resource::<SimulationRng>();
+    app.init_resource::<SharedRng>();
     app.init_resource::<GravitationalConstant>();
     app.init_resource::<BodyCount>();
     app.init_resource::<CurrentBarycenter>();
@@ -136,7 +136,7 @@ fn spawn_bodies(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<SimulationRng>,
+    mut rng: ResMut<SharedRng>,
     body_count: Res<BodyCount>,
 ) {
     for _ in 0..**body_count {
