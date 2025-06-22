@@ -25,7 +25,7 @@
 //!
 //! # Main Functions
 //!
-//! - [`emissive_material_from_temp`]: Creates Bevy materials with temperature-based
+//! - [`emissive_material_for_temp`]: Creates Bevy materials with temperature-based
 //!   colors and bloom
 //!
 //! # Usage
@@ -34,7 +34,7 @@
 //! use crate::color::*;
 //!
 //! // Create a material for a star at 5778K (Sun's temperature)
-//! let material = create_emissive_material_from_temperature(
+//! let material = emissive_material_for_temp(
 //!     &mut materials,
 //!     5778.0,  // Temperature in Kelvin
 //!     2.0      // Bloom intensity multiplier
@@ -82,6 +82,7 @@ const BLUE_LOG_OFFSET: f64 = 10.0;
 /// * `materials` - Mutable reference to Bevy's material asset storage
 /// * `temperature` - Color temperature in Kelvin (clamped to 1000K - 40000K range)
 /// * `bloom_intensity` - Multiplier for bloom effect intensity (typically 1.0 - 5.0)
+/// * `saturation_intensity` - Multiplier for saturation intensity (typically 1.0 - 5.0)
 ///
 /// # Returns
 ///
@@ -94,7 +95,7 @@ const BLUE_LOG_OFFSET: f64 = 10.0;
 ///
 /// ```rust,ignore
 /// // Create a material for the Sun (5778K) with moderate bloom
-/// let sun_material = create_emissive_material_from_temperature(
+/// let sun_material = emissive_material_for_temp(
 ///     &mut materials,
 ///     5778.0,
 ///     2.5,
@@ -102,14 +103,14 @@ const BLUE_LOG_OFFSET: f64 = 10.0;
 /// );
 ///
 /// // Create a material for a red giant star (3500K) with intense bloom and saturation
-/// let red_giant_material = create_emissive_material_from_temperature(
+/// let red_giant_material = emissive_material_for_temp(
 ///     &mut materials,
 ///     3500.0,
 ///     4.0,
 ///     2.0,
 /// );
 /// ```
-pub(crate) fn emissive_material_from_temp(
+pub(crate) fn emissive_material_for_temp(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     temperature: f64,
     bloom_intensity: f64,
