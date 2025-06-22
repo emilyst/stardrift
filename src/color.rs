@@ -25,12 +25,8 @@
 //!
 //! # Main Functions
 //!
-//! - [`create_emissive_material_from_temperature`]: Creates Bevy materials with temperature-based
+//! - [`emissive_material_from_temp`]: Creates Bevy materials with temperature-based
 //!   colors and bloom
-//! - [`kelvin_to_rgb`]: Core temperature-to-RGB conversion function
-//! - [`kelvin_to_bevy_color`]: Converts temperature to Bevy Color format
-//! - [`kelvin_to_bloom_color`]: Generates bloom-enhanced colors for emissive effects
-//! - [`intensify_for_bloom`]: Applies luminance-based intensity scaling for bloom effects
 //!
 //! # Usage
 //!
@@ -42,10 +38,8 @@
 //!     &mut materials,
 //!     5778.0,  // Temperature in Kelvin
 //!     2.0      // Bloom intensity multiplier
+//!     2.0      // Saturation intensity multiplier
 //! );
-//!
-//! // Get RGB values for a specific temperature
-//! let (r, g, b) = kelvin_to_rgb(3000.0); // Warm white
 //! ```
 //!
 //! # Algorithm Details
@@ -59,7 +53,6 @@ use bevy::prelude::*;
 
 const MIN_TEMPERATURE: f64 = 1000.0;
 const MAX_TEMPERATURE: f64 = 40000.0;
-const TEMP_DIVISOR: f64 = 100.0;
 const DAYLIGHT_TEMP_THRESHOLD: f64 = 6600.0;
 const BLUE_TEMP_THRESHOLD: f64 = 1900.0;
 const MAX_COLOR_VALUE: f64 = 255.0;
@@ -104,23 +97,36 @@ const BLUE_LOG_OFFSET: f64 = 10.0;
 /// let sun_material = create_emissive_material_from_temperature(
 ///     &mut materials,
 ///     5778.0,
-///     2.5
+///     2.5,
+///     1.0,
 /// );
 ///
-/// // Create a material for a red giant star (3500K) with intense bloom
+/// // Create a material for a red giant star (3500K) with intense bloom and saturation
 /// let red_giant_material = create_emissive_material_from_temperature(
 ///     &mut materials,
 ///     3500.0,
-///     4.0
+///     4.0,
+///     2.0,
 /// );
 /// ```
-pub(crate) fn create_emissive_material_from_temperature(
+pub(crate) fn emissive_material_from_temp(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     temperature: f64,
     bloom_intensity: f64,
+    saturation_intensity: f64,
 ) -> Handle<StandardMaterial> {
-    let bloom_color = kelvin_to_bloom_color(temperature, bloom_intensity);
-    let base_color = kelvin_to_bevy_color(temperature);
+    let base_rgb = rgb_for_temp(temperature);
+    let saturated_rgb = enhance_saturation(base_rgb, saturation_intensity);
+
+    let bloom_color = {
+        let (r, g, b) = intensify_for_bloom(saturated_rgb, bloom_intensity);
+        Color::LinearRgba(LinearRgba::rgb(r as f32, g as f32, b as f32))
+    };
+
+    let base_color = {
+        let (r, g, b) = saturated_rgb;
+        Color::LinearRgba(LinearRgba::rgb(r as f32, g as f32, b as f32))
+    };
 
     materials.add(StandardMaterial {
         base_color,
@@ -129,36 +135,34 @@ pub(crate) fn create_emissive_material_from_temperature(
     })
 }
 
-/// Converts a color temperature to a Bevy Color with bloom enhancement.
+/// Enhances the saturation of RGB values by scaling the distance from grayscale.
 ///
-/// This function creates a bloom-enhanced color by first converting the temperature
-/// to RGB values, then applying intensity scaling based on luminance, and finally
-/// converting to Bevy's LinearRgba color format.
+/// This function increases color saturation by pushing RGB values further away
+/// from their grayscale equivalent, making colors more vivid and intense.
 ///
 /// # Arguments
 ///
-/// * `temperature` - Color temperature in Kelvin (clamped to 1000K - 40000K range)
-/// * `bloom_intensity` - Multiplier for bloom effect intensity
+/// * `rgb` - A tuple of normalized RGB values (0.0 - 1.0)
+/// * `saturation_factor` - Saturation enhancement factor (1.0 = no change, >1.0 = more saturated)
 ///
 /// # Returns
 ///
-/// A `Color::LinearRgba` suitable for use as an emissive color in materials.
-/// The color is enhanced for bloom effects while maintaining the temperature's
-/// characteristic hue.
-///
-/// # Examples
-///
-/// ```rust,ignore
-/// // Create a bloom color for a blue star
-/// let blue_bloom = kelvin_to_bloom_color(10000.0, 3.0);
-///
-/// // Create a subtle bloom for warm light
-/// let warm_bloom = kelvin_to_bloom_color(2700.0, 1.5);
-/// ```
-fn kelvin_to_bloom_color(temperature: f64, bloom_intensity: f64) -> Color {
-    let base_rgb = kelvin_to_rgb(temperature);
-    let (r, g, b) = intensify_for_bloom(base_rgb, bloom_intensity);
-    Color::LinearRgba(LinearRgba::rgb(r as f32, g as f32, b as f32))
+/// A tuple of enhanced RGB values, clamped to [0.0, 1.0] range.
+fn enhance_saturation(rgb: (f64, f64, f64), saturation_factor: f64) -> (f64, f64, f64) {
+    let (r, g, b) = rgb;
+
+    // Calculate grayscale using ITU-R BT.601 luminance formula
+    let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+
+    let enhanced_r = gray + (r - gray) * saturation_factor;
+    let enhanced_g = gray + (g - gray) * saturation_factor;
+    let enhanced_b = gray + (b - gray) * saturation_factor;
+
+    (
+        enhanced_r.clamp(0.0, 1.0),
+        enhanced_g.clamp(0.0, 1.0),
+        enhanced_b.clamp(0.0, 1.0),
+    )
 }
 
 /// Applies luminance-based intensity scaling to RGB values for bloom effects.
@@ -197,43 +201,10 @@ fn kelvin_to_bloom_color(temperature: f64, bloom_intensity: f64) -> Color {
 fn intensify_for_bloom(rgb: (f64, f64, f64), intensity: f64) -> (f64, f64, f64) {
     let (r, g, b) = rgb;
 
-    // Scale based on luminance with ITU-R BT.601 color shifting
+    // Scale using ITU-R BT.601 luminance formula
     let luminance = 0.299 * r + 0.587 * g + 0.114 * b;
     let scale_factor = intensity * luminance + 1.0;
     (r * scale_factor, g * scale_factor, b * scale_factor)
-}
-
-/// Converts a color temperature directly to a Bevy Color without bloom enhancement.
-///
-/// This is a convenience function that converts a temperature to RGB values and then
-/// wraps them in Bevy's `Color::LinearRgba` format. Unlike `kelvin_to_bloom_color`,
-/// this function does not apply any intensity enhancement, making it suitable for
-/// base colors or non-emissive materials.
-///
-/// # Arguments
-///
-/// * `temperature` - Color temperature in Kelvin (clamped to 1000K - 40000K range)
-///
-/// # Returns
-///
-/// A `Color::LinearRgba` with normalized RGB values representing the natural color
-/// at the specified temperature.
-///
-/// # Examples
-///
-/// ```rust,ignore
-/// // Get the natural color of sunlight
-/// let sunlight = kelvin_to_bevy_color(5778.0);
-///
-/// // Get the color of a warm incandescent bulb
-/// let warm_white = kelvin_to_bevy_color(2700.0);
-///
-/// // Get the color of a cool LED
-/// let cool_white = kelvin_to_bevy_color(6500.0);
-/// ```
-fn kelvin_to_bevy_color(temperature: f64) -> Color {
-    let (r, g, b) = kelvin_to_rgb(temperature);
-    Color::LinearRgba(LinearRgba::rgb(r as f32, g as f32, b as f32))
 }
 
 /// Converts a color temperature in Kelvin to normalized RGB values.
@@ -297,13 +268,12 @@ fn kelvin_to_bevy_color(temperature: f64) -> Color {
 /// accurate color temperature conversion for the range 1000K - 40000K.
 ///
 /// See https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html.
-fn kelvin_to_rgb(temperature: f64) -> (f64, f64, f64) {
+fn rgb_for_temp(temperature: f64) -> (f64, f64, f64) {
     let temp = temperature.clamp(MIN_TEMPERATURE, MAX_TEMPERATURE);
-    let temp_100 = temp / TEMP_DIVISOR;
 
-    let red = calculate_red_channel(temp, temp_100);
-    let green = calculate_green_channel(temp, temp_100);
-    let blue = calculate_blue_channel(temp, temp_100);
+    let red = red_channel_for_temp(temp);
+    let green = green_channel_for_temp(temp);
+    let blue = blue_channel_for_temp(temp);
 
     let red_norm = red.clamp(0.0, MAX_COLOR_VALUE) / MAX_COLOR_VALUE;
     let green_norm = green.clamp(0.0, MAX_COLOR_VALUE) / MAX_COLOR_VALUE;
@@ -312,29 +282,29 @@ fn kelvin_to_rgb(temperature: f64) -> (f64, f64, f64) {
     (red_norm, green_norm, blue_norm)
 }
 
-fn calculate_red_channel(temp: f64, temp_100: f64) -> f64 {
+fn red_channel_for_temp(temp: f64) -> f64 {
     if temp <= DAYLIGHT_TEMP_THRESHOLD {
         MAX_COLOR_VALUE
     } else {
-        RED_COEFFICIENT * libm::pow(temp_100 - RED_OFFSET, RED_EXPONENT)
+        RED_COEFFICIENT * libm::pow(temp / 100.0 - RED_OFFSET, RED_EXPONENT)
     }
 }
 
-fn calculate_green_channel(temp: f64, temp_100: f64) -> f64 {
+fn green_channel_for_temp(temp: f64) -> f64 {
     if temp <= DAYLIGHT_TEMP_THRESHOLD {
-        GREEN_WARM_COEFFICIENT * libm::log(temp_100) + GREEN_WARM_OFFSET
+        GREEN_WARM_COEFFICIENT * libm::log(temp / 100.0) + GREEN_WARM_OFFSET
     } else {
-        GREEN_COOL_COEFFICIENT * libm::pow(temp_100 - RED_OFFSET, GREEN_COOL_EXPONENT)
+        GREEN_COOL_COEFFICIENT * libm::pow(temp / 100.0 - RED_OFFSET, GREEN_COOL_EXPONENT)
     }
 }
 
-fn calculate_blue_channel(temp: f64, temp_100: f64) -> f64 {
+fn blue_channel_for_temp(temp: f64) -> f64 {
     if temp >= DAYLIGHT_TEMP_THRESHOLD {
         MAX_COLOR_VALUE
     } else if temp < BLUE_TEMP_THRESHOLD {
         0.0
     } else {
-        BLUE_COEFFICIENT * libm::log(temp_100 - BLUE_LOG_OFFSET) + BLUE_OFFSET
+        BLUE_COEFFICIENT * libm::log(temp / 100.0 - BLUE_LOG_OFFSET) + BLUE_OFFSET
     }
 }
 
@@ -345,31 +315,31 @@ mod color_tests {
     #[test]
     fn test_common_temperatures() {
         // Candle flame (~1900K) - should be very warm/orange
-        let (r, g, b) = kelvin_to_rgb(1900.0);
+        let (r, g, b) = rgb_for_temp(1900.0);
         assert!(r > 0.9); // Very red
         assert!(g < 0.7); // Less green
         assert!(b < 0.1); // Very little blue
 
         // Incandescent bulb (~2700K) - warm white
-        let (r, g, b) = kelvin_to_rgb(2700.0);
+        let (r, g, b) = rgb_for_temp(2700.0);
         assert!(r > 0.9);
         assert!(g > 0.6);
         assert!(b < 0.5);
 
         // Daylight (~5500K) - should be relatively balanced
-        let (r, g, b) = kelvin_to_rgb(5500.0);
+        let (r, g, b) = rgb_for_temp(5500.0);
         assert!(r > 0.8);
         assert!(g > 0.8);
         assert!(b > 0.7);
 
         // Cool daylight (~6500K) - slightly blue
-        let (r, g, b) = kelvin_to_rgb(6500.0);
+        let (r, g, b) = rgb_for_temp(6500.0);
         assert!(r > 0.7);
         assert!(g > 0.8);
         assert!(b > 0.8);
 
         // Blue sky (~10000K) - should be very blue
-        let (r, g, b) = kelvin_to_rgb(10000.0);
+        let (r, g, b) = rgb_for_temp(10000.0);
         assert!(r < 0.8);
         assert!(g < 0.9);
         assert!(b > 0.9);
@@ -378,7 +348,7 @@ mod color_tests {
     #[test]
     fn test_rgb_range() {
         for temp in (1000..=40000).step_by(500) {
-            let (r, g, b) = kelvin_to_rgb(temp as f64);
+            let (r, g, b) = rgb_for_temp(temp as f64);
 
             assert!(r >= 0.0 && r <= 1.0, "Red out of range at {}K: {}", temp, r);
             assert!(
@@ -398,23 +368,12 @@ mod color_tests {
 
     #[test]
     fn test_temperature_clamping() {
-        let (r1, g1, b1) = kelvin_to_rgb(500.0); // Too low
-        let (r2, g2, b2) = kelvin_to_rgb(1000.0); // Minimum
+        let (r1, g1, b1) = rgb_for_temp(500.0); // Too low
+        let (r2, g2, b2) = rgb_for_temp(1000.0); // Minimum
         assert_eq!((r1, g1, b1), (r2, g2, b2));
 
-        let (r3, g3, b3) = kelvin_to_rgb(50000.0); // Too high
-        let (r4, g4, b4) = kelvin_to_rgb(40000.0); // Maximum
+        let (r3, g3, b3) = rgb_for_temp(50000.0); // Too high
+        let (r4, g4, b4) = rgb_for_temp(40000.0); // Maximum
         assert_eq!((r3, g3, b3), (r4, g4, b4));
-    }
-
-    #[test]
-    fn test_bevy_color_conversion() {
-        let color = kelvin_to_bevy_color(5500.0);
-
-        // Just verify it creates a valid color without panicking
-        match color {
-            Color::LinearRgba(_) => (),
-            _ => panic!("Expected LinearRgba color"),
-        }
     }
 }
