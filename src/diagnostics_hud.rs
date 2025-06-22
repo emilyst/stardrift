@@ -45,6 +45,7 @@
 //! ```
 
 use crate::diagnostics::SimulationDiagnosticsPlugin;
+use crate::BodyCount;
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::asset::io::AssetSourceId;
 use bevy::asset::AssetPath;
@@ -124,6 +125,7 @@ impl DiagnosticsHudPlugin {
         mut commands: Commands,
         asset_server: Res<AssetServer>,
         settings: Res<DiagnosticsHudSettings>,
+        body_count: Res<BodyCount>,
     ) {
         let embedded_asset_source = &AssetSourceId::from("embedded");
 
@@ -197,10 +199,20 @@ impl DiagnosticsHudPlugin {
                 (
                     hud_row_node.clone(),
                     children![
-                        (Text::new("Camera"), bold_text_font),
-                        (CameraTextNode, Text::new("-"), regular_text_font),
+                        (Text::new("Camera"), bold_text_font.clone()),
+                        (CameraTextNode, Text::new("-"), regular_text_font.clone()),
                     ],
-                )
+                ),
+                (
+                    hud_row_node.clone(),
+                    children![
+                        (Text::new("Body count"), bold_text_font.clone()),
+                        (
+                            Text::new(format!("{}", **body_count)),
+                            regular_text_font.clone()
+                        ),
+                    ],
+                ),
             ],
         ));
     }
