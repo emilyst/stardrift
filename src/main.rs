@@ -57,7 +57,7 @@ impl Default for BodyCount {
 
     #[cfg(target_arch = "wasm32")]
     fn default() -> Self {
-        Self(35)
+        Self(50)
     }
 }
 
