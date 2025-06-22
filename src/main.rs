@@ -131,7 +131,7 @@ fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
             focus: Vec3::ZERO,
             pan_smoothness: 0.0,
             radius: Some((body_distribution_sphere_radius * 3.0) as f32),
-            touch_controls: TouchControls::TwoFingerOrbit,
+            touch_controls: TouchControls::OneFingerOrbit,
             trackpad_behavior: TrackpadBehavior::blender_default(),
             trackpad_pinch_to_zoom_enabled: true,
             ..default()
