@@ -50,8 +50,14 @@ impl Default for GravitationalConstant {
 struct BodyCount(usize);
 
 impl Default for BodyCount {
+    #[cfg(not(target_arch = "wasm32"))]
     fn default() -> Self {
         Self(100)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn default() -> Self {
+        Self(35)
     }
 }
 
