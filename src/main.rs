@@ -4,9 +4,12 @@ mod color;
 mod diagnostics;
 mod diagnostics_hud;
 mod math;
+mod octree;
 
 use crate::diagnostics::SimulationDiagnosticsPlugin;
 use crate::diagnostics_hud::DiagnosticsHudPlugin;
+use crate::octree::Octree;
+use crate::octree::OctreeBody;
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use avian3d::prelude::*;
@@ -42,7 +45,7 @@ struct GravitationalConstant(Scalar);
 
 impl Default for GravitationalConstant {
     fn default() -> Self {
-        Self(100000.0)
+        Self(100.0)
     }
 }
 
@@ -50,14 +53,12 @@ impl Default for GravitationalConstant {
 struct BodyCount(usize);
 
 impl Default for BodyCount {
-    #[cfg(not(target_arch = "wasm32"))]
     fn default() -> Self {
-        Self(100)
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn default() -> Self {
-        Self(50)
+        if cfg!(target_arch = "wasm32") {
+            Self(100)
+        } else {
+            Self(100)
+        }
     }
 }
 
@@ -66,6 +67,15 @@ struct CurrentBarycenter(Vector);
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
 struct PreviousBarycenter(Vector);
+
+#[derive(Resource, Deref, DerefMut, Debug)]
+struct GravitationalOctree(Octree);
+
+#[derive(Resource, Default)]
+struct OctreeVisualizationSettings {
+    enabled: bool,
+    max_depth: Option<usize>, // None means show all levels
+}
 
 fn main() {
     let mut app = App::new();
@@ -76,8 +86,6 @@ fn main() {
         FrameTimeDiagnosticsPlugin::default(),
         LogDiagnosticsPlugin::default(),
         PanOrbitCameraPlugin,
-        #[cfg(not(target_arch = "wasm32"))]
-        PhysicsDiagnosticsPlugin,
         PhysicsPlugins::default(),
         SimulationDiagnosticsPlugin::default(),
     ));
@@ -87,6 +95,11 @@ fn main() {
     app.init_resource::<BodyCount>();
     app.init_resource::<CurrentBarycenter>();
     app.init_resource::<PreviousBarycenter>();
+    app.insert_resource(GravitationalOctree(Octree::new(0.5))); // theta = 0.5 for Barnes-Hut approximation
+    app.insert_resource(OctreeVisualizationSettings {
+        enabled: false,
+        ..default()
+    });
 
     app.edit_schedule(FixedUpdate, |schedule| {
         schedule.set_build_settings(ScheduleBuildSettings {
@@ -100,13 +113,22 @@ fn main() {
         FixedUpdate,
         (
             // TODO: move these systems into a Simulation struct
-            apply_gravitation,
+            rebuild_octree,
+            apply_gravitation_octree,
             update_barycenter,
             follow_barycenter,
         )
             .chain(),
     );
-    app.add_systems(Update, (quit_on_escape, pause_physics_on_space));
+    app.add_systems(
+        Update,
+        (
+            quit_on_escape,
+            pause_physics_on_space,
+            toggle_octree_visualization,
+            visualize_octree,
+        ),
+    );
 
     app.run();
 }
@@ -114,7 +136,7 @@ fn main() {
 fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
     // TODO: calculate distance at which min sphere radius subtends camera frustum
     let body_distribution_sphere_radius =
-        math::min_sphere_radius_for_surface_distribution(**body_count, 100.0, 0.001);
+        math::min_sphere_radius_for_surface_distribution(**body_count, 200.0, 0.001);
 
     commands.spawn((
         Name::new("Main Camera"),
@@ -130,7 +152,7 @@ fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
         PanOrbitCamera {
             focus: Vec3::ZERO,
             pan_smoothness: 0.0,
-            radius: Some((body_distribution_sphere_radius * 3.0) as f32),
+            radius: Some((body_distribution_sphere_radius * 2.0) as f32),
             touch_controls: TouchControls::OneFingerOrbit,
             trackpad_behavior: TrackpadBehavior::blender_default(),
             trackpad_pinch_to_zoom_enabled: true,
@@ -148,10 +170,10 @@ fn spawn_bodies(
 ) {
     for _ in 0..**body_count {
         let body_distribution_sphere_radius =
-            math::min_sphere_radius_for_surface_distribution(**body_count, 100.0, 0.001);
+            math::min_sphere_radius_for_surface_distribution(**body_count, 200.0, 0.001);
         let position = math::random_unit_vector(&mut *rng) * body_distribution_sphere_radius;
         let transform = Transform::from_translation(position.as_vec3());
-        let radius = rng.random_range(2.0..=3.0);
+        let radius = rng.random_range(10.0..=20.0);
         let mesh = meshes.add(Sphere::new(radius as f32));
 
         let temperature = rng.random_range(2000.0..=15000.0);
@@ -175,46 +197,44 @@ fn spawn_bodies(
     }
 }
 
-// TODO: test
-fn apply_gravitation(
+fn rebuild_octree(
+    bodies: Query<(Entity, &Transform, &ComputedMass), With<RigidBody>>,
+    mut octree: ResMut<GravitationalOctree>,
+) {
+    let octree_bodies: Vec<OctreeBody> = bodies
+        .iter()
+        .map(|(entity, transform, mass)| OctreeBody {
+            entity,
+            position: Vector::from(transform.translation),
+            mass: mass.value(),
+        })
+        .collect();
+
+    octree.build(octree_bodies);
+}
+
+// Apply gravitational forces using the octree for approximation
+fn apply_gravitation_octree(
     time: ResMut<Time>,
     g: Res<GravitationalConstant>,
+    octree: Res<GravitationalOctree>,
     mut bodies: Query<
-        (&Transform, &ComputedMass, &mut LinearVelocity),
+        (Entity, &Transform, &ComputedMass, &mut LinearVelocity),
         (With<RigidBody>, Without<RigidBodyDisabled>),
     >,
 ) {
     let delta_time = time.delta_secs_f64();
-    let mut body_pairs = bodies.iter_combinations_mut();
 
-    const MIN_DISTANCE: Scalar = 1.0;
-    const MAX_FORCE: Scalar = 10000.0;
-    const MIN_DISTANCE_SQUARED: Scalar = MIN_DISTANCE * MIN_DISTANCE;
+    for (entity, transform, mass, mut velocity) in bodies.iter_mut() {
+        let body = OctreeBody {
+            entity,
+            position: Vector::from(transform.translation),
+            mass: mass.value(),
+        };
 
-    while let Some(
-        [
-            (transform1, computed_mass1, mut linear_velocity1),
-            (transform2, computed_mass2, mut linear_velocity2),
-        ],
-    ) = body_pairs.fetch_next()
-    {
-        let direction = Vector::from(transform2.translation) - Vector::from(transform1.translation);
-        let distance_squared = direction.length_squared();
-
-        if distance_squared < MIN_DISTANCE_SQUARED {
-            continue;
-        }
-
-        let distance = distance_squared;
-        let direction_normalized = direction / distance;
-        let force_magnitude =
-            **g * computed_mass1.value() * computed_mass2.value() / distance_squared;
-        let force_magnitude = force_magnitude.min(MAX_FORCE);
-        let acceleration1 = force_magnitude * direction_normalized * computed_mass1.inverse();
-        let acceleration2 = -force_magnitude * direction_normalized * computed_mass2.inverse();
-
-        **linear_velocity1 += acceleration1 * delta_time;
-        **linear_velocity2 += acceleration2 * delta_time;
+        let force = octree.calculate_force(&body, octree.root.as_ref(), **g);
+        let acceleration = force * mass.inverse();
+        **velocity += acceleration * delta_time;
     }
 }
 
@@ -279,4 +299,81 @@ fn pause_physics_on_space(
             commands.entity(entity).remove::<RigidBodyDisabled>();
         }
     }
+}
+
+fn toggle_octree_visualization(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut settings: ResMut<OctreeVisualizationSettings>,
+) {
+    for &keycode in keys.get_just_pressed() {
+        match keycode {
+            KeyCode::KeyO => settings.enabled = !settings.enabled,
+            KeyCode::Digit0 => settings.max_depth = None,
+            KeyCode::Digit1 => settings.max_depth = Some(1),
+            KeyCode::Digit2 => settings.max_depth = Some(2),
+            KeyCode::Digit3 => settings.max_depth = Some(3),
+            KeyCode::Digit4 => settings.max_depth = Some(4),
+            KeyCode::Digit5 => settings.max_depth = Some(5),
+            KeyCode::Digit6 => settings.max_depth = Some(6),
+            KeyCode::Digit7 => settings.max_depth = Some(7),
+            KeyCode::Digit8 => settings.max_depth = Some(8),
+            KeyCode::Digit9 => settings.max_depth = Some(9),
+            _ => {}
+        }
+    }
+}
+
+fn visualize_octree(
+    mut gizmos: Gizmos,
+    octree: Res<GravitationalOctree>,
+    settings: Res<OctreeVisualizationSettings>,
+) {
+    if !settings.enabled {
+        return;
+    }
+
+    let bounds = octree.get_bounds(settings.max_depth);
+
+    for aabb in bounds {
+        draw_bounding_box_wireframe_gizmo(&mut gizmos, &aabb, css::WHITE);
+    }
+}
+
+fn draw_bounding_box_wireframe_gizmo(
+    gizmos: &mut Gizmos,
+    aabb: &octree::Aabb3d,
+    color: impl Into<Color>,
+) {
+    let min = aabb.min.as_vec3();
+    let max = aabb.max.as_vec3();
+    let color = color.into();
+
+    let corners = [
+        Vec3::new(min.x, min.y, min.z), // 0: min corner
+        Vec3::new(max.x, min.y, min.z), // 1: +x
+        Vec3::new(max.x, max.y, min.z), // 2: +x+y
+        Vec3::new(min.x, max.y, min.z), // 3: +y
+        Vec3::new(min.x, min.y, max.z), // 4: +z
+        Vec3::new(max.x, min.y, max.z), // 5: +x+z
+        Vec3::new(max.x, max.y, max.z), // 6: max corner
+        Vec3::new(min.x, max.y, max.z), // 7: +y+z
+    ];
+
+    // Bottom face (z = min)
+    gizmos.line(corners[0], corners[1], color); // min to +x
+    gizmos.line(corners[1], corners[2], color); // +x to +x+y
+    gizmos.line(corners[2], corners[3], color); // +x+y to +y
+    gizmos.line(corners[3], corners[0], color); // +y to min
+
+    // Top face (z = max)
+    gizmos.line(corners[4], corners[5], color); // +z to +x+z
+    gizmos.line(corners[5], corners[6], color); // +x+z to max
+    gizmos.line(corners[6], corners[7], color); // max to +y+z
+    gizmos.line(corners[7], corners[4], color); // +y+z to +z
+
+    // Vertical edges
+    gizmos.line(corners[0], corners[4], color); // min to +z
+    gizmos.line(corners[1], corners[5], color); // +x to +x+z
+    gizmos.line(corners[2], corners[6], color); // +x+y to max
+    gizmos.line(corners[3], corners[7], color); // +y to +y+z
 }
