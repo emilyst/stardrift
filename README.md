@@ -9,6 +9,7 @@ interactive camera controls.
 ### Core Simulation
 
 - **N-body gravitational physics**: Accurate gravitational force calculations between all bodies
+- **Barnes-Hut octree algorithm**: Efficient O(N log N) gravitational force calculations using spatial partitioning
 - **High precision**: Uses f64 floating-point precision for enhanced accuracy
 - **Deterministic simulation**: Physics use enhanced determinism for reproducible results
 - **Parallel processing**: Multi-threaded physics calculations for optimal performance
@@ -21,6 +22,8 @@ interactive camera controls.
 - **Touch support**: Touch controls for mobile and tablet devices
 - **Visual effects**: Bloom effects and tone mapping for enhanced visual quality
 - **Barycenter visualization**: Cross-hair indicator showing the system's center of mass
+- **Octree visualization**: Real-time wireframe rendering of the spatial partitioning structure
+- **Interactive octree controls**: Toggle octree display and adjust visualization depth levels
 
 ### User Interface
 
@@ -30,6 +33,7 @@ interactive camera controls.
     - Barycenter coordinates (X, Y, Z)
     - Camera position (X, Y, Z)
 - **Pause/Resume functionality**: Space bar to pause and resume the simulation
+- **Octree toggle button**: Interactive UI button to show/hide octree visualization
 
 ### Platform Support
 
@@ -102,6 +106,8 @@ npx http-server out
 | **Mouse**       | Pan and orbit camera around the simulation |
 | **Mouse Wheel** | Zoom in/out                                |
 | **Space**       | Pause/Resume simulation                    |
+| **O**           | Toggle octree visualization on/off         |
+| **0-9**         | Set octree visualization depth (0 = all levels) |
 | **Escape**      | Quit application                           |
 | **Touch**       | Pan, orbit, and zoom (mobile/tablet)       |
 
@@ -124,8 +130,10 @@ The simulation can be customized by modifying the constants in the source code:
 
 - **Engine**: Bevy 0.16.* (Entity Component System game engine)
 - **Physics**: Avian3D with f64 precision and parallel processing
-- **Rendering**: Bevy's PBR (Physically Based Rendering) pipeline
+- **Spatial Optimization**: Barnes-Hut octree algorithm with configurable theta parameter for accuracy/performance balance
+- **Rendering**: Bevy's PBR (Physically Based Rendering) pipeline with real-time octree wireframe visualization
 - **Random Number Generation**: ChaCha8 algorithm for efficient PRNG
+- **Mathematical Utilities**: Advanced sphere surface distribution algorithms and statistical validation
 
 ### Performance Optimizations
 
@@ -134,6 +142,7 @@ The simulation can be customized by modifying the constants in the source code:
     - Release: Full optimizations with debug info stripped
     - Distribution: Link-time optimization (LTO) and single codegen unit
     - WASM: Size-optimized build for web deployment
+- **Algorithmic Efficiency**: Barnes-Hut octree reduces gravitational calculations from O(N²) to O(N log N)
 - **Parallel Processing**: Multi-threaded physics calculations
 - **Memory Efficiency**: Optimized data structures and minimal allocations
 - **Rendering Optimizations**: Efficient mesh and material management
