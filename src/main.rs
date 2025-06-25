@@ -5,6 +5,7 @@ mod diagnostics;
 mod diagnostics_hud;
 mod math;
 mod octree;
+mod stars;
 
 use crate::diagnostics::SimulationDiagnosticsPlugin;
 use crate::diagnostics_hud::DiagnosticsHudPlugin;
