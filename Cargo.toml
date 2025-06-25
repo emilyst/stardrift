@@ -28,11 +28,57 @@ inherits = "distribution"
 opt-level = "z"
 
 [dependencies]
-bevy = { version = "0.16.*", features = ["default_no_std"] }
 bevy_panorbit_camera = "*"
 libm = "0.2.15"
 rand = "0.9.*"
 rand_chacha = "0.9.*"
+
+[dependencies.bevy]
+version = "0.16.*"
+default-features = false
+features = [
+    "default_no_std",
+    "libm",
+    "zstd",
+    "bevy_ui",
+    "async_executor",
+    "android-game-activity",
+    "android_shared_stdcxx",
+    "animation",
+    "bevy_asset",
+    "bevy_audio",
+    "bevy_color",
+    "bevy_core_pipeline",
+    "bevy_gilrs",
+    "bevy_gizmos",
+    "bevy_gltf",
+    "bevy_input_focus",
+    "bevy_log",
+    "bevy_mesh_picking_backend",
+    "bevy_pbr",
+    "bevy_picking",
+    "bevy_render",
+    "bevy_scene",
+    "bevy_sprite",
+    "bevy_sprite_picking_backend",
+    "bevy_state",
+    "bevy_text",
+    "bevy_ui",
+    "bevy_ui_picking_backend",
+    "bevy_window",
+    "bevy_winit",
+    "custom_cursor",
+    "default_font",
+    "hdr",
+    "multi_threaded",
+    "png",
+    "smaa_luts",
+    "sysinfo_plugin",
+    "tonemapping_luts",
+    "vorbis",
+    "webgl2",
+    "x11",
+]
 
 [dependencies.avian3d]
 version = "*"
