@@ -173,7 +173,22 @@ fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
     ));
 }
 
-/// Helper function to spawn simulation bodies with shared logic
+fn spawn_bodies(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut rng: ResMut<SharedRng>,
+    body_count: Res<BodyCount>,
+) {
+    spawn_simulation_bodies(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &mut rng,
+        **body_count,
+    );
+}
+
 fn spawn_simulation_bodies(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -215,16 +230,6 @@ fn spawn_simulation_bodies(
     }
 }
 
-fn spawn_bodies(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<SharedRng>,
-    body_count: Res<BodyCount>,
-) {
-    spawn_simulation_bodies(&mut commands, &mut meshes, &mut materials, &mut rng, **body_count);
-}
-
 fn rebuild_octree(
     bodies: Query<(Entity, &Transform, &ComputedMass), With<RigidBody>>,
     mut octree: ResMut<GravitationalOctree>,
@@ -241,7 +246,6 @@ fn rebuild_octree(
     octree.build(octree_bodies);
 }
 
-// Apply gravitational forces using the octree for approximation
 fn apply_gravitation_octree(
     time: ResMut<Time>,
     g: Res<GravitationalConstant>,
@@ -312,16 +316,6 @@ fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit
     }
 }
 
-/// Restarts the simulation by despawning all current bodies and spawning new ones.
-/// 
-/// This system listens for the 'R' key press and performs a complete simulation reset:
-/// 1. Despawns all entities with RigidBody components (simulation bodies)
-/// 2. Resets simulation resources (barycenter, octree)
-/// 3. Resets camera focus to origin
-/// 4. Generates new random seed for body generation
-/// 5. Spawns new bodies with fresh random positions and properties
-/// 
-/// Press 'R' to restart the simulation with a completely new configuration.
 fn restart_simulation_on_r(
     keys: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
@@ -336,27 +330,28 @@ fn restart_simulation_on_r(
     mut pan_orbit_camera: Query<&mut PanOrbitCamera>,
 ) {
     if keys.just_pressed(KeyCode::KeyR) {
-        // Despawn all current simulation bodies
         for entity in simulation_bodies.iter() {
             commands.entity(entity).despawn();
         }
 
-        // Reset resources
         **current_barycenter = Vector::ZERO;
         **previous_barycenter = Vector::ZERO;
         octree.build(vec![]); // Reset octree with empty body list
 
-        // Reset camera focus to origin
         if let Ok(mut camera) = pan_orbit_camera.single_mut() {
             camera.target_focus = Vec3::ZERO;
             camera.force_update = true;
         }
 
-        // Respawn new bodies with fresh random seed
         *rng = SharedRng::default(); // This will create a new random seed
 
-        // Spawn new bodies using the shared logic
-        spawn_simulation_bodies(&mut commands, &mut meshes, &mut materials, &mut rng, **body_count);
+        spawn_simulation_bodies(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            &mut rng,
+            **body_count,
+        );
     }
 }
 
