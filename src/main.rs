@@ -47,7 +47,7 @@ struct GravitationalConstant(Scalar);
 
 impl Default for GravitationalConstant {
     fn default() -> Self {
-        Self(100.0)
+        Self(1e1)
     }
 }
 

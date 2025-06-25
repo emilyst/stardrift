@@ -235,7 +235,7 @@ impl Octree {
 
     fn calculate_direct_force(&self, body1: &OctreeBody, body2: &OctreeBody, g: Scalar) -> Vector {
         const MIN_DISTANCE: Scalar = 10.0;
-        const MAX_FORCE: Scalar = 100000.0;
+        const MAX_FORCE: Scalar = 1e4;
         const MIN_DISTANCE_SQUARED: Scalar = MIN_DISTANCE * MIN_DISTANCE;
 
         let direction = body2.position - body1.position;
