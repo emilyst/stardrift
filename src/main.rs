@@ -133,6 +133,7 @@ fn main() {
         Update,
         (
             quit_on_escape,
+            restart_simulation_on_r,
             pause_physics_on_space,
             toggle_octree_visualization,
             visualize_octree,
@@ -172,17 +173,18 @@ fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
     ));
 }
 
-fn spawn_bodies(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<SharedRng>,
-    body_count: Res<BodyCount>,
+/// Helper function to spawn simulation bodies with shared logic
+fn spawn_simulation_bodies(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    rng: &mut ResMut<SharedRng>,
+    body_count: usize,
 ) {
-    for _ in 0..**body_count {
+    for _ in 0..body_count {
         let body_distribution_sphere_radius =
-            math::min_sphere_radius_for_surface_distribution(**body_count, 200.0, 0.001);
-        let position = math::random_unit_vector(&mut *rng) * body_distribution_sphere_radius;
+            math::min_sphere_radius_for_surface_distribution(body_count, 200.0, 0.001);
+        let position = math::random_unit_vector(&mut **rng) * body_distribution_sphere_radius;
         let transform = Transform::from_translation(position.as_vec3());
         let radius = rng.random_range(10.0..=20.0);
         let mesh = meshes.add(Sphere::new(radius as f32));
@@ -196,7 +198,7 @@ fn spawn_bodies(
         let bloom_intensity = 100.0;
         let saturation_intensity = 3.0;
         let material = color::emissive_material_for_temp(
-            &mut materials,
+            materials,
             temperature,
             bloom_intensity,
             saturation_intensity,
@@ -211,6 +213,16 @@ fn spawn_bodies(
             Mesh3d(mesh),
         ));
     }
+}
+
+fn spawn_bodies(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut rng: ResMut<SharedRng>,
+    body_count: Res<BodyCount>,
+) {
+    spawn_simulation_bodies(&mut commands, &mut meshes, &mut materials, &mut rng, **body_count);
 }
 
 fn rebuild_octree(
@@ -297,6 +309,54 @@ fn follow_barycenter(
 fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit>) {
     if keys.just_pressed(KeyCode::Escape) {
         exit.write_default();
+    }
+}
+
+/// Restarts the simulation by despawning all current bodies and spawning new ones.
+/// 
+/// This system listens for the 'R' key press and performs a complete simulation reset:
+/// 1. Despawns all entities with RigidBody components (simulation bodies)
+/// 2. Resets simulation resources (barycenter, octree)
+/// 3. Resets camera focus to origin
+/// 4. Generates new random seed for body generation
+/// 5. Spawns new bodies with fresh random positions and properties
+/// 
+/// Press 'R' to restart the simulation with a completely new configuration.
+fn restart_simulation_on_r(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands,
+    simulation_bodies: Query<Entity, With<RigidBody>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut rng: ResMut<SharedRng>,
+    body_count: Res<BodyCount>,
+    mut current_barycenter: ResMut<CurrentBarycenter>,
+    mut previous_barycenter: ResMut<PreviousBarycenter>,
+    mut octree: ResMut<GravitationalOctree>,
+    mut pan_orbit_camera: Query<&mut PanOrbitCamera>,
+) {
+    if keys.just_pressed(KeyCode::KeyR) {
+        // Despawn all current simulation bodies
+        for entity in simulation_bodies.iter() {
+            commands.entity(entity).despawn();
+        }
+
+        // Reset resources
+        **current_barycenter = Vector::ZERO;
+        **previous_barycenter = Vector::ZERO;
+        octree.build(vec![]); // Reset octree with empty body list
+
+        // Reset camera focus to origin
+        if let Ok(mut camera) = pan_orbit_camera.single_mut() {
+            camera.target_focus = Vec3::ZERO;
+            camera.force_update = true;
+        }
+
+        // Respawn new bodies with fresh random seed
+        *rng = SharedRng::default(); // This will create a new random seed
+
+        // Spawn new bodies using the shared logic
+        spawn_simulation_bodies(&mut commands, &mut meshes, &mut materials, &mut rng, **body_count);
     }
 }
 
