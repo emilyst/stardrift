@@ -16,8 +16,10 @@ use avian3d::prelude::*;
 use bevy::color::palettes::css;
 use bevy::core_pipeline::bloom::Bloom;
 use bevy::core_pipeline::tonemapping::Tonemapping;
+use bevy::diagnostic::EntityCountDiagnosticsPlugin;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::diagnostic::LogDiagnosticsPlugin;
+use bevy::diagnostic::SystemInformationDiagnosticsPlugin;
 use bevy::ecs::schedule::LogLevel;
 use bevy::ecs::schedule::ScheduleBuildSettings;
 use bevy::math::*;
@@ -83,11 +85,13 @@ fn main() {
     app.add_plugins((
         DefaultPlugins,
         DiagnosticsHudPlugin,
+        EntityCountDiagnosticsPlugin,
         FrameTimeDiagnosticsPlugin::default(),
         LogDiagnosticsPlugin::default(),
         PanOrbitCameraPlugin,
         PhysicsPlugins::default(),
         SimulationDiagnosticsPlugin::default(),
+        SystemInformationDiagnosticsPlugin,
     ));
 
     app.init_resource::<SharedRng>();
