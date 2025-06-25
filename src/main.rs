@@ -176,7 +176,12 @@ fn spawn_bodies(
         let radius = rng.random_range(10.0..=20.0);
         let mesh = meshes.add(Sphere::new(radius as f32));
 
-        let temperature = rng.random_range(2000.0..=15000.0);
+        let min_temp = 2000.0;
+        let max_temp = 15000.0;
+        let min_radius = 10.0;
+        let max_radius = 20.0;
+        let temperature =
+            min_temp + (max_temp - min_temp) * (max_radius - radius) / (max_radius - min_radius);
         let bloom_intensity = 100.0;
         let saturation_intensity = 3.0;
         let material = color::emissive_material_for_temp(
