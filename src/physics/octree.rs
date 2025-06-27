@@ -59,15 +59,15 @@ impl Aabb3d {
 #[derive(Debug)]
 pub struct Octree {
     pub root: Option<OctreeNode>,
-    pub theta: Scalar, // Barnes-Hut approximation parameter
+    pub theta: Scalar,        // Barnes-Hut approximation parameter
     pub min_distance: Scalar, // Minimum distance for force calculation
-    pub max_force: Scalar, // Maximum force magnitude
+    pub max_force: Scalar,    // Maximum force magnitude
 }
 
 impl Octree {
     pub fn new(theta: Scalar, min_distance: Scalar, max_force: Scalar) -> Self {
-        Self { 
-            root: None, 
+        Self {
+            root: None,
             theta,
             min_distance,
             max_force,

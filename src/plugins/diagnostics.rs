@@ -25,11 +25,11 @@
 //! ```
 
 use crate::resources::CurrentBarycenter;
+use bevy::diagnostic::DEFAULT_MAX_HISTORY_LENGTH;
 use bevy::diagnostic::Diagnostic;
 use bevy::diagnostic::DiagnosticPath;
 use bevy::diagnostic::Diagnostics;
 use bevy::diagnostic::RegisterDiagnostic;
-use bevy::diagnostic::DEFAULT_MAX_HISTORY_LENGTH;
 use bevy::prelude::*;
 use core::time::Duration;
 

@@ -46,9 +46,9 @@
 
 use crate::plugins::diagnostics::SimulationDiagnosticsPlugin;
 use crate::resources::BodyCount;
-use bevy::asset::io::embedded::EmbeddedAssetRegistry;
-use bevy::asset::io::AssetSourceId;
 use bevy::asset::AssetPath;
+use bevy::asset::io::AssetSourceId;
+use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::diagnostic::DiagnosticsStore;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;

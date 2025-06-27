@@ -1,2 +1,2 @@
-pub mod stars;
 pub mod octree;
+pub mod stars;

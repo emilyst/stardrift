@@ -42,7 +42,8 @@ pub fn spawn_simulation_bodies(
         );
         let position = math::random_unit_vector(&mut **rng) * body_distribution_sphere_radius;
         let transform = Transform::from_translation(position.as_vec3());
-        let radius = rng.random_range(config.physics.min_body_radius..=config.physics.max_body_radius);
+        let radius =
+            rng.random_range(config.physics.min_body_radius..=config.physics.max_body_radius);
         let mesh = meshes.add(Sphere::new(radius as f32));
 
         let min_temp = config.rendering.min_temperature;

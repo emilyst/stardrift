@@ -1,8 +1,8 @@
 use crate::physics::octree::Octree;
 use avian3d::math::{Scalar, Vector};
 use bevy::prelude::*;
-use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use rand_chacha::rand_core::SeedableRng;
 use std::sync::RwLock;
 
 #[derive(Resource, Deref, DerefMut, Debug, Clone, PartialEq)]

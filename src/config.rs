@@ -37,7 +37,11 @@ impl Default for PhysicsConfig {
     fn default() -> Self {
         Self {
             gravitational_constant: 1e1,
-            default_body_count: if cfg!(target_arch = "wasm32") { 100 } else { 100 },
+            default_body_count: if cfg!(target_arch = "wasm32") {
+                100
+            } else {
+                100
+            },
             octree_theta: 0.5,
             body_distribution_sphere_radius_multiplier: 200.0,
             body_distribution_min_distance: 0.001,
@@ -118,7 +122,10 @@ impl SimulationConfig {
             Ok(content) => match toml::from_str(&content) {
                 Ok(config) => config,
                 Err(e) => {
-                    warn!("Failed to parse config file {}: {}. Using defaults.", path, e);
+                    warn!(
+                        "Failed to parse config file {}: {}. Using defaults.",
+                        path, e
+                    );
                     Self::default()
                 }
             },
@@ -160,11 +167,26 @@ mod tests {
         let default_config = SimulationConfig::default();
 
         // Verify that we get the default values
-        assert_eq!(config.physics.gravitational_constant, default_config.physics.gravitational_constant);
-        assert_eq!(config.physics.default_body_count, default_config.physics.default_body_count);
-        assert_eq!(config.physics.octree_theta, default_config.physics.octree_theta);
-        assert_eq!(config.rendering.min_temperature, default_config.rendering.min_temperature);
-        assert_eq!(config.rendering.max_temperature, default_config.rendering.max_temperature);
+        assert_eq!(
+            config.physics.gravitational_constant,
+            default_config.physics.gravitational_constant
+        );
+        assert_eq!(
+            config.physics.default_body_count,
+            default_config.physics.default_body_count
+        );
+        assert_eq!(
+            config.physics.octree_theta,
+            default_config.physics.octree_theta
+        );
+        assert_eq!(
+            config.rendering.min_temperature,
+            default_config.rendering.min_temperature
+        );
+        assert_eq!(
+            config.rendering.max_temperature,
+            default_config.rendering.max_temperature
+        );
     }
 
     #[test]
