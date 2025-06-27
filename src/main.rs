@@ -83,6 +83,9 @@ struct OctreeVisualizationSettings {
 #[derive(Component)]
 struct OctreeToggleButton;
 
+#[derive(Component)]
+struct RestartSimulationButton;
+
 fn main() {
     let mut app = App::new();
 
@@ -138,6 +141,7 @@ fn main() {
             toggle_octree_visualization,
             visualize_octree,
             handle_octree_button,
+            handle_restart_button,
             update_octree_button_text,
         ),
     );
@@ -467,33 +471,68 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..default()
         })
         .with_children(|parent| {
-            // Octree toggle button in bottom left corner
+            // Container for buttons in bottom right corner
             parent
-                .spawn((
-                    Button,
-                    Node {
-                        top: Val::Px(5.0),
-                        right: Val::Px(5.0),
-                        margin: UiRect::all(Val::Px(10.0)),
-                        padding: UiRect::all(Val::Px(5.0)),
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Column,
-                        align_items: AlignItems::Center,
-                        justify_content: JustifyContent::Center,
-
-                        row_gap: Val::Px(1.0),
-                        ..default()
-                    },
-                    BorderRadius::all(Val::Px(5.0)),
-                    BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
-                    OctreeToggleButton,
-                ))
+                .spawn(Node {
+                    display: Display::Flex,
+                    flex_direction: FlexDirection::Row,
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::FlexEnd,
+                    column_gap: Val::Px(10.0),
+                    margin: UiRect::all(Val::Px(10.0)),
+                    ..default()
+                })
                 .with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Show Octree"),
-                        button_text_font,
-                        TextColor(Color::WHITE),
-                    ));
+                    // Octree toggle button
+
+                    // Restart simulation button
+                    parent
+                        .spawn((
+                            Button,
+                            Node {
+                                padding: UiRect::all(Val::Px(5.0)),
+                                display: Display::Flex,
+                                flex_direction: FlexDirection::Column,
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                row_gap: Val::Px(1.0),
+                                ..default()
+                            },
+                            BorderRadius::all(Val::Px(5.0)),
+                            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
+                            RestartSimulationButton,
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn((
+                                Text::new("New Simulation"),
+                                button_text_font.clone(),
+                                TextColor(Color::WHITE),
+                            ));
+                        });
+
+                    parent
+                        .spawn((
+                            Button,
+                            Node {
+                                padding: UiRect::all(Val::Px(5.0)),
+                                display: Display::Flex,
+                                flex_direction: FlexDirection::Column,
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                row_gap: Val::Px(1.0),
+                                ..default()
+                            },
+                            BorderRadius::all(Val::Px(5.0)),
+                            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
+                            OctreeToggleButton,
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn((
+                                Text::new("Show Octree"),
+                                button_text_font.clone(),
+                                TextColor(Color::WHITE),
+                            ));
+                        });
                 });
         });
 }
@@ -510,6 +549,61 @@ fn handle_octree_button(
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
                 settings.enabled = !settings.enabled;
+            }
+            Interaction::Hovered => {
+                *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
+            }
+            Interaction::None => {
+                *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
+            }
+        }
+    }
+}
+
+fn handle_restart_button(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<RestartSimulationButton>),
+    >,
+    mut commands: Commands,
+    simulation_bodies: Query<Entity, With<RigidBody>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut rng: ResMut<SharedRng>,
+    body_count: Res<BodyCount>,
+    mut current_barycenter: ResMut<CurrentBarycenter>,
+    mut previous_barycenter: ResMut<PreviousBarycenter>,
+    mut octree: ResMut<GravitationalOctree>,
+    mut pan_orbit_camera: Query<&mut PanOrbitCamera>,
+) {
+    for (interaction, mut color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
+
+                // Restart simulation logic (same as restart_simulation_on_r)
+                for entity in simulation_bodies.iter() {
+                    commands.entity(entity).despawn();
+                }
+
+                **current_barycenter = Vector::ZERO;
+                **previous_barycenter = Vector::ZERO;
+                octree.build(vec![]); // Reset octree with empty body list
+
+                if let Ok(mut camera) = pan_orbit_camera.single_mut() {
+                    camera.target_focus = Vec3::ZERO;
+                    camera.force_update = true;
+                }
+
+                *rng = SharedRng::default(); // This will create a new random seed
+
+                spawn_simulation_bodies(
+                    &mut commands,
+                    &mut meshes,
+                    &mut materials,
+                    &mut rng,
+                    **body_count,
+                );
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
