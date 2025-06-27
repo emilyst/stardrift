@@ -130,7 +130,7 @@ pub fn handle_restart_button(
     mut current_barycenter: ResMut<CurrentBarycenter>,
     mut previous_barycenter: ResMut<PreviousBarycenter>,
     octree: ResMut<GravitationalOctree>,
-    mut pan_orbit_camera: Query<&mut PanOrbitCamera>,
+    mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
     config: Res<SimulationConfig>,
 ) {
     for (interaction, mut color) in &mut interaction_query {

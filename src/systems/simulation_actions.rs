@@ -16,10 +16,10 @@ pub fn restart_simulation(
     current_barycenter: &mut ResMut<CurrentBarycenter>,
     previous_barycenter: &mut ResMut<PreviousBarycenter>,
     octree: &ResMut<GravitationalOctree>,
-    pan_orbit_camera: &mut Query<&mut PanOrbitCamera>,
+    pan_orbit_camera: &mut Single<&mut PanOrbitCamera>,
     config: &Res<SimulationConfig>,
 ) {
-    for entity in simulation_bodies.iter() {
+    for entity in simulation_bodies {
         commands.entity(entity).despawn();
     }
 
@@ -30,10 +30,8 @@ pub fn restart_simulation(
         octree_guard.build(vec![]);
     }
 
-    if let Ok(mut camera) = pan_orbit_camera.single_mut() {
-        camera.target_focus = Vec3::ZERO;
-        camera.force_update = true;
-    }
+    pan_orbit_camera.target_focus = Vec3::ZERO;
+    pan_orbit_camera.force_update = true;
 
     **rng = SharedRng::default();
 
