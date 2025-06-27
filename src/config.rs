@@ -23,7 +23,7 @@ impl Default for SimulationConfig {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PhysicsConfig {
     pub gravitational_constant: Scalar,
-    pub default_body_count: usize,
+    pub body_count: usize,
     pub octree_theta: Scalar,
     pub body_distribution_sphere_radius_multiplier: Scalar,
     pub body_distribution_min_distance: Scalar,
@@ -37,7 +37,7 @@ impl Default for PhysicsConfig {
     fn default() -> Self {
         Self {
             gravitational_constant: 1e1,
-            default_body_count: if cfg!(target_arch = "wasm32") {
+            body_count: if cfg!(target_arch = "wasm32") {
                 100
             } else {
                 100
@@ -167,10 +167,7 @@ mod tests {
             config.physics.gravitational_constant,
             default_config.physics.gravitational_constant
         );
-        assert_eq!(
-            config.physics.default_body_count,
-            default_config.physics.default_body_count
-        );
+        assert_eq!(config.physics.body_count, default_config.physics.body_count);
         assert_eq!(
             config.physics.octree_theta,
             default_config.physics.octree_theta
@@ -200,7 +197,7 @@ mod tests {
 
         let mut config = SimulationConfig::default();
         config.physics.gravitational_constant = 42.0;
-        config.physics.default_body_count = 123;
+        config.physics.body_count = 123;
         config.rendering.bloom_intensity = 999.0;
 
         let temp_path = "test_config_temp.toml";
@@ -209,7 +206,7 @@ mod tests {
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
         assert_eq!(loaded_config.physics.gravitational_constant, 42.0);
-        assert_eq!(loaded_config.physics.default_body_count, 123);
+        assert_eq!(loaded_config.physics.body_count, 123);
         assert_eq!(loaded_config.rendering.bloom_intensity, 999.0);
 
         let _ = fs::remove_file(temp_path);
