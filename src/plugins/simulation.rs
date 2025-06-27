@@ -15,7 +15,7 @@ impl Plugin for SimulationPlugin {
         app.init_resource::<BodyCount>();
         app.init_resource::<CurrentBarycenter>();
         app.init_resource::<PreviousBarycenter>();
-        app.insert_resource(GravitationalOctree(Octree::new(0.5))); // theta = 0.5 for Barnes-Hut approximation
+        app.insert_resource(GravitationalOctree::new(Octree::new(0.5))); // theta = 0.5 for Barnes-Hut approximation
         app.insert_resource(OctreeVisualizationSettings {
             enabled: false,
             ..default()

@@ -3,6 +3,7 @@ use avian3d::math::{Scalar, Vector};
 use bevy::prelude::*;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use std::sync::RwLock;
 
 #[derive(Resource, Deref, DerefMut, Debug, Clone, PartialEq)]
 pub struct SharedRng(pub ChaCha8Rng);
@@ -42,8 +43,14 @@ pub struct CurrentBarycenter(pub Vector);
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
 pub struct PreviousBarycenter(pub Vector);
 
-#[derive(Resource, Deref, DerefMut, Debug)]
-pub struct GravitationalOctree(pub Octree);
+#[derive(Resource, Debug)]
+pub struct GravitationalOctree(pub RwLock<Octree>);
+
+impl GravitationalOctree {
+    pub fn new(octree: Octree) -> Self {
+        Self(RwLock::new(octree))
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct OctreeVisualizationSettings {

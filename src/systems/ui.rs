@@ -125,7 +125,7 @@ pub fn handle_restart_button(
     body_count: Res<BodyCount>,
     mut current_barycenter: ResMut<CurrentBarycenter>,
     mut previous_barycenter: ResMut<PreviousBarycenter>,
-    mut octree: ResMut<GravitationalOctree>,
+    octree: ResMut<GravitationalOctree>,
     mut pan_orbit_camera: Query<&mut PanOrbitCamera>,
 ) {
     for (interaction, mut color) in &mut interaction_query {
@@ -140,7 +140,9 @@ pub fn handle_restart_button(
 
                 **current_barycenter = Vector::ZERO;
                 **previous_barycenter = Vector::ZERO;
-                octree.build(vec![]); // Reset octree with empty body list
+                if let Ok(mut octree_guard) = octree.0.write() {
+                    octree_guard.build(vec![]); // Reset octree with empty body list
+                }
 
                 if let Ok(mut camera) = pan_orbit_camera.single_mut() {
                     camera.target_focus = Vec3::ZERO;

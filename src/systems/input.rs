@@ -21,7 +21,7 @@ pub fn restart_simulation_on_r(
     body_count: Res<BodyCount>,
     mut current_barycenter: ResMut<CurrentBarycenter>,
     mut previous_barycenter: ResMut<PreviousBarycenter>,
-    mut octree: ResMut<GravitationalOctree>,
+    octree: ResMut<GravitationalOctree>,
     mut pan_orbit_camera: Query<&mut PanOrbitCamera>,
 ) {
     if keys.just_pressed(KeyCode::KeyR) {
@@ -31,7 +31,9 @@ pub fn restart_simulation_on_r(
 
         **current_barycenter = Vector::ZERO;
         **previous_barycenter = Vector::ZERO;
-        octree.build(vec![]); // Reset octree with empty body list
+        if let Ok(mut octree_guard) = octree.0.write() {
+            octree_guard.build(vec![]); // Reset octree with empty body list
+        }
 
         if let Ok(mut camera) = pan_orbit_camera.single_mut() {
             camera.target_focus = Vec3::ZERO;

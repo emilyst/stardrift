@@ -66,7 +66,7 @@ pub fn spawn_simulation_bodies(
 
 pub fn rebuild_octree(
     bodies: Query<(Entity, &Transform, &ComputedMass), With<RigidBody>>,
-    mut octree: ResMut<GravitationalOctree>,
+    octree: ResMut<GravitationalOctree>,
 ) {
     let octree_bodies: Vec<OctreeBody> = bodies
         .iter()
@@ -77,7 +77,9 @@ pub fn rebuild_octree(
         })
         .collect();
 
-    octree.build(octree_bodies);
+    if let Ok(mut octree_guard) = octree.0.write() {
+        octree_guard.build(octree_bodies);
+    }
 }
 
 pub fn apply_gravitation_octree(
@@ -91,16 +93,18 @@ pub fn apply_gravitation_octree(
 ) {
     let delta_time = time.delta_secs_f64();
 
-    for (entity, transform, mass, mut velocity) in bodies.iter_mut() {
-        let body = OctreeBody {
-            entity,
-            position: Vector::from(transform.translation),
-            mass: mass.value(),
-        };
+    if let Ok(octree_guard) = octree.0.read() {
+        for (entity, transform, mass, mut velocity) in bodies.iter_mut() {
+            let body = OctreeBody {
+                entity,
+                position: Vector::from(transform.translation),
+                mass: mass.value(),
+            };
 
-        let force = octree.calculate_force(&body, octree.root.as_ref(), **g);
-        let acceleration = force * mass.inverse();
-        **velocity += acceleration * delta_time;
+            let force = octree_guard.calculate_force(&body, octree_guard.root.as_ref(), **g);
+            let acceleration = force * mass.inverse();
+            **velocity += acceleration * delta_time;
+        }
     }
 }
 
