@@ -21,9 +21,9 @@ interactive camera controls.
 - **Interactive camera**: Pan, orbit, and zoom controls
 - **Touch support**: Touch controls for mobile and tablet devices
 - **Visual effects**: Bloom effects and tone mapping for enhanced visual quality
-- **Barycenter visualization**: Cross-hair indicator showing the system's center of mass
+- **Barycenter visualization**: Cross-hair indicator showing the system's center of mass with toggle controls
 - **Octree visualization**: Real-time wireframe rendering of the spatial partitioning structure
-- **Interactive octree controls**: Toggle octree display and adjust visualization depth levels
+- **Interactive visualization controls**: Toggle octree display, barycenter gizmos, and adjust visualization depth levels
 
 ### User Interface
 
@@ -33,7 +33,10 @@ interactive camera controls.
     - Barycenter coordinates (X, Y, Z)
     - Camera position (X, Y, Z)
 - **Pause/Resume functionality**: Space bar to pause and resume the simulation
-- **Octree toggle button**: Interactive UI button to show/hide octree visualization
+- **Interactive UI buttons**:
+    - **Octree toggle button**: Show/hide octree visualization
+    - **Barycenter gizmo toggle button**: Show/hide barycenter cross-hair indicator
+    - **Restart simulation button**: Generate new random bodies and restart the simulation
 
 ### Platform Support
 
@@ -106,6 +109,7 @@ npx http-server out
 | **Mouse**       | Pan and orbit camera around the simulation |
 | **Mouse Wheel** | Zoom in/out                                |
 | **Space**       | Pause/Resume simulation                    |
+| **R**           | Restart simulation with new random bodies |
 | **O**           | Toggle octree visualization on/off         |
 | **0-9**         | Set octree visualization depth (0 = all levels) |
 | **Escape**      | Quit application                           |
@@ -117,12 +121,37 @@ npx http-server out
 - Pan and orbit controls allow you to explore the simulation from different angles
 - The camera smoothly tracks the movement of the gravitational system
 
-### Simulation Parameters
+### Configuration
 
-The simulation can be customized by modifying the constants in the source code:
+The simulation features a comprehensive configuration system that allows customization of physics, rendering, and UI parameters. Configuration is managed through TOML files and supports XDG config directory standards.
 
-- **Body count**: Number of bodies in the simulation (default: configurable)
-- **Gravitational constant**: Strength of gravitational interactions
+#### Configuration Categories
+
+**Physics Configuration:**
+- **Body count**: Number of bodies in the simulation (default: 100)
+- **Gravitational constant**: Strength of gravitational interactions (default: 1e1)
+- **Octree theta**: Barnes-Hut approximation parameter for accuracy/performance balance (default: 0.5)
+- **Body distribution**: Sphere radius multiplier and minimum distance parameters
+- **Body size**: Minimum and maximum body radius settings
+- **Force calculation**: Minimum distance and maximum force limits
+
+**Rendering Configuration:**
+- **Temperature range**: Min/max temperature for stellar color mapping (default: 2000-15000K)
+- **Bloom intensity**: Visual bloom effect strength (default: 100.0)
+- **Saturation intensity**: Color saturation level (default: 3.0)
+- **Camera settings**: Radius multiplier for camera positioning
+
+**UI Configuration:**
+- **Button styling**: Padding, gaps, margins, and border radius
+- **Font settings**: Font size and other text properties
+
+#### Configuration File Location
+
+The configuration is automatically loaded from the XDG config directory:
+- **Linux/macOS**: `~/.config/many_body_simulation/config.toml`
+- **Windows**: `%APPDATA%/many_body_simulation/config.toml`
+
+If no configuration file exists, the application uses sensible defaults and can generate a configuration file for customization.
 
 ## Technical Details
 
