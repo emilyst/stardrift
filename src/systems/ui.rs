@@ -7,13 +7,17 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCamera;
 
-pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn setup_ui(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    config: Res<SimulationConfig>,
+) {
     // Load the same font as the diagnostic hud
     let embedded_asset_source = &bevy::asset::io::AssetSourceId::from("embedded");
     let regular_font_asset_path = bevy::asset::AssetPath::parse("fonts/BerkeleyMono-Regular")
         .with_source(embedded_asset_source);
     let regular_font = asset_server.load(regular_font_asset_path);
-    let button_text_font = TextFont::from_font(regular_font).with_font_size(12.0);
+    let button_text_font = TextFont::from_font(regular_font).with_font_size(config.ui.font_size);
 
     // Root UI node
     commands
@@ -32,8 +36,8 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::FlexEnd,
-                    column_gap: Val::Px(10.0),
-                    margin: UiRect::all(Val::Px(10.0)),
+                    column_gap: Val::Px(config.ui.button_gap),
+                    margin: UiRect::all(Val::Px(config.ui.button_margin)),
                     ..default()
                 })
                 .with_children(|parent| {
@@ -42,7 +46,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .spawn((
                             Button,
                             Node {
-                                padding: UiRect::all(Val::Px(5.0)),
+                                padding: UiRect::all(Val::Px(config.ui.button_padding)),
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Column,
                                 align_items: AlignItems::Center,
@@ -50,7 +54,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                 row_gap: Val::Px(1.0),
                                 ..default()
                             },
-                            BorderRadius::all(Val::Px(5.0)),
+                            BorderRadius::all(Val::Px(config.ui.button_border_radius)),
                             BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
                             RestartSimulationButton,
                         ))
@@ -67,7 +71,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .spawn((
                             Button,
                             Node {
-                                padding: UiRect::all(Val::Px(5.0)),
+                                padding: UiRect::all(Val::Px(config.ui.button_padding)),
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Column,
                                 align_items: AlignItems::Center,
@@ -75,7 +79,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                 row_gap: Val::Px(1.0),
                                 ..default()
                             },
-                            BorderRadius::all(Val::Px(5.0)),
+                            BorderRadius::all(Val::Px(config.ui.button_border_radius)),
                             BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
                             OctreeToggleButton,
                         ))

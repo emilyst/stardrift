@@ -1,3 +1,4 @@
+use crate::config::SimulationConfig;
 use crate::resources::*;
 use crate::utils::math;
 use avian3d::math::Scalar;
@@ -7,10 +8,17 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
 use bevy_panorbit_camera::{PanOrbitCamera, TouchControls, TrackpadBehavior};
 
-pub fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
+pub fn spawn_camera(
+    mut commands: Commands,
+    body_count: Res<BodyCount>,
+    config: Res<SimulationConfig>,
+) {
     // TODO: calculate distance at which min sphere radius subtends camera frustum
-    let body_distribution_sphere_radius =
-        math::min_sphere_radius_for_surface_distribution(**body_count, 200.0, 0.001);
+    let body_distribution_sphere_radius = math::min_sphere_radius_for_surface_distribution(
+        **body_count,
+        config.physics.body_distribution_sphere_radius_multiplier,
+        config.physics.body_distribution_min_distance,
+    );
 
     commands.spawn((
         Name::new("Main Camera"),
@@ -26,7 +34,10 @@ pub fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>) {
         PanOrbitCamera {
             focus: Vec3::ZERO,
             pan_smoothness: 0.0,
-            radius: Some((body_distribution_sphere_radius * 2.0) as f32),
+            radius: Some(
+                (body_distribution_sphere_radius * config.rendering.camera_radius_multiplier)
+                    as f32,
+            ),
             touch_controls: TouchControls::OneFingerOrbit,
             trackpad_behavior: TrackpadBehavior::blender_default(),
             trackpad_pinch_to_zoom_enabled: true,
