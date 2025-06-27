@@ -1,7 +1,7 @@
 use crate::config::SimulationConfig;
 use crate::physics::octree::Octree;
 use crate::resources::*;
-use crate::systems::{camera, input, physics, ui, visualization};
+use crate::systems::{camera, config, input, physics, ui, visualization};
 use bevy::ecs::schedule::LogLevel;
 use bevy::ecs::schedule::ScheduleBuildSettings;
 use bevy::prelude::*;
@@ -71,5 +71,8 @@ impl Plugin for SimulationPlugin {
                 ui::update_octree_button_text,
             ),
         );
+
+        // Add exit handling system (runs in Last schedule to ensure it runs after all other systems)
+        app.add_systems(Last, config::save_config_on_exit);
     }
 }

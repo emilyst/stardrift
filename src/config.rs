@@ -201,4 +201,30 @@ mod tests {
         // Should contain either .config (HOME fallback) or be an absolute path (XDG_CONFIG_HOME)
         assert!(path_str.contains(".config") || path_str.starts_with("/"));
     }
+
+    #[test]
+    fn test_save_and_load_config() {
+        use std::fs;
+
+        // Create a temporary config with modified values
+        let mut config = SimulationConfig::default();
+        config.physics.gravitational_constant = 42.0;
+        config.physics.default_body_count = 123;
+        config.rendering.bloom_intensity = 999.0;
+
+        // Save to a temporary file
+        let temp_path = "test_config_temp.toml";
+        config.save(temp_path).expect("Failed to save test config");
+
+        // Load it back
+        let loaded_config = SimulationConfig::load_or_default(temp_path);
+
+        // Verify the values were saved and loaded correctly
+        assert_eq!(loaded_config.physics.gravitational_constant, 42.0);
+        assert_eq!(loaded_config.physics.default_body_count, 123);
+        assert_eq!(loaded_config.rendering.bloom_intensity, 999.0);
+
+        // Clean up
+        let _ = fs::remove_file(temp_path);
+    }
 }
