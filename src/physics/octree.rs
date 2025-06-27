@@ -140,11 +140,10 @@ impl Octree {
             return OctreeNode::External { bounds, bodies };
         }
 
-        let octants = bounds.subdivide_into_children();
-        let mut children: [Option<OctreeNode>; 8] = Default::default();
         let center = bounds.center();
-
+        let octants = bounds.subdivide_into_children();
         let mut octant_bodies: [Vec<OctreeBody>; 8] = Default::default();
+        let mut children: [Option<OctreeNode>; 8] = Default::default();
 
         for body in bodies.iter() {
             let octant_index = Self::get_octant_index(body.position, center);
