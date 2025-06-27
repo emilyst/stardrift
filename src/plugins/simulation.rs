@@ -1,3 +1,4 @@
+use crate::config::SimulationConfig;
 use crate::physics::octree::Octree;
 use crate::resources::*;
 use crate::systems::{camera, input, physics, ui, visualization};
@@ -9,13 +10,21 @@ pub struct SimulationPlugin;
 
 impl Plugin for SimulationPlugin {
     fn build(&self, app: &mut App) {
-        // Initialize resources
+        // Load configuration from XDG config path
+        let config = SimulationConfig::load_from_user_config();
+
+        // Initialize resources using config values
+        app.insert_resource(config.clone());
         app.init_resource::<SharedRng>();
-        app.init_resource::<GravitationalConstant>();
-        app.init_resource::<BodyCount>();
+        app.insert_resource(GravitationalConstant(config.physics.gravitational_constant));
+        app.insert_resource(BodyCount(config.physics.default_body_count));
         app.init_resource::<CurrentBarycenter>();
         app.init_resource::<PreviousBarycenter>();
-        app.insert_resource(GravitationalOctree::new(Octree::new(0.5))); // theta = 0.5 for Barnes-Hut approximation
+        app.insert_resource(GravitationalOctree::new(Octree::new(
+            config.physics.octree_theta,
+            config.physics.force_calculation_min_distance,
+            config.physics.force_calculation_max_force,
+        )));
         app.insert_resource(OctreeVisualizationSettings {
             enabled: false,
             ..default()

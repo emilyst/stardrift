@@ -60,11 +60,18 @@ impl Aabb3d {
 pub struct Octree {
     pub root: Option<OctreeNode>,
     pub theta: Scalar, // Barnes-Hut approximation parameter
+    pub min_distance: Scalar, // Minimum distance for force calculation
+    pub max_force: Scalar, // Maximum force magnitude
 }
 
 impl Octree {
-    pub fn new(theta: Scalar) -> Self {
-        Self { root: None, theta }
+    pub fn new(theta: Scalar, min_distance: Scalar, max_force: Scalar) -> Self {
+        Self { 
+            root: None, 
+            theta,
+            min_distance,
+            max_force,
+        }
     }
 
     pub fn get_bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
@@ -234,21 +241,19 @@ impl Octree {
     }
 
     fn calculate_direct_force(&self, body1: &OctreeBody, body2: &OctreeBody, g: Scalar) -> Vector {
-        const MIN_DISTANCE: Scalar = 10.0;
-        const MAX_FORCE: Scalar = 1e4;
-        const MIN_DISTANCE_SQUARED: Scalar = MIN_DISTANCE * MIN_DISTANCE;
+        let min_distance_squared = self.min_distance * self.min_distance;
 
         let direction = body2.position - body1.position;
         let distance_squared = direction.length_squared();
 
-        if distance_squared < MIN_DISTANCE_SQUARED {
+        if distance_squared < min_distance_squared {
             return Vector::ZERO;
         }
 
         let distance = distance_squared.sqrt();
         let direction_normalized = direction / distance;
         let force_magnitude = g * body1.mass * body2.mass / distance_squared;
-        let force_magnitude = force_magnitude.min(MAX_FORCE);
+        let force_magnitude = force_magnitude.min(self.max_force);
 
         direction_normalized * force_magnitude
     }
@@ -291,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_octree_force_calculation() {
-        let mut octree = Octree::new(0.5); // theta = 0.5
+        let mut octree = Octree::new(0.5, 10.0, 1e4); // theta = 0.5, min_distance = 10.0, max_force = 1e4
 
         // Create two bodies separated by some distance
         let body1 = OctreeBody {
@@ -322,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_octree_boundary_handling() {
-        let mut octree = Octree::new(0.5);
+        let mut octree = Octree::new(0.5, 10.0, 1e4);
 
         // Create a body exactly at the center (boundary of all octants)
         let center_body = OctreeBody {
@@ -359,7 +364,7 @@ mod tests {
 
     #[test]
     fn test_octree_no_body_duplication() {
-        let mut octree = Octree::new(0.5);
+        let mut octree = Octree::new(0.5, 10.0, 1e4);
 
         // Create bodies, including one exactly on octant boundary
         let bodies = vec![

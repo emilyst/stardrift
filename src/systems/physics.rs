@@ -1,3 +1,4 @@
+use crate::config::SimulationConfig;
 use crate::physics::octree::OctreeBody;
 use crate::resources::*;
 use crate::utils::color;
@@ -13,6 +14,7 @@ pub fn spawn_bodies(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut rng: ResMut<SharedRng>,
     body_count: Res<BodyCount>,
+    config: Res<SimulationConfig>,
 ) {
     spawn_simulation_bodies(
         &mut commands,
@@ -20,6 +22,7 @@ pub fn spawn_bodies(
         &mut materials,
         &mut rng,
         **body_count,
+        &config,
     );
 }
 
@@ -29,23 +32,27 @@ pub fn spawn_simulation_bodies(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     rng: &mut ResMut<SharedRng>,
     body_count: usize,
+    config: &SimulationConfig,
 ) {
     for _ in 0..body_count {
-        let body_distribution_sphere_radius =
-            math::min_sphere_radius_for_surface_distribution(body_count, 200.0, 0.001);
+        let body_distribution_sphere_radius = math::min_sphere_radius_for_surface_distribution(
+            body_count,
+            config.physics.body_distribution_sphere_radius_multiplier,
+            config.physics.body_distribution_min_distance,
+        );
         let position = math::random_unit_vector(&mut **rng) * body_distribution_sphere_radius;
         let transform = Transform::from_translation(position.as_vec3());
-        let radius = rng.random_range(10.0..=20.0);
+        let radius = rng.random_range(config.physics.min_body_radius..=config.physics.max_body_radius);
         let mesh = meshes.add(Sphere::new(radius as f32));
 
-        let min_temp = 2000.0;
-        let max_temp = 15000.0;
-        let min_radius = 10.0;
-        let max_radius = 20.0;
+        let min_temp = config.rendering.min_temperature;
+        let max_temp = config.rendering.max_temperature;
+        let min_radius = config.physics.min_body_radius;
+        let max_radius = config.physics.max_body_radius;
         let temperature =
             min_temp + (max_temp - min_temp) * (max_radius - radius) / (max_radius - min_radius);
-        let bloom_intensity = 100.0;
-        let saturation_intensity = 3.0;
+        let bloom_intensity = config.rendering.bloom_intensity;
+        let saturation_intensity = config.rendering.saturation_intensity;
         let material = color::emissive_material_for_temp(
             materials,
             temperature,

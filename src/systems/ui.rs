@@ -1,4 +1,5 @@
 use crate::components::*;
+use crate::config::SimulationConfig;
 use crate::resources::*;
 use crate::systems::physics::spawn_simulation_bodies;
 use avian3d::math::Vector;
@@ -127,6 +128,7 @@ pub fn handle_restart_button(
     mut previous_barycenter: ResMut<PreviousBarycenter>,
     octree: ResMut<GravitationalOctree>,
     mut pan_orbit_camera: Query<&mut PanOrbitCamera>,
+    config: Res<SimulationConfig>,
 ) {
     for (interaction, mut color) in &mut interaction_query {
         match *interaction {
@@ -157,6 +159,7 @@ pub fn handle_restart_button(
                     &mut materials,
                     &mut rng,
                     **body_count,
+                    &config,
                 );
             }
             Interaction::Hovered => {

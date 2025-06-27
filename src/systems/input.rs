@@ -1,3 +1,4 @@
+use crate::config::SimulationConfig;
 use crate::resources::*;
 use crate::systems::physics::spawn_simulation_bodies;
 use avian3d::math::Vector;
@@ -23,6 +24,7 @@ pub fn restart_simulation_on_r(
     mut previous_barycenter: ResMut<PreviousBarycenter>,
     octree: ResMut<GravitationalOctree>,
     mut pan_orbit_camera: Query<&mut PanOrbitCamera>,
+    config: Res<SimulationConfig>,
 ) {
     if keys.just_pressed(KeyCode::KeyR) {
         for entity in simulation_bodies.iter() {
@@ -48,6 +50,7 @@ pub fn restart_simulation_on_r(
             &mut materials,
             &mut rng,
             **body_count,
+            &config,
         );
     }
 }
