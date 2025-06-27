@@ -22,6 +22,8 @@ wasm-bindgen \
     --out-name "many_body_simulation" \
     ./target/wasm32-unknown-unknown/wasm/many_body_simulation.wasm
 
-gzip --keep --force ./out/many_body_simulation_bg.wasm
-
 cp index.html ./out/
+
+gzip --keep --force ./out/*.html
+gzip --keep --force ./out/*.js
+gzip --keep --force ./out/*.wasm
