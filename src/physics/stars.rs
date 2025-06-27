@@ -9,10 +9,8 @@ use libm::pow;
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 
-// Add these new resources for stellar properties
 #[derive(Resource, Default)]
 struct StellarParameters {
-    // Solar units for reference
     solar_mass: Scalar,
     solar_radius: Scalar,
     solar_luminosity: Scalar,
@@ -22,20 +20,20 @@ struct StellarParameters {
 impl StellarParameters {
     fn new() -> Self {
         Self {
-            solar_mass: 1.0,           // Reference mass in simulation units
-            solar_radius: 10.0,        // Reference radius in simulation units
-            solar_luminosity: 1.0,     // Reference luminosity
-            solar_temperature: 5778.0, // Kelvin
+            solar_mass: 1.0,
+            solar_radius: 10.0,
+            solar_luminosity: 1.0,
+            solar_temperature: 5778.0,
         }
     }
 }
 
 #[derive(Component)]
 struct StellarProperties {
-    mass_solar: Scalar,       // Mass in solar masses
-    radius_solar: Scalar,     // Radius in solar radii
-    luminosity_solar: Scalar, // Luminosity in solar luminosities
-    temperature: Scalar,      // Effective temperature in Kelvin
+    mass_solar: Scalar,
+    radius_solar: Scalar,
+    luminosity_solar: Scalar,
+    temperature: Scalar,
     stellar_class: StellarClass,
 }
 
@@ -140,17 +138,16 @@ fn calculate_stellar_properties(mass_solar: Scalar) -> (Scalar, Scalar, Scalar) 
 
     // Calculate radius from Stefan-Boltzmann law: L = 4πR²σT⁴
     // R = sqrt(L / (4π σ T⁴)) in solar units
-    let stefan_boltzmann = 5.67e-8; // Not needed for ratio calculation
+    // let stefan_boltzmann = 5.67e-8; // Not needed for ratio calculation
     let temp_ratio_4th = pow(temperature / 5778.0, 4.0);
     let radius_solar = libm::sqrt(luminosity_solar / temp_ratio_4th);
 
     (radius_solar, luminosity_solar, temperature)
 }
 
-// Add some stellar evolution effects (simplified)
 fn apply_stellar_evolution(
     mass_solar: Scalar,
-    age_gyr: Scalar, // Age in billion years
+    age_gyr: Scalar,
     rng: &mut ChaCha8Rng,
 ) -> (Scalar, Scalar, Scalar, bool) {
     let main_sequence_lifetime = match mass_solar {
@@ -229,21 +226,16 @@ pub(crate) fn spawn_realistic_stellar_bodies(
         let position = math::random_unit_vector(&mut *rng) * body_distribution_sphere_radius;
         let transform = Transform::from_translation(position.as_vec3());
 
-        // Sample stellar mass from realistic IMF
         let mass_solar = sample_stellar_mass_kroupa(&mut *rng);
 
-        // Calculate age (stars formed at different times)
         let age_gyr = rng.random_range(0.1..stellar_population_max_age_gyr);
 
-        // Apply stellar evolution
         let (radius_solar, luminosity_solar, temperature, is_evolved) =
             apply_stellar_evolution(mass_solar, age_gyr, &mut *rng);
 
-        // Convert to simulation units
         let radius_sim = radius_solar * stellar_params.solar_radius;
         let mass_sim = mass_solar * stellar_params.solar_mass;
 
-        // Create stellar properties component
         let stellar_props = StellarProperties {
             mass_solar,
             radius_solar,
@@ -252,10 +244,8 @@ pub(crate) fn spawn_realistic_stellar_bodies(
             stellar_class: StellarClass::from_temperature(temperature),
         };
 
-        // Create mesh
         let mesh = meshes.add(Sphere::new(radius_sim as f32));
 
-        // Create material based on temperature and luminosity
         let bloom_intensity = (luminosity_solar * 100.0).clamp(100.0, 10000.0);
         let saturation_intensity = if is_evolved { 1.0 } else { 2.0 };
         let material = color::emissive_material_for_temp(
@@ -274,7 +264,6 @@ pub(crate) fn spawn_realistic_stellar_bodies(
             MeshMaterial3d(material.clone()),
             Mesh3d(mesh),
             stellar_props,
-            // Override mass for physics simulation
             Mass(mass_sim as f32),
         ));
     }

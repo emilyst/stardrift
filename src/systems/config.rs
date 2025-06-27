@@ -3,7 +3,6 @@ use bevy::prelude::*;
 
 pub fn save_config_on_exit(mut exit_events: EventReader<AppExit>, config: Res<SimulationConfig>) {
     for _event in exit_events.read() {
-        // Save configuration when the app is exiting
         if let Err(e) = config.save_to_user_config() {
             warn!("Failed to save configuration on exit: {}", e);
         } else {

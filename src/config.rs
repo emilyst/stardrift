@@ -103,7 +103,6 @@ impl SimulationConfig {
         } else if let Ok(home) = std::env::var("HOME") {
             PathBuf::from(home).join(".config")
         } else {
-            // Fallback to current directory if HOME is not set
             PathBuf::from(".")
         };
 
@@ -147,7 +146,6 @@ impl SimulationConfig {
     pub fn save_to_user_config(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config_path = Self::get_xdg_config_path();
 
-        // Create the directory if it doesn't exist
         if let Some(parent) = config_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -162,11 +160,9 @@ mod tests {
 
     #[test]
     fn test_load_from_user_config() {
-        // This should load defaults since the XDG config file likely doesn't exist
         let config = SimulationConfig::load_from_user_config();
         let default_config = SimulationConfig::default();
 
-        // Verify that we get the default values
         assert_eq!(
             config.physics.gravitational_constant,
             default_config.physics.gravitational_constant
@@ -191,14 +187,10 @@ mod tests {
 
     #[test]
     fn test_xdg_config_path_structure() {
-        // Test that the path structure is correct
         let path = SimulationConfig::get_xdg_config_path();
         let path_str = path.to_string_lossy();
 
-        // Should end with the correct application directory and filename
         assert!(path_str.ends_with("many_body_simulation/config.toml"));
-
-        // Should contain either .config (HOME fallback) or be an absolute path (XDG_CONFIG_HOME)
         assert!(path_str.contains(".config") || path_str.starts_with("/"));
     }
 
@@ -206,25 +198,20 @@ mod tests {
     fn test_save_and_load_config() {
         use std::fs;
 
-        // Create a temporary config with modified values
         let mut config = SimulationConfig::default();
         config.physics.gravitational_constant = 42.0;
         config.physics.default_body_count = 123;
         config.rendering.bloom_intensity = 999.0;
 
-        // Save to a temporary file
         let temp_path = "test_config_temp.toml";
         config.save(temp_path).expect("Failed to save test config");
 
-        // Load it back
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
-        // Verify the values were saved and loaded correctly
         assert_eq!(loaded_config.physics.gravitational_constant, 42.0);
         assert_eq!(loaded_config.physics.default_body_count, 123);
         assert_eq!(loaded_config.rendering.bloom_intensity, 999.0);
 
-        // Clean up
         let _ = fs::remove_file(temp_path);
     }
 }

@@ -89,7 +89,6 @@ impl Octree {
         current_depth: usize,
         max_depth: Option<usize>,
     ) {
-        // Check if we should include this node based on depth limit
         if let Some(max_depth) = max_depth {
             if current_depth > max_depth {
                 return;
@@ -145,7 +144,6 @@ impl Octree {
         let mut children: [Option<OctreeNode>; 8] = Default::default();
         let center = bounds.center();
 
-        // Distribute bodies to octants, ensuring each body goes to exactly one octant
         let mut octant_bodies: [Vec<OctreeBody>; 8] = Default::default();
 
         for body in bodies.iter() {
@@ -214,7 +212,7 @@ impl Octree {
                 // Barnes-Hut criterion: if s/d < theta, treat as single body
                 if size / distance < self.theta {
                     let virtual_body = OctreeBody {
-                        entity: Entity::PLACEHOLDER, // Won't be used in comparison
+                        entity: Entity::PLACEHOLDER,
                         position: *center_of_mass,
                         mass: *total_mass,
                     };
@@ -296,9 +294,8 @@ mod tests {
 
     #[test]
     fn test_octree_force_calculation() {
-        let mut octree = Octree::new(0.5, 10.0, 1e4); // theta = 0.5, min_distance = 10.0, max_force = 1e4
+        let mut octree = Octree::new(0.5, 10.0, 1e4);
 
-        // Create two bodies separated by some distance
         let body1 = OctreeBody {
             entity: Entity::from_raw(0),
             position: Vector::new(0.0, 0.0, 0.0),
@@ -311,7 +308,6 @@ mod tests {
             mass: 1000.0,
         };
 
-        // Build octree with these bodies
         octree.build(vec![body1, body2]);
 
         // Calculate force on body1 from the octree
