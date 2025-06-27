@@ -238,12 +238,10 @@ impl Octree {
     }
 
     fn calculate_direct_force(&self, body1: &OctreeBody, body2: &OctreeBody, g: Scalar) -> Vector {
-        let min_distance_squared = self.min_distance * self.min_distance;
-
         let direction = body2.position - body1.position;
         let distance_squared = direction.length_squared();
 
-        if distance_squared < min_distance_squared {
+        if distance_squared < (self.min_distance * self.min_distance) {
             return Vector::ZERO;
         }
 
