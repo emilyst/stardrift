@@ -1,8 +1,7 @@
 use crate::components::*;
 use crate::config::SimulationConfig;
 use crate::resources::*;
-use crate::systems::physics::spawn_simulation_bodies;
-use avian3d::math::Vector;
+use crate::systems::simulation_actions;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCamera;
@@ -105,7 +104,7 @@ pub fn handle_octree_button(
         match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
-                settings.enabled = !settings.enabled;
+                simulation_actions::toggle_octree_visualization(&mut settings);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
@@ -139,30 +138,17 @@ pub fn handle_restart_button(
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
 
-                // Restart simulation logic (same as restart_simulation_on_r)
-                for entity in simulation_bodies.iter() {
-                    commands.entity(entity).despawn();
-                }
-
-                **current_barycenter = Vector::ZERO;
-                **previous_barycenter = Vector::ZERO;
-                if let Ok(mut octree_guard) = octree.0.write() {
-                    octree_guard.build(vec![]); // Reset octree with empty body list
-                }
-
-                if let Ok(mut camera) = pan_orbit_camera.single_mut() {
-                    camera.target_focus = Vec3::ZERO;
-                    camera.force_update = true;
-                }
-
-                *rng = SharedRng::default(); // This will create a new random seed
-
-                spawn_simulation_bodies(
+                simulation_actions::restart_simulation(
                     &mut commands,
+                    &simulation_bodies,
                     &mut meshes,
                     &mut materials,
                     &mut rng,
-                    **body_count,
+                    &body_count,
+                    &mut current_barycenter,
+                    &mut previous_barycenter,
+                    &octree,
+                    &mut pan_orbit_camera,
                     &config,
                 );
             }

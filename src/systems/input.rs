@@ -1,7 +1,6 @@
 use crate::config::SimulationConfig;
 use crate::resources::*;
-use crate::systems::physics::spawn_simulation_bodies;
-use avian3d::math::Vector;
+use crate::systems::simulation_actions;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCamera;
@@ -27,29 +26,17 @@ pub fn restart_simulation_on_r(
     config: Res<SimulationConfig>,
 ) {
     if keys.just_pressed(KeyCode::KeyR) {
-        for entity in simulation_bodies.iter() {
-            commands.entity(entity).despawn();
-        }
-
-        **current_barycenter = Vector::ZERO;
-        **previous_barycenter = Vector::ZERO;
-        if let Ok(mut octree_guard) = octree.0.write() {
-            octree_guard.build(vec![]); // Reset octree with empty body list
-        }
-
-        if let Ok(mut camera) = pan_orbit_camera.single_mut() {
-            camera.target_focus = Vec3::ZERO;
-            camera.force_update = true;
-        }
-
-        *rng = SharedRng::default(); // This will create a new random seed
-
-        spawn_simulation_bodies(
+        simulation_actions::restart_simulation(
             &mut commands,
+            &simulation_bodies,
             &mut meshes,
             &mut materials,
             &mut rng,
-            **body_count,
+            &body_count,
+            &mut current_barycenter,
+            &mut previous_barycenter,
+            &octree,
+            &mut pan_orbit_camera,
             &config,
         );
     }
@@ -78,7 +65,7 @@ pub fn toggle_octree_visualization(
 ) {
     for &keycode in keys.get_just_pressed() {
         match keycode {
-            KeyCode::KeyO => settings.enabled = !settings.enabled,
+            KeyCode::KeyO => simulation_actions::toggle_octree_visualization(&mut settings),
             KeyCode::Digit0 => settings.max_depth = None,
             KeyCode::Digit1 => settings.max_depth = Some(1),
             KeyCode::Digit2 => settings.max_depth = Some(2),
