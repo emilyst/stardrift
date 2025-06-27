@@ -174,8 +174,8 @@ pub fn update_octree_button_text(
 
     for button_entity in &button_query {
         if let Ok(children) = children_query.get(button_entity) {
-            for child in children.iter() {
-                if let Ok(mut text) = text_query.get_mut(child) {
+            for child in children {
+                if let Ok(mut text) = text_query.get_mut(*child) {
                     text.0 = if settings.enabled {
                         "Hide Octree".to_string()
                     } else {

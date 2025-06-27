@@ -145,7 +145,7 @@ impl Octree {
         let mut octant_bodies: [Vec<OctreeBody>; 8] = Default::default();
         let mut children: [Option<OctreeNode>; 8] = Default::default();
 
-        for body in bodies.iter() {
+        for body in &bodies {
             let octant_index = Self::get_octant_index(body.position, center);
             octant_bodies[octant_index].push(*body);
         }
