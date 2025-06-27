@@ -137,7 +137,7 @@ impl SimulationConfig {
     }
 
     /// Save configuration to the XDG config path
-    pub fn save_to_xdg(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save_to_user_config(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config_path = Self::get_xdg_config_path();
 
         // Create the directory if it doesn't exist
