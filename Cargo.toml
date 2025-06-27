@@ -32,6 +32,8 @@ bevy_panorbit_camera = "*"
 libm = "0.2.15"
 rand = "0.9.*"
 rand_chacha = "0.9.*"
+serde = { version = "1.*", features = ["derive"] }
+toml = "0.*"
 
 [dependencies.bevy]
 version = "0.16.*"

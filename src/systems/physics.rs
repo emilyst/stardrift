@@ -1,0 +1,128 @@
+use crate::physics::octree::OctreeBody;
+use crate::resources::*;
+use crate::utils::color;
+use crate::utils::math;
+use avian3d::math::Vector;
+use avian3d::prelude::*;
+use bevy::prelude::*;
+use rand::Rng;
+
+pub fn spawn_bodies(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut rng: ResMut<SharedRng>,
+    body_count: Res<BodyCount>,
+) {
+    spawn_simulation_bodies(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &mut rng,
+        **body_count,
+    );
+}
+
+pub fn spawn_simulation_bodies(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    rng: &mut ResMut<SharedRng>,
+    body_count: usize,
+) {
+    for _ in 0..body_count {
+        let body_distribution_sphere_radius =
+            math::min_sphere_radius_for_surface_distribution(body_count, 200.0, 0.001);
+        let position = math::random_unit_vector(&mut **rng) * body_distribution_sphere_radius;
+        let transform = Transform::from_translation(position.as_vec3());
+        let radius = rng.random_range(10.0..=20.0);
+        let mesh = meshes.add(Sphere::new(radius as f32));
+
+        let min_temp = 2000.0;
+        let max_temp = 15000.0;
+        let min_radius = 10.0;
+        let max_radius = 20.0;
+        let temperature =
+            min_temp + (max_temp - min_temp) * (max_radius - radius) / (max_radius - min_radius);
+        let bloom_intensity = 100.0;
+        let saturation_intensity = 3.0;
+        let material = color::emissive_material_for_temp(
+            materials,
+            temperature,
+            bloom_intensity,
+            saturation_intensity,
+        );
+
+        commands.spawn((
+            transform,
+            Collider::sphere(radius),
+            GravityScale(0.0),
+            RigidBody::Dynamic,
+            MeshMaterial3d(material.clone()),
+            Mesh3d(mesh),
+        ));
+    }
+}
+
+pub fn rebuild_octree(
+    bodies: Query<(Entity, &Transform, &ComputedMass), With<RigidBody>>,
+    mut octree: ResMut<GravitationalOctree>,
+) {
+    let octree_bodies: Vec<OctreeBody> = bodies
+        .iter()
+        .map(|(entity, transform, mass)| OctreeBody {
+            entity,
+            position: Vector::from(transform.translation),
+            mass: mass.value(),
+        })
+        .collect();
+
+    octree.build(octree_bodies);
+}
+
+pub fn apply_gravitation_octree(
+    time: ResMut<Time>,
+    g: Res<GravitationalConstant>,
+    octree: Res<GravitationalOctree>,
+    mut bodies: Query<
+        (Entity, &Transform, &ComputedMass, &mut LinearVelocity),
+        (With<RigidBody>, Without<RigidBodyDisabled>),
+    >,
+) {
+    let delta_time = time.delta_secs_f64();
+
+    for (entity, transform, mass, mut velocity) in bodies.iter_mut() {
+        let body = OctreeBody {
+            entity,
+            position: Vector::from(transform.translation),
+            mass: mass.value(),
+        };
+
+        let force = octree.calculate_force(&body, octree.root.as_ref(), **g);
+        let acceleration = force * mass.inverse();
+        **velocity += acceleration * delta_time;
+    }
+}
+
+// TODO: test
+pub fn update_barycenter(
+    bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Without<RigidBodyDisabled>)>,
+    mut current_barycenter: ResMut<CurrentBarycenter>,
+    mut previous_barycenter: ResMut<PreviousBarycenter>,
+) {
+    **previous_barycenter = **current_barycenter;
+
+    let (weighted_positions, total_mass): (Vector, avian3d::math::Scalar) = bodies
+        .iter()
+        .map(|(transform, mass)| {
+            let mass = mass.value();
+            (Vector::from(transform.translation) * mass, mass)
+        })
+        .fold((Vector::ZERO, 0.0), |(pos_acc, mass_acc), (pos, mass)| {
+            (pos_acc + pos, mass_acc + mass)
+        });
+
+    if total_mass > 0.0 {
+        **current_barycenter = weighted_positions / total_mass;
+    }
+}

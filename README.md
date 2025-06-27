@@ -174,6 +174,60 @@ The simulation can be customized by modifying the constants in the source code:
     - Edge 79+ (Modern Chromium-based Edge)
 - **Hardware acceleration**: Required for optimal performance
 
+## Project Structure
+
+The codebase is organized using a modular architecture designed for maintainability, scalability, and ease of use by AI agents. The structure follows Rust best practices and separates concerns clearly:
+
+```
+src/
+├── main.rs                 # Application entry point and plugin registration
+├── components/             # Bevy ECS components
+│   └── mod.rs             # UI and simulation components
+├── config.rs              # Configuration management system
+├── plugins/               # Bevy plugins for modular functionality
+│   ├── mod.rs
+│   ├── simulation.rs      # Main simulation plugin orchestrating all systems
+│   ├── diagnostics.rs     # Simulation metrics and diagnostics plugin
+│   └── diagnostics_hud.rs # Real-time HUD display plugin
+├── resources/             # Bevy ECS resources (global state)
+│   └── mod.rs            # Shared resources like RNG, constants, and octree
+├── systems/              # Bevy ECS systems (game logic)
+│   ├── mod.rs
+│   ├── physics.rs        # Physics simulation and body management
+│   ├── camera.rs         # Camera controls and barycenter following
+│   ├── input.rs          # Keyboard and interaction handling
+│   ├── ui.rs             # User interface systems
+│   └── visualization.rs  # Octree and visual debugging systems
+├── utils/                # Utility modules
+│   ├── mod.rs
+│   ├── math.rs           # Mathematical functions and algorithms
+│   └── color.rs          # Color and material utilities
+└── physics/              # Physics-specific modules
+    ├── mod.rs
+    ├── stars.rs          # Stellar physics and realistic body generation
+    └── octree.rs         # Barnes-Hut octree implementation
+```
+
+### Design Principles
+
+- **Separation of Concerns**: Each module has a single, well-defined responsibility
+- **Plugin Architecture**: Functionality is organized into composable Bevy plugins
+- **Resource Management**: Global state is managed through Bevy's resource system
+- **System Organization**: Game logic is separated into focused, testable systems
+- **Configuration-Driven**: Centralized configuration system for easy customization
+- **AI-Friendly Structure**: Clear module boundaries and consistent naming for AI navigation
+
+### Key Modules
+
+- **`plugins/simulation.rs`**: Central orchestrator that coordinates all simulation systems
+- **`systems/physics.rs`**: Core physics calculations including octree rebuilding and force application
+- **`resources/mod.rs`**: Shared state including RNG, gravitational constants, and octree data
+- **`utils/math.rs`**: Mathematical utilities for sphere distribution and random vector generation
+- **`config.rs`**: Centralized configuration management with serialization support
+- **`physics/octree.rs`**: High-performance Barnes-Hut spatial partitioning implementation
+
+This structure enables easy extension, testing, and maintenance while providing clear entry points for understanding and modifying the simulation behavior.
+
 ## Development
 
 ### Development Features

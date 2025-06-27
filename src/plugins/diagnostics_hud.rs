@@ -44,8 +44,8 @@
 //! });
 //! ```
 
-use crate::diagnostics::SimulationDiagnosticsPlugin;
-use crate::BodyCount;
+use crate::plugins::diagnostics::SimulationDiagnosticsPlugin;
+use crate::resources::BodyCount;
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::asset::io::AssetSourceId;
 use bevy::asset::AssetPath;
@@ -54,8 +54,8 @@ use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use core::time::Duration;
 
-static REGULAR_OTF_BYTES: &[u8] = include_bytes!("../assets/fonts/BerkeleyMono-Regular.otf");
-static BOLD_OTF_BYTES: &[u8] = include_bytes!("../assets/fonts/BerkeleyMono-Bold.otf");
+static REGULAR_OTF_BYTES: &[u8] = include_bytes!("../../assets/fonts/BerkeleyMono-Regular.otf");
+static BOLD_OTF_BYTES: &[u8] = include_bytes!("../../assets/fonts/BerkeleyMono-Bold.otf");
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
 struct FrameCountTextNode;

@@ -24,7 +24,7 @@
 //! app.add_plugins(SimulationDiagnosticsPlugin::default());
 //! ```
 
-use crate::CurrentBarycenter;
+use crate::resources::CurrentBarycenter;
 use bevy::diagnostic::Diagnostic;
 use bevy::diagnostic::DiagnosticPath;
 use bevy::diagnostic::Diagnostics;

@@ -1,4 +1,4 @@
-use crate::SharedRng;
+use crate::resources::SharedRng;
 use avian3d::math;
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
