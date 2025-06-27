@@ -41,3 +41,7 @@ pub fn restart_simulation(
 pub fn toggle_octree_visualization(settings: &mut ResMut<OctreeVisualizationSettings>) {
     settings.enabled = !settings.enabled;
 }
+
+pub fn toggle_barycenter_gizmo_visibility(settings: &mut ResMut<BarycenterGizmoVisibility>) {
+    settings.enabled = !settings.enabled;
+}

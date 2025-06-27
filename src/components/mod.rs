@@ -5,3 +5,6 @@ pub struct OctreeToggleButton;
 
 #[derive(Component)]
 pub struct RestartSimulationButton;
+
+#[derive(Component)]
+pub struct BarycenterGizmoToggleButton;

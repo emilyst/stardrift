@@ -51,14 +51,18 @@ pub fn follow_barycenter(
     mut gizmos: Gizmos,
     current_barycenter: Res<CurrentBarycenter>,
     body_count: Res<BodyCount>,
+    barycenter_gizmo_visibility: Res<BarycenterGizmoVisibility>,
 ) {
     if current_barycenter.is_finite() {
         pan_orbit_camera.force_update = true;
         pan_orbit_camera.target_focus = current_barycenter.clone().as_vec3();
-        gizmos.cross(
-            current_barycenter.as_vec3(),
-            libm::cbrt(**body_count as Scalar * **body_count as Scalar / 3.0) as f32,
-            css::WHITE,
-        );
+
+        if barycenter_gizmo_visibility.enabled {
+            gizmos.cross(
+                current_barycenter.as_vec3(),
+                libm::cbrt(**body_count as Scalar * **body_count as Scalar / 3.0) as f32,
+                css::WHITE,
+            );
+        }
     }
 }

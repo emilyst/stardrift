@@ -57,3 +57,14 @@ pub struct OctreeVisualizationSettings {
     pub enabled: bool,
     pub max_depth: Option<usize>, // None means show all levels
 }
+
+#[derive(Resource)]
+pub struct BarycenterGizmoVisibility {
+    pub enabled: bool,
+}
+
+impl Default for BarycenterGizmoVisibility {
+    fn default() -> Self {
+        Self { enabled: false }
+    }
+}

@@ -89,6 +89,31 @@ pub fn setup_ui(
                                 TextColor(Color::WHITE),
                             ));
                         });
+
+                    // Barycenter gizmo toggle button
+                    parent
+                        .spawn((
+                            Button,
+                            Node {
+                                padding: UiRect::all(Val::Px(config.ui.button_padding)),
+                                display: Display::Flex,
+                                flex_direction: FlexDirection::Column,
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                row_gap: Val::Px(1.0),
+                                ..default()
+                            },
+                            BorderRadius::all(Val::Px(config.ui.button_border_radius)),
+                            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
+                            BarycenterGizmoToggleButton,
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn((
+                                Text::new("Hide Barycenter"),
+                                button_text_font.clone(),
+                                TextColor(Color::WHITE),
+                            ));
+                        });
                 });
         });
 }
@@ -105,6 +130,29 @@ pub fn handle_octree_button(
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
                 simulation_actions::toggle_octree_visualization(&mut settings);
+            }
+            Interaction::Hovered => {
+                *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
+            }
+            Interaction::None => {
+                *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
+            }
+        }
+    }
+}
+
+pub fn handle_barycenter_gizmo_button(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<BarycenterGizmoToggleButton>),
+    >,
+    mut settings: ResMut<BarycenterGizmoVisibility>,
+) {
+    for (interaction, mut color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
+                simulation_actions::toggle_barycenter_gizmo_visibility(&mut settings);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
@@ -180,6 +228,31 @@ pub fn update_octree_button_text(
                         "Hide Octree".to_string()
                     } else {
                         "Show Octree".to_string()
+                    };
+                }
+            }
+        }
+    }
+}
+
+pub fn update_barycenter_gizmo_button_text(
+    button_query: Query<Entity, With<BarycenterGizmoToggleButton>>,
+    children_query: Query<&Children>,
+    mut text_query: Query<&mut Text>,
+    settings: Res<BarycenterGizmoVisibility>,
+) {
+    if !settings.is_changed() {
+        return;
+    }
+
+    for button_entity in &button_query {
+        if let Ok(children) = children_query.get(button_entity) {
+            for child in children {
+                if let Ok(mut text) = text_query.get_mut(*child) {
+                    text.0 = if settings.enabled {
+                        "Hide Barycenter".to_string()
+                    } else {
+                        "Show Barycenter".to_string()
                     };
                 }
             }

@@ -27,6 +27,7 @@ impl Plugin for SimulationPlugin {
             enabled: false,
             ..default()
         });
+        app.init_resource::<BarycenterGizmoVisibility>();
 
         app.edit_schedule(FixedUpdate, |schedule| {
             schedule.set_build_settings(ScheduleBuildSettings {
@@ -60,8 +61,10 @@ impl Plugin for SimulationPlugin {
                 input::toggle_octree_visualization,
                 visualization::visualize_octree,
                 ui::handle_octree_button,
+                ui::handle_barycenter_gizmo_button,
                 ui::handle_restart_button,
                 ui::update_octree_button_text,
+                ui::update_barycenter_gizmo_button_text,
             ),
         );
 
