@@ -26,7 +26,7 @@ pub fn restart_simulation(
     ***current_barycenter = Vector::ZERO;
     ***previous_barycenter = Vector::ZERO;
 
-    if let Ok(mut octree_guard) = octree.0.write() {
+    if let Ok(mut octree_guard) = octree.write() {
         octree_guard.build(vec![]);
     }
 

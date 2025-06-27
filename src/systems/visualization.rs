@@ -12,7 +12,7 @@ pub fn visualize_octree(
         return;
     }
 
-    if let Ok(octree_guard) = octree.0.read() {
+    if let Ok(octree_guard) = octree.read() {
         let bounds = octree_guard.get_bounds(settings.max_depth);
 
         for aabb in bounds {

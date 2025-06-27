@@ -85,7 +85,7 @@ pub fn rebuild_octree(
         })
         .collect();
 
-    if let Ok(mut octree_guard) = octree.0.write() {
+    if let Ok(mut octree_guard) = octree.write() {
         octree_guard.build(octree_bodies);
     }
 }
@@ -101,7 +101,7 @@ pub fn apply_gravitation_octree(
 ) {
     let delta_time = time.delta_secs_f64();
 
-    if let Ok(octree_guard) = octree.0.read() {
+    if let Ok(octree_guard) = octree.read() {
         for (entity, transform, mass, mut velocity) in bodies.iter_mut() {
             let body = OctreeBody {
                 entity,

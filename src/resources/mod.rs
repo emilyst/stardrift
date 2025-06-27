@@ -43,7 +43,7 @@ pub struct CurrentBarycenter(pub Vector);
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
 pub struct PreviousBarycenter(pub Vector);
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Deref, DerefMut, Debug)]
 pub struct GravitationalOctree(pub RwLock<Octree>);
 
 impl GravitationalOctree {
