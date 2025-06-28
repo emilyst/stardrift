@@ -49,8 +49,8 @@ pub fn toggle_barycenter_gizmo_visibility(settings: &mut ResMut<BarycenterGizmoV
 
 pub fn toggle_pause_simulation(
     current_state: &mut Res<State<AppState>>,
-    mut next_state: &mut ResMut<NextState<AppState>>,
-    mut time: &mut ResMut<Time<Physics>>,
+    next_state: &mut ResMut<NextState<AppState>>,
+    time: &mut ResMut<Time<Physics>>,
 ) {
     match current_state.get() {
         AppState::Running => {

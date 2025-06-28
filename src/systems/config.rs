@@ -17,7 +17,6 @@ mod tests {
     use bevy::app::AppExit;
     use bevy::ecs::event::Events;
     use bevy::ecs::system::SystemState;
-    use bevy::prelude::*;
 
     #[test]
     fn test_save_config_on_exit_system() {

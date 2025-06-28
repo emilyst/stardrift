@@ -92,9 +92,9 @@ impl SimulationDiagnosticsPlugin {
         state: ResMut<SimulationDiagnosticsState>,
     ) {
         if state.update_timer.finished() {
-            diagnostics.add_measurement(&Self::BARYCENTER_X_PATH, || barycenter.x.into());
-            diagnostics.add_measurement(&Self::BARYCENTER_Y_PATH, || barycenter.y.into());
-            diagnostics.add_measurement(&Self::BARYCENTER_Z_PATH, || barycenter.z.into());
+            diagnostics.add_measurement(&Self::BARYCENTER_X_PATH, || barycenter.x);
+            diagnostics.add_measurement(&Self::BARYCENTER_Y_PATH, || barycenter.y);
+            diagnostics.add_measurement(&Self::BARYCENTER_Z_PATH, || barycenter.z);
         }
     }
 

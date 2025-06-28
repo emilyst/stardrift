@@ -260,10 +260,6 @@ pub fn is_loading(loading_state: Res<LoadingState>) -> bool {
     loading_state.is_loading
 }
 
-pub fn not_loading(loading_state: Res<LoadingState>) -> bool {
-    !loading_state.is_loading
-}
-
 pub fn should_spawn_bodies(loading_state: Res<LoadingState>) -> bool {
     loading_state.is_loading && matches!(loading_state.current_step, LoadingStep::SpawningBodies)
 }
