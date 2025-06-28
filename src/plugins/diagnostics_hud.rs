@@ -47,14 +47,10 @@ use crate::plugins::simulation_diagnostics::SimulationDiagnosticsPlugin;
 use crate::resources::BodyCount;
 use bevy::asset::AssetPath;
 use bevy::asset::io::AssetSourceId;
-use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::diagnostic::DiagnosticsStore;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use core::time::Duration;
-
-static REGULAR_OTF_BYTES: &[u8] = include_bytes!("../../assets/fonts/BerkeleyMono-Regular.otf");
-static BOLD_OTF_BYTES: &[u8] = include_bytes!("../../assets/fonts/BerkeleyMono-Bold.otf");
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
 struct FrameCountTextNode;
@@ -101,22 +97,6 @@ impl Default for DiagnosticsHudState {
 pub struct DiagnosticsHudPlugin;
 
 impl DiagnosticsHudPlugin {
-    fn insert_font_assets(world: &mut World) {
-        let embedded_asset_registry = world.resource_mut::<EmbeddedAssetRegistry>();
-
-        embedded_asset_registry.insert_asset(
-            "fonts/BerkeleyMono-Regular".into(),
-            "fonts/BerkeleyMono-Regular".as_ref(),
-            REGULAR_OTF_BYTES,
-        );
-
-        embedded_asset_registry.insert_asset(
-            "fonts/BerkeleyMono-Bold".into(),
-            "fonts/BerkeleyMono-Bold".as_ref(),
-            BOLD_OTF_BYTES,
-        );
-    }
-
     fn spawn_diagnostics_hud(
         mut commands: Commands,
         asset_server: Res<AssetServer>,
@@ -268,10 +248,7 @@ impl Plugin for DiagnosticsHudPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(DiagnosticsHudSettings::default());
         app.insert_resource(DiagnosticsHudState::default());
-        app.add_systems(
-            Startup,
-            (Self::insert_font_assets, Self::spawn_diagnostics_hud).chain(),
-        );
+        app.add_systems(Startup, Self::spawn_diagnostics_hud);
         app.add_systems(
             Update,
             (

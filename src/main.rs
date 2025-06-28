@@ -8,6 +8,7 @@ mod systems;
 mod utils;
 
 use crate::plugins::diagnostics_hud::DiagnosticsHudPlugin;
+use crate::plugins::embedded_assets::EmbeddedAssetsPlugin;
 use crate::plugins::simulation::SimulationPlugin;
 use crate::plugins::simulation_diagnostics::SimulationDiagnosticsPlugin;
 use crate::states::{AppState, LoadingState};
@@ -24,6 +25,7 @@ fn main() {
 
     app.add_plugins((
         DefaultPlugins,
+        EmbeddedAssetsPlugin,
         DiagnosticsHudPlugin,
         EntityCountDiagnosticsPlugin,
         FrameTimeDiagnosticsPlugin::default(),

@@ -4,6 +4,8 @@ use crate::resources::*;
 use crate::states::AppState;
 use crate::systems::simulation_actions;
 use avian3d::prelude::*;
+use bevy::asset::AssetPath;
+use bevy::asset::io::AssetSourceId;
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCamera;
 
@@ -12,10 +14,9 @@ pub fn setup_ui(
     asset_server: Res<AssetServer>,
     config: Res<SimulationConfig>,
 ) {
-    // Load the same font as the diagnostic hud
-    let embedded_asset_source = &bevy::asset::io::AssetSourceId::from("embedded");
-    let regular_font_asset_path = bevy::asset::AssetPath::parse("fonts/BerkeleyMono-Regular")
-        .with_source(embedded_asset_source);
+    let embedded_asset_source = &AssetSourceId::from("embedded");
+    let regular_font_asset_path =
+        AssetPath::parse("fonts/BerkeleyMono-Regular").with_source(embedded_asset_source);
     let regular_font = asset_server.load(regular_font_asset_path);
     let button_text_font = TextFont::from_font(regular_font).with_font_size(config.ui.font_size);
 
