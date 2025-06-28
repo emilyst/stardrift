@@ -8,11 +8,22 @@ use crate::systems::config;
 use crate::systems::input;
 use crate::systems::loading;
 use crate::systems::physics;
+use crate::systems::physics::PhysicsSet;
 use crate::systems::ui;
 use crate::systems::visualization;
 use bevy::ecs::schedule::LogLevel;
 use bevy::ecs::schedule::ScheduleBuildSettings;
 use bevy::prelude::*;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SimulationSet {
+    Loading,
+    Input,
+    UI,
+    Camera,
+    Visualization,
+    Configuration,
+}
 
 pub struct SimulationPlugin;
 
@@ -45,6 +56,28 @@ impl Plugin for SimulationPlugin {
             });
         });
 
+        app.configure_sets(
+            FixedUpdate,
+            (
+                PhysicsSet::BuildOctree,
+                PhysicsSet::ApplyForces,
+                PhysicsSet::UpdateBarycenter,
+            )
+                .chain(),
+        );
+
+        app.configure_sets(
+            Update,
+            (
+                SimulationSet::Loading,
+                SimulationSet::Input,
+                SimulationSet::Camera,
+                SimulationSet::UI,
+                SimulationSet::Visualization,
+            )
+                .chain(),
+        );
+
         app.add_systems(Startup, camera::spawn_camera);
         app.add_systems(
             OnEnter(AppState::Loading),
@@ -57,12 +90,13 @@ impl Plugin for SimulationPlugin {
             FixedUpdate,
             (
                 physics::rebuild_octree
-                    .before(physics::apply_gravitation_octree)
+                    .in_set(PhysicsSet::BuildOctree)
                     .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
                 physics::apply_gravitation_octree
-                    .after(physics::rebuild_octree)
+                    .in_set(PhysicsSet::ApplyForces)
                     .run_if(in_state(AppState::Running)),
                 physics::update_barycenter
+                    .in_set(PhysicsSet::UpdateBarycenter)
                     .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
             ),
         );
@@ -75,16 +109,29 @@ impl Plugin for SimulationPlugin {
                 loading::finalize_loading.run_if(in_state(LoadingState::BuildingOctree)),
                 loading::setup_ui_after_loading.run_if(in_state(LoadingState::SettingUpUI)),
                 loading::complete_loading.run_if(in_state(AppState::Running)),
-            ),
+            )
+                .in_set(SimulationSet::Loading),
+        );
+        app.add_systems(
+            Update,
+            camera::follow_barycenter
+                .in_set(SimulationSet::Camera)
+                .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
         );
         app.add_systems(
             Update,
             (
-                camera::follow_barycenter,
                 input::pause_physics_on_space,
                 input::restart_simulation_on_n,
                 input::toggle_barycenter_gizmo_visibility_on_c,
                 input::toggle_octree_visualization,
+            )
+                .in_set(SimulationSet::Input)
+                .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
+        );
+        app.add_systems(
+            Update,
+            (
                 ui::handle_barycenter_gizmo_button,
                 ui::handle_octree_button,
                 ui::handle_pause_button,
@@ -92,12 +139,21 @@ impl Plugin for SimulationPlugin {
                 ui::update_barycenter_gizmo_button_text,
                 ui::update_octree_button_text,
                 ui::update_pause_button_text,
-                visualization::visualize_octree,
             )
+                .in_set(SimulationSet::UI)
+                .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
+        );
+        app.add_systems(
+            Update,
+            visualization::visualize_octree
+                .in_set(SimulationSet::Visualization)
                 .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
         );
 
-        app.add_systems(Update, input::quit_on_escape);
-        app.add_systems(Last, config::save_config_on_exit);
+        app.add_systems(Update, input::quit_on_escape.in_set(SimulationSet::Input));
+        app.add_systems(
+            Last,
+            config::save_config_on_exit.in_set(SimulationSet::Configuration),
+        );
     }
 }

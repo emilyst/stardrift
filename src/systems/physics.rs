@@ -9,6 +9,13 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use rand::Rng;
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum PhysicsSet {
+    BuildOctree,
+    ApplyForces,
+    UpdateBarycenter,
+}
+
 pub fn spawn_simulation_bodies(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
