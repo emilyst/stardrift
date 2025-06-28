@@ -1,5 +1,6 @@
 use crate::config::SimulationConfig;
 use crate::resources::*;
+use crate::states::AppState;
 use crate::systems::simulation_actions;
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -44,18 +45,12 @@ pub fn restart_simulation_on_n(
 
 pub fn pause_physics_on_space(
     keys: Res<ButtonInput<KeyCode>>,
-    mut commands: Commands,
-    enabled_rigid_bodies: Query<Entity, (With<RigidBody>, Without<RigidBodyDisabled>)>,
-    disabled_rigid_bodies: Query<Entity, (With<RigidBody>, With<RigidBodyDisabled>)>,
+    mut current_state: Res<State<AppState>>,
+    mut next_state: ResMut<NextState<AppState>>,
+    mut time: ResMut<Time<Physics>>,
 ) {
     if keys.just_pressed(KeyCode::Space) {
-        for entity in &enabled_rigid_bodies {
-            commands.entity(entity).insert(RigidBodyDisabled);
-        }
-
-        for entity in &disabled_rigid_bodies {
-            commands.entity(entity).remove::<RigidBodyDisabled>();
-        }
+        simulation_actions::toggle_pause_simulation(&mut current_state, &mut next_state, &mut time);
     }
 }
 

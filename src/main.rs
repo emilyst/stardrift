@@ -3,12 +3,15 @@ mod config;
 mod physics;
 mod plugins;
 mod resources;
+mod states;
 mod systems;
 mod utils;
 
 use crate::plugins::diagnostics_hud::DiagnosticsHudPlugin;
 use crate::plugins::simulation::SimulationPlugin;
 use crate::plugins::simulation_diagnostics::SimulationDiagnosticsPlugin;
+use crate::states::AppState;
+use crate::states::LoadingState;
 use avian3d::prelude::*;
 use bevy::diagnostic::EntityCountDiagnosticsPlugin;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
@@ -32,6 +35,10 @@ fn main() {
         SystemInformationDiagnosticsPlugin,
         SimulationPlugin,
     ));
+
+    // Initialize app states after DefaultPlugins (which includes StatesPlugin)
+    app.init_state::<AppState>();
+    app.add_sub_state::<LoadingState>();
 
     app.run();
 }

@@ -3,28 +3,11 @@ use crate::physics::octree::OctreeBody;
 use crate::resources::*;
 use crate::utils::color;
 use crate::utils::math;
+use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use rand::Rng;
-
-pub fn spawn_bodies(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<SharedRng>,
-    body_count: Res<BodyCount>,
-    config: Res<SimulationConfig>,
-) {
-    spawn_simulation_bodies(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        &mut rng,
-        **body_count,
-        &config,
-    );
-}
 
 pub fn spawn_simulation_bodies(
     commands: &mut Commands,
@@ -94,10 +77,7 @@ pub fn apply_gravitation_octree(
     time: ResMut<Time>,
     g: Res<GravitationalConstant>,
     octree: Res<GravitationalOctree>,
-    mut bodies: Query<
-        (Entity, &Transform, &ComputedMass, &mut LinearVelocity),
-        (With<RigidBody>, Without<RigidBodyDisabled>),
-    >,
+    mut bodies: Query<(Entity, &Transform, &ComputedMass, &mut LinearVelocity)>,
 ) {
     let delta_time = time.delta_secs_f64();
 
@@ -118,13 +98,13 @@ pub fn apply_gravitation_octree(
 
 // TODO: test
 pub fn update_barycenter(
-    bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Without<RigidBodyDisabled>)>,
+    bodies: Query<(&Transform, &ComputedMass), With<RigidBody>>,
     mut current_barycenter: ResMut<CurrentBarycenter>,
     mut previous_barycenter: ResMut<PreviousBarycenter>,
 ) {
     **previous_barycenter = **current_barycenter;
 
-    let (weighted_positions, total_mass): (Vector, avian3d::math::Scalar) = bodies
+    let (weighted_positions, total_mass): (Vector, Scalar) = bodies
         .iter()
         .map(|(transform, mass)| {
             let mass = mass.value();

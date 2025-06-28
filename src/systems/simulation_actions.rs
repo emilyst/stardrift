@@ -1,5 +1,6 @@
 use crate::config::SimulationConfig;
 use crate::resources::*;
+use crate::states::AppState;
 use crate::systems::physics::spawn_simulation_bodies;
 use avian3d::math::Vector;
 use avian3d::prelude::*;
@@ -47,15 +48,19 @@ pub fn toggle_barycenter_gizmo_visibility(settings: &mut ResMut<BarycenterGizmoV
 }
 
 pub fn toggle_pause_simulation(
-    commands: &mut Commands,
-    enabled_rigid_bodies: &Query<Entity, (With<RigidBody>, Without<RigidBodyDisabled>)>,
-    disabled_rigid_bodies: &Query<Entity, (With<RigidBody>, With<RigidBodyDisabled>)>,
+    current_state: &mut Res<State<AppState>>,
+    mut next_state: &mut ResMut<NextState<AppState>>,
+    mut time: &mut ResMut<Time<Physics>>,
 ) {
-    for entity in enabled_rigid_bodies {
-        commands.entity(entity).insert(RigidBodyDisabled);
-    }
-
-    for entity in disabled_rigid_bodies {
-        commands.entity(entity).remove::<RigidBodyDisabled>();
+    match current_state.get() {
+        AppState::Running => {
+            next_state.set(AppState::Paused);
+            time.pause();
+        }
+        AppState::Paused => {
+            next_state.set(AppState::Running);
+            time.unpause();
+        }
+        _ => {} // ignore Loading state
     }
 }

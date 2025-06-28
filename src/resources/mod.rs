@@ -68,3 +68,30 @@ impl Default for BarycenterGizmoVisibility {
         Self { enabled: false }
     }
 }
+
+#[derive(Resource, Default)]
+pub struct LoadingState {
+    pub is_loading: bool,
+    pub current_step: LoadingStep,
+    pub progress: f32, // 0.0 to 1.0
+}
+
+#[derive(Default, Clone, Copy, PartialEq)]
+pub enum LoadingStep {
+    #[default]
+    InitializingConfig,
+    SpawningBodies,
+    BuildingOctree,
+    SettingUpUI,
+    Complete,
+}
+
+#[derive(Resource)]
+pub struct BodySpawningProgress {
+    pub bodies_spawned: usize,
+    pub total_bodies: usize,
+    pub batch_size: usize,
+}
+
+#[derive(Resource, Deref, DerefMut)]
+pub struct LoadingTimer(pub Timer);

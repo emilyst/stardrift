@@ -1,7 +1,14 @@
 use crate::config::SimulationConfig;
 use crate::physics::octree::Octree;
 use crate::resources::*;
-use crate::systems::{camera, config, input, physics, ui, visualization};
+use crate::states::AppState;
+use crate::systems::camera;
+use crate::systems::config;
+use crate::systems::input;
+use crate::systems::loading;
+use crate::systems::physics;
+use crate::systems::ui;
+use crate::systems::visualization;
 use bevy::ecs::schedule::LogLevel;
 use bevy::ecs::schedule::ScheduleBuildSettings;
 use bevy::prelude::*;
@@ -28,6 +35,7 @@ impl Plugin for SimulationPlugin {
             ..default()
         });
         app.init_resource::<BarycenterGizmoVisibility>();
+        app.init_resource::<LoadingState>();
 
         app.edit_schedule(FixedUpdate, |schedule| {
             schedule.set_build_settings(ScheduleBuildSettings {
@@ -36,38 +44,60 @@ impl Plugin for SimulationPlugin {
             });
         });
 
-        app.add_systems(Startup, (camera::spawn_camera, physics::spawn_bodies));
-        app.add_systems(PostStartup, ui::setup_ui);
+        app.add_systems(Startup, camera::spawn_camera);
+        app.add_systems(
+            OnEnter(AppState::Loading),
+            (
+                loading::setup_loading_screen,
+                loading::start_loading_process,
+            ),
+        );
         app.add_systems(
             FixedUpdate,
-            (
-                physics::rebuild_octree,
-                physics::apply_gravitation_octree,
-                physics::update_barycenter,
-                camera::follow_barycenter,
-            )
-                .chain(),
+            (physics::apply_gravitation_octree,)
+                .chain()
+                .run_if(in_state(AppState::Running)),
+        );
+        app.add_systems(
+            FixedUpdate,
+            (physics::rebuild_octree, physics::update_barycenter)
+                .chain()
+                .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
         );
         app.add_systems(
             Update,
             (
-                input::quit_on_escape,
-                input::restart_simulation_on_n,
+                loading::advance_loading_step.run_if(loading::is_loading),
+                loading::update_loading_progress,
+                loading::spawn_bodies_async.run_if(loading::should_spawn_bodies),
+                loading::finalize_loading.run_if(loading::should_finalize_loading),
+                loading::setup_ui_after_loading.run_if(loading::should_setup_ui),
+                loading::complete_loading.run_if(loading::loading_complete),
+                loading::transition_to_running,
+            )
+                .run_if(in_state(AppState::Loading)),
+        );
+        app.add_systems(
+            Update,
+            (
+                camera::follow_barycenter,
                 input::pause_physics_on_space,
+                input::restart_simulation_on_n,
                 input::toggle_barycenter_gizmo_visibility_on_c,
                 input::toggle_octree_visualization,
-                visualization::visualize_octree,
-                ui::handle_octree_button,
                 ui::handle_barycenter_gizmo_button,
-                ui::handle_restart_button,
+                ui::handle_octree_button,
                 ui::handle_pause_button,
-                ui::update_octree_button_text,
+                ui::handle_restart_button,
                 ui::update_barycenter_gizmo_button_text,
+                ui::update_octree_button_text,
                 ui::update_pause_button_text,
-            ),
+                visualization::visualize_octree,
+            )
+                .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
         );
 
-        // runs in Last schedule to ensure it runs after all other systems
+        app.add_systems(Update, input::quit_on_escape);
         app.add_systems(Last, config::save_config_on_exit);
     }
 }

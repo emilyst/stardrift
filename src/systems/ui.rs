@@ -1,6 +1,7 @@
 use crate::components::*;
 use crate::config::SimulationConfig;
 use crate::resources::*;
+use crate::states::AppState;
 use crate::systems::simulation_actions;
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -239,18 +240,18 @@ pub fn handle_pause_button(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<PauseButton>),
     >,
-    mut commands: Commands,
-    enabled_rigid_bodies: Query<Entity, (With<RigidBody>, Without<RigidBodyDisabled>)>,
-    disabled_rigid_bodies: Query<Entity, (With<RigidBody>, With<RigidBodyDisabled>)>,
+    mut current_state: Res<State<AppState>>,
+    mut next_state: ResMut<NextState<AppState>>,
+    mut time: ResMut<Time<Physics>>,
 ) {
     for (interaction, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
                 simulation_actions::toggle_pause_simulation(
-                    &mut commands,
-                    &enabled_rigid_bodies,
-                    &disabled_rigid_bodies,
+                    &mut current_state,
+                    &mut next_state,
+                    &mut time,
                 );
             }
             Interaction::Hovered => {
@@ -317,21 +318,16 @@ pub fn update_pause_button_text(
     button_query: Query<Entity, With<PauseButton>>,
     children_query: Query<&Children>,
     mut text_query: Query<&mut Text>,
-    enabled_rigid_bodies: Query<Entity, (With<RigidBody>, Without<RigidBodyDisabled>)>,
-    disabled_rigid_bodies: Query<Entity, (With<RigidBody>, With<RigidBodyDisabled>)>,
+    current_state: Res<State<AppState>>,
 ) {
-    let enabled_count = enabled_rigid_bodies.iter().count();
-    let disabled_count = disabled_rigid_bodies.iter().count();
-    let is_paused = enabled_count == 0 && disabled_count > 0;
-
     for button_entity in &button_query {
         if let Ok(children) = children_query.get(button_entity) {
             for child in children {
                 if let Ok(mut text) = text_query.get_mut(*child) {
-                    let new_text = if is_paused {
-                        "Resume (Space)".to_string()
-                    } else {
-                        "Pause (Space)".to_string()
+                    let new_text = match current_state.get() {
+                        AppState::Running => "Pause (Space)".to_string(),
+                        AppState::Paused => "Resume (Space)".to_string(),
+                        _ => String::new(), // ignore Loading state
                     };
 
                     if **text != new_text {
