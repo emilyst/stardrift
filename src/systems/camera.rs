@@ -32,6 +32,7 @@ pub fn spawn_camera(
         Bloom::NATURAL,
         Msaa::default(),
         PanOrbitCamera {
+            allow_upside_down: true,
             focus: Vec3::ZERO,
             pan_smoothness: 0.0,
             radius: Some(
