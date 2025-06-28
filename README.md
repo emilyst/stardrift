@@ -109,8 +109,9 @@ npx http-server out
 | **Mouse**       | Pan and orbit camera around the simulation |
 | **Mouse Wheel** | Zoom in/out                                |
 | **Space**       | Pause/Resume simulation                    |
-| **R**           | Restart simulation with new random bodies |
+| **N**           | Restart simulation with new random bodies |
 | **O**           | Toggle octree visualization on/off         |
+| **C**           | Toggle barycenter gizmo visibility on/off  |
 | **0-9**         | Set octree visualization depth (0 = all levels) |
 | **Escape**      | Quit application                           |
 | **Touch**       | Pan, orbit, and zoom (mobile/tablet)       |
