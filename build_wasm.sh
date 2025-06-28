@@ -4,7 +4,7 @@ echo "Building for WASM target..."
 
 rustup target add wasm32-unknown-unknown
 
-RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo build \
+cargo build \
   --profile wasm \
   --target wasm32-unknown-unknown
 
