@@ -5,6 +5,7 @@ use crate::states::AppState;
 use crate::systems::ui;
 use avian3d::prelude::*;
 use bevy::prelude::*;
+use bevy::render::mesh::SphereKind;
 
 pub fn setup_loading_screen(mut commands: Commands, mut loading_state: ResMut<LoadingState>) {
     loading_state.is_loading = true;
@@ -152,7 +153,14 @@ fn spawn_single_body(
     let position = math::random_unit_vector(&mut **rng) * body_distribution_sphere_radius;
     let transform = Transform::from_translation(position.as_vec3());
     let radius = rng.random_range(config.physics.min_body_radius..=config.physics.max_body_radius);
-    let mesh = meshes.add(Sphere::new(radius as f32));
+    let mesh = meshes.add(
+        Sphere::new(radius as f32)
+            .mesh()
+            .kind(SphereKind::Ico {
+                subdivisions: if cfg!(target_arch = "wasm32") { 1 } else { 4 },
+            })
+            .build(),
+    );
 
     let min_temp = config.rendering.min_temperature;
     let max_temp = config.rendering.max_temperature;
