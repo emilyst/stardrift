@@ -2,6 +2,7 @@ use crate::config::SimulationConfig;
 use crate::physics::octree::Octree;
 use crate::resources::*;
 use crate::states::AppState;
+use crate::states::LoadingState;
 use crate::systems::camera;
 use crate::systems::config;
 use crate::systems::input;
@@ -35,7 +36,7 @@ impl Plugin for SimulationPlugin {
             ..default()
         });
         app.init_resource::<BarycenterGizmoVisibility>();
-        app.init_resource::<LoadingState>();
+        app.init_resource::<LoadingProgress>();
 
         app.edit_schedule(FixedUpdate, |schedule| {
             schedule.set_build_settings(ScheduleBuildSettings {
@@ -54,28 +55,25 @@ impl Plugin for SimulationPlugin {
         );
         app.add_systems(
             FixedUpdate,
-            (physics::apply_gravitation_octree,)
-                .chain()
-                .run_if(in_state(AppState::Running)),
-        );
-        app.add_systems(
-            FixedUpdate,
-            (physics::rebuild_octree, physics::update_barycenter)
-                .chain()
-                .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
+            (
+                physics::apply_gravitation_octree
+                    .chain()
+                    .run_if(in_state(AppState::Running)),
+                (physics::rebuild_octree, physics::update_barycenter)
+                    .chain()
+                    .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
+            ),
         );
         app.add_systems(
             Update,
             (
-                loading::advance_loading_step.run_if(loading::is_loading),
-                loading::update_loading_progress,
-                loading::spawn_bodies_async.run_if(loading::should_spawn_bodies),
-                loading::finalize_loading.run_if(loading::should_finalize_loading),
-                loading::setup_ui_after_loading.run_if(loading::should_setup_ui),
-                loading::complete_loading.run_if(loading::loading_complete),
-                loading::transition_to_running,
-            )
-                .run_if(in_state(AppState::Loading)),
+                loading::update_loading_progress.run_if(in_state(AppState::Loading)),
+                loading::advance_loading_step.run_if(in_state(LoadingState::InitializingConfig)),
+                loading::spawn_bodies_async.run_if(in_state(LoadingState::SpawningBodies)),
+                loading::finalize_loading.run_if(in_state(LoadingState::BuildingOctree)),
+                loading::setup_ui_after_loading.run_if(in_state(LoadingState::SettingUpUI)),
+                loading::complete_loading.run_if(in_state(AppState::Running)),
+            ),
         );
         app.add_systems(
             Update,

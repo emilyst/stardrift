@@ -24,6 +24,7 @@
 //! ```
 
 use crate::resources::CurrentBarycenter;
+use crate::states::AppState;
 use bevy::diagnostic::DEFAULT_MAX_HISTORY_LENGTH;
 use bevy::diagnostic::Diagnostic;
 use bevy::diagnostic::DiagnosticPath;
@@ -105,7 +106,8 @@ impl Plugin for SimulationDiagnosticsPlugin {
                 Self::update_timer_ticks,
                 Self::update_barycenter_diagnostics,
             )
-                .chain(),
+                .chain()
+                .run_if(in_state(AppState::Running)),
         );
     }
 }

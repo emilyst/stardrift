@@ -70,20 +70,9 @@ impl Default for BarycenterGizmoVisibility {
 }
 
 #[derive(Resource, Default)]
-pub struct LoadingState {
-    pub is_loading: bool,
-    pub current_step: LoadingStep,
+pub struct LoadingProgress {
     pub progress: f32, // 0.0 to 1.0
-}
-
-#[derive(Default, Clone, Copy, PartialEq)]
-pub enum LoadingStep {
-    #[default]
-    InitializingConfig,
-    SpawningBodies,
-    BuildingOctree,
-    SettingUpUI,
-    Complete,
+    pub current_message: String,
 }
 
 #[derive(Resource)]
