@@ -74,10 +74,10 @@ pub fn rebuild_octree(
 }
 
 pub fn apply_gravitation_octree(
-    time: ResMut<Time>,
+    time: Res<Time<Fixed>>,
     g: Res<GravitationalConstant>,
     octree: Res<GravitationalOctree>,
-    mut bodies: Query<(Entity, &Transform, &ComputedMass, &mut LinearVelocity)>,
+    mut bodies: Query<(Entity, &Transform, &ComputedMass, &mut LinearVelocity), With<RigidBody>>,
 ) {
     let delta_time = time.delta_secs_f64();
 
