@@ -28,13 +28,16 @@ fn main() {
         DiagnosticsHudPlugin,
         EntityCountDiagnosticsPlugin,
         FrameTimeDiagnosticsPlugin::default(),
-        LogDiagnosticsPlugin::default(),
         PanOrbitCameraPlugin,
         PhysicsPlugins::default(),
         SimulationDiagnosticsPlugin::default(),
         SystemInformationDiagnosticsPlugin,
         SimulationPlugin,
     ));
+
+    if !cfg!(target_arch = "wasm32") {
+        app.add_plugins(LogDiagnosticsPlugin::default());
+    };
 
     // Initialize app states after DefaultPlugins (which includes StatesPlugin)
     app.init_state::<AppState>();
