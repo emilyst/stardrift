@@ -11,7 +11,7 @@ pub fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<App
     }
 }
 
-pub fn restart_simulation_on_r(
+pub fn restart_simulation_on_n(
     keys: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
     simulation_bodies: Query<Entity, With<RigidBody>>,
@@ -25,7 +25,7 @@ pub fn restart_simulation_on_r(
     mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
     config: Res<SimulationConfig>,
 ) {
-    if keys.just_pressed(KeyCode::KeyR) {
+    if keys.just_pressed(KeyCode::KeyN) {
         simulation_actions::restart_simulation(
             &mut commands,
             &simulation_bodies,
@@ -76,6 +76,20 @@ pub fn toggle_octree_visualization(
             KeyCode::Digit7 => settings.max_depth = Some(7),
             KeyCode::Digit8 => settings.max_depth = Some(8),
             KeyCode::Digit9 => settings.max_depth = Some(9),
+            _ => {}
+        }
+    }
+}
+
+pub fn toggle_barycenter_gizmo_visibility_on_c(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut visibility: ResMut<BarycenterGizmoVisibility>,
+) {
+    for &keycode in keys.get_just_pressed() {
+        match keycode {
+            KeyCode::KeyC => {
+                simulation_actions::toggle_barycenter_gizmo_visibility(&mut visibility)
+            }
             _ => {}
         }
     }

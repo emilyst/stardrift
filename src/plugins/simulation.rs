@@ -38,8 +38,6 @@ impl Plugin for SimulationPlugin {
 
         app.add_systems(Startup, (camera::spawn_camera, physics::spawn_bodies));
         app.add_systems(PostStartup, ui::setup_ui);
-
-        // run in FixedUpdate for deterministic physics
         app.add_systems(
             FixedUpdate,
             (
@@ -50,14 +48,13 @@ impl Plugin for SimulationPlugin {
             )
                 .chain(),
         );
-
-        // run in Update for responsive input
         app.add_systems(
             Update,
             (
                 input::quit_on_escape,
-                input::restart_simulation_on_r,
+                input::restart_simulation_on_n,
                 input::pause_physics_on_space,
+                input::toggle_barycenter_gizmo_visibility_on_c,
                 input::toggle_octree_visualization,
                 visualization::visualize_octree,
                 ui::handle_octree_button,

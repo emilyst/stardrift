@@ -59,7 +59,7 @@ pub fn setup_ui(
                         ))
                         .with_children(|parent| {
                             parent.spawn((
-                                Text::new("New Simulation"),
+                                Text::new("New Simulation (N)"),
                                 button_text_font.clone(),
                                 TextColor(Color::WHITE),
                             ));
@@ -84,7 +84,7 @@ pub fn setup_ui(
                         ))
                         .with_children(|parent| {
                             parent.spawn((
-                                Text::new("Show Octree"),
+                                Text::new("Show Octree (O)"),
                                 button_text_font.clone(),
                                 TextColor(Color::WHITE),
                             ));
@@ -109,7 +109,7 @@ pub fn setup_ui(
                         ))
                         .with_children(|parent| {
                             parent.spawn((
-                                Text::new("Hide Barycenter"),
+                                Text::new("Show Barycenter (C)"),
                                 button_text_font.clone(),
                                 TextColor(Color::WHITE),
                             ));
@@ -225,9 +225,9 @@ pub fn update_octree_button_text(
             for child in children {
                 if let Ok(mut text) = text_query.get_mut(*child) {
                     text.0 = if settings.enabled {
-                        "Hide Octree".to_string()
+                        "Hide Octree (O)".to_string()
                     } else {
-                        "Show Octree".to_string()
+                        "Show Octree (O)".to_string()
                     };
                 }
             }
@@ -250,9 +250,9 @@ pub fn update_barycenter_gizmo_button_text(
             for child in children {
                 if let Ok(mut text) = text_query.get_mut(*child) {
                     text.0 = if settings.enabled {
-                        "Hide Barycenter".to_string()
+                        "Hide Barycenter (C)".to_string()
                     } else {
-                        "Show Barycenter".to_string()
+                        "Show Barycenter (C)".to_string()
                     };
                 }
             }
@@ -276,18 +276,18 @@ mod ui_tests {
         };
 
         let expected_text_when_enabled = if enabled_settings.enabled {
-            "Hide Octree"
+            "Hide Octree (O)"
         } else {
-            "Show Octree"
+            "Show Octree (O)"
         };
 
         let expected_text_when_disabled = if disabled_settings.enabled {
-            "Hide Octree"
+            "Hide Octree (O)"
         } else {
-            "Show Octree"
+            "Show Octree (O)"
         };
 
-        assert_eq!(expected_text_when_enabled, "Hide Octree");
-        assert_eq!(expected_text_when_disabled, "Show Octree");
+        assert_eq!(expected_text_when_enabled, "Hide Octree (O)");
+        assert_eq!(expected_text_when_disabled, "Show Octree (O)");
     }
 }
