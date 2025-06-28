@@ -56,11 +56,13 @@ impl Plugin for SimulationPlugin {
         app.add_systems(
             FixedUpdate,
             (
+                physics::rebuild_octree
+                    .before(physics::apply_gravitation_octree)
+                    .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
                 physics::apply_gravitation_octree
-                    .chain()
+                    .after(physics::rebuild_octree)
                     .run_if(in_state(AppState::Running)),
-                (physics::rebuild_octree, physics::update_barycenter)
-                    .chain()
+                physics::update_barycenter
                     .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
             ),
         );
