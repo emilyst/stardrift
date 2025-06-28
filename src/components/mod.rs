@@ -8,3 +8,6 @@ pub struct RestartSimulationButton;
 
 #[derive(Component)]
 pub struct BarycenterGizmoToggleButton;
+
+#[derive(Component)]
+pub struct PauseButton;

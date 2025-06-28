@@ -114,6 +114,30 @@ pub fn setup_ui(
                                 TextColor(Color::WHITE),
                             ));
                         });
+
+                    parent
+                        .spawn((
+                            Button,
+                            Node {
+                                padding: UiRect::all(Val::Px(config.ui.button_padding)),
+                                display: Display::Flex,
+                                flex_direction: FlexDirection::Column,
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                row_gap: Val::Px(1.0),
+                                ..default()
+                            },
+                            BorderRadius::all(Val::Px(config.ui.button_border_radius)),
+                            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
+                            PauseButton,
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn((
+                                Text::new("Pause (Space)"),
+                                button_text_font.clone(),
+                                TextColor(Color::WHITE),
+                            ));
+                        });
                 });
         });
 }
@@ -210,6 +234,35 @@ pub fn handle_restart_button(
     }
 }
 
+pub fn handle_pause_button(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<PauseButton>),
+    >,
+    mut commands: Commands,
+    enabled_rigid_bodies: Query<Entity, (With<RigidBody>, Without<RigidBodyDisabled>)>,
+    disabled_rigid_bodies: Query<Entity, (With<RigidBody>, With<RigidBodyDisabled>)>,
+) {
+    for (interaction, mut color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
+                simulation_actions::toggle_pause_simulation(
+                    &mut commands,
+                    &enabled_rigid_bodies,
+                    &disabled_rigid_bodies,
+                );
+            }
+            Interaction::Hovered => {
+                *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
+            }
+            Interaction::None => {
+                *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
+            }
+        }
+    }
+}
+
 pub fn update_octree_button_text(
     button_query: Query<Entity, With<OctreeToggleButton>>,
     children_query: Query<&Children>,
@@ -254,6 +307,36 @@ pub fn update_barycenter_gizmo_button_text(
                     } else {
                         "Show Barycenter (C)".to_string()
                     };
+                }
+            }
+        }
+    }
+}
+
+pub fn update_pause_button_text(
+    button_query: Query<Entity, With<PauseButton>>,
+    children_query: Query<&Children>,
+    mut text_query: Query<&mut Text>,
+    enabled_rigid_bodies: Query<Entity, (With<RigidBody>, Without<RigidBodyDisabled>)>,
+    disabled_rigid_bodies: Query<Entity, (With<RigidBody>, With<RigidBodyDisabled>)>,
+) {
+    let enabled_count = enabled_rigid_bodies.iter().count();
+    let disabled_count = disabled_rigid_bodies.iter().count();
+    let is_paused = enabled_count == 0 && disabled_count > 0;
+
+    for button_entity in &button_query {
+        if let Ok(children) = children_query.get(button_entity) {
+            for child in children {
+                if let Ok(mut text) = text_query.get_mut(*child) {
+                    let new_text = if is_paused {
+                        "Resume (Space)".to_string()
+                    } else {
+                        "Pause (Space)".to_string()
+                    };
+
+                    if **text != new_text {
+                        **text = new_text;
+                    }
                 }
             }
         }

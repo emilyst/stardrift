@@ -45,3 +45,17 @@ pub fn toggle_octree_visualization(settings: &mut ResMut<OctreeVisualizationSett
 pub fn toggle_barycenter_gizmo_visibility(settings: &mut ResMut<BarycenterGizmoVisibility>) {
     settings.enabled = !settings.enabled;
 }
+
+pub fn toggle_pause_simulation(
+    commands: &mut Commands,
+    enabled_rigid_bodies: &Query<Entity, (With<RigidBody>, Without<RigidBodyDisabled>)>,
+    disabled_rigid_bodies: &Query<Entity, (With<RigidBody>, With<RigidBodyDisabled>)>,
+) {
+    for entity in enabled_rigid_bodies {
+        commands.entity(entity).insert(RigidBodyDisabled);
+    }
+
+    for entity in disabled_rigid_bodies {
+        commands.entity(entity).remove::<RigidBodyDisabled>();
+    }
+}

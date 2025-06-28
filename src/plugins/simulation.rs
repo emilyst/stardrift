@@ -60,8 +60,10 @@ impl Plugin for SimulationPlugin {
                 ui::handle_octree_button,
                 ui::handle_barycenter_gizmo_button,
                 ui::handle_restart_button,
+                ui::handle_pause_button,
                 ui::update_octree_button_text,
                 ui::update_barycenter_gizmo_button_text,
+                ui::update_pause_button_text,
             ),
         );
 
