@@ -70,10 +70,12 @@ impl Plugin for SimulationPlugin {
             Update,
             (
                 SimulationSet::Loading,
-                SimulationSet::Input,
-                SimulationSet::Camera,
-                SimulationSet::UI,
-                SimulationSet::Visualization,
+                (
+                    SimulationSet::Input,
+                    SimulationSet::UI,
+                    SimulationSet::Visualization,
+                ), // These can run in parallel
+                SimulationSet::Camera, // Camera follows after input/UI for responsiveness
             )
                 .chain(),
         );

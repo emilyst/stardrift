@@ -24,26 +24,31 @@ pub fn spawn_simulation_bodies(
     body_count: usize,
     config: &SimulationConfig,
 ) {
+    // Pre-calculate common values
+    let body_distribution_sphere_radius = math::min_sphere_radius_for_surface_distribution(
+        body_count,
+        config.physics.body_distribution_sphere_radius_multiplier,
+        config.physics.body_distribution_min_distance,
+    );
+    let min_temp = config.rendering.min_temperature;
+    let max_temp = config.rendering.max_temperature;
+    let min_radius = config.physics.min_body_radius;
+    let max_radius = config.physics.max_body_radius;
+    let bloom_intensity = config.rendering.bloom_intensity;
+    let saturation_intensity = config.rendering.saturation_intensity;
+
+    // Prepare batch data for efficient spawning
+    let mut spawn_data = Vec::with_capacity(body_count);
+
     for _ in 0..body_count {
-        let body_distribution_sphere_radius = math::min_sphere_radius_for_surface_distribution(
-            body_count,
-            config.physics.body_distribution_sphere_radius_multiplier,
-            config.physics.body_distribution_min_distance,
-        );
         let position = math::random_unit_vector(&mut **rng) * body_distribution_sphere_radius;
         let transform = Transform::from_translation(position.as_vec3());
         let radius =
             rng.random_range(config.physics.min_body_radius..=config.physics.max_body_radius);
         let mesh = meshes.add(Sphere::new(radius as f32));
 
-        let min_temp = config.rendering.min_temperature;
-        let max_temp = config.rendering.max_temperature;
-        let min_radius = config.physics.min_body_radius;
-        let max_radius = config.physics.max_body_radius;
         let temperature =
             min_temp + (max_temp - min_temp) * (max_radius - radius) / (max_radius - min_radius);
-        let bloom_intensity = config.rendering.bloom_intensity;
-        let saturation_intensity = config.rendering.saturation_intensity;
         let material = color::emissive_material_for_temp(
             materials,
             temperature,
@@ -51,20 +56,23 @@ pub fn spawn_simulation_bodies(
             saturation_intensity,
         );
 
-        commands.spawn((
+        spawn_data.push((
             transform,
             Collider::sphere(radius),
             GravityScale(0.0),
             RigidBody::Dynamic,
-            MeshMaterial3d(material.clone()),
+            MeshMaterial3d(material),
             Mesh3d(mesh),
         ));
     }
+
+    // Batch spawn all entities for better performance
+    commands.spawn_batch(spawn_data);
 }
 
 pub fn rebuild_octree(
     bodies: Query<(Entity, &Transform, &ComputedMass), With<RigidBody>>,
-    octree: ResMut<GravitationalOctree>,
+    mut octree: ResMut<GravitationalOctree>,
 ) {
     let octree_bodies: Vec<OctreeBody> = bodies
         .iter()
@@ -75,9 +83,7 @@ pub fn rebuild_octree(
         })
         .collect();
 
-    if let Ok(mut octree_guard) = octree.write() {
-        octree_guard.build(octree_bodies);
-    }
+    octree.build(octree_bodies);
 }
 
 pub fn apply_gravitation_octree(
@@ -87,31 +93,38 @@ pub fn apply_gravitation_octree(
     mut bodies: Query<(Entity, &Transform, &ComputedMass, &mut LinearVelocity), With<RigidBody>>,
 ) {
     let delta_time = time.delta_secs_f64();
+    let gravitational_constant = **g;
 
-    if let Ok(octree_guard) = octree.read() {
-        for (entity, transform, mass, mut velocity) in bodies.iter_mut() {
+    bodies
+        .par_iter_mut()
+        .for_each(|(entity, transform, mass, mut velocity)| {
             let body = OctreeBody {
                 entity,
                 position: Vector::from(transform.translation),
                 mass: mass.value(),
             };
 
-            let force = octree_guard.calculate_force(&body, octree_guard.root.as_ref(), **g);
+            let force = octree.calculate_force(&body, octree.root.as_ref(), gravitational_constant);
             let acceleration = force * mass.inverse();
             **velocity += acceleration * delta_time;
-        }
-    }
+        });
 }
 
 // TODO: test
 pub fn update_barycenter(
-    bodies: Query<(&Transform, &ComputedMass), With<RigidBody>>,
+    bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
+    all_bodies: Query<(&Transform, &ComputedMass), With<RigidBody>>,
     mut current_barycenter: ResMut<CurrentBarycenter>,
     mut previous_barycenter: ResMut<PreviousBarycenter>,
 ) {
+    // Only recalculate if any body has moved
+    if bodies.is_empty() {
+        return;
+    }
+
     **previous_barycenter = **current_barycenter;
 
-    let (weighted_positions, total_mass): (Vector, Scalar) = bodies
+    let (weighted_positions, total_mass): (Vector, Scalar) = all_bodies
         .iter()
         .map(|(transform, mass)| {
             let mass = mass.value();

@@ -202,7 +202,7 @@ pub fn handle_restart_button(
     body_count: Res<BodyCount>,
     mut current_barycenter: ResMut<CurrentBarycenter>,
     mut previous_barycenter: ResMut<PreviousBarycenter>,
-    octree: ResMut<GravitationalOctree>,
+    mut octree: ResMut<GravitationalOctree>,
     mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
     config: Res<SimulationConfig>,
 ) {
@@ -220,7 +220,7 @@ pub fn handle_restart_button(
                     &body_count,
                     &mut current_barycenter,
                     &mut previous_barycenter,
-                    &octree,
+                    &mut octree,
                     &mut pan_orbit_camera,
                     &config,
                 );

@@ -12,12 +12,10 @@ pub fn visualize_octree(
         return;
     }
 
-    if let Ok(octree_guard) = octree.read() {
-        let bounds = octree_guard.get_bounds(settings.max_depth);
+    let bounds = octree.get_bounds(settings.max_depth);
 
-        for aabb in bounds {
-            draw_bounding_box_wireframe_gizmo(&mut gizmos, &aabb, css::WHITE);
-        }
+    for aabb in bounds {
+        draw_bounding_box_wireframe_gizmo(&mut gizmos, &aabb, css::WHITE);
     }
 }
 

@@ -16,7 +16,7 @@ pub fn restart_simulation(
     body_count: &Res<BodyCount>,
     current_barycenter: &mut ResMut<CurrentBarycenter>,
     previous_barycenter: &mut ResMut<PreviousBarycenter>,
-    octree: &ResMut<GravitationalOctree>,
+    octree: &mut ResMut<GravitationalOctree>,
     pan_orbit_camera: &mut Single<&mut PanOrbitCamera>,
     config: &Res<SimulationConfig>,
 ) {
@@ -27,9 +27,7 @@ pub fn restart_simulation(
     ***current_barycenter = Vector::ZERO;
     ***previous_barycenter = Vector::ZERO;
 
-    if let Ok(mut octree_guard) = octree.write() {
-        octree_guard.build(vec![]);
-    }
+    octree.build(vec![]);
 
     pan_orbit_camera.target_focus = Vec3::ZERO;
     pan_orbit_camera.force_update = true;
