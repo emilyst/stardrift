@@ -31,7 +31,6 @@ interactive camera controls.
     - Frame rate (FPS)
     - Frame count
     - Barycenter coordinates (X, Y, Z)
-    - Camera position (X, Y, Z)
 - **Pause/Resume functionality**: Space bar to pause and resume the simulation
 - **Interactive UI buttons**:
     - **Octree toggle button**: Show/hide octree visualization

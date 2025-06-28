@@ -4,7 +4,6 @@
 //! It collects and monitors key simulation metrics including:
 //!
 //! - **Barycenter position**: Tracks the X, Y, and Z coordinates of the system's center of mass
-//! - **Camera position**: Monitors the current camera position in 3D space
 //!
 //! The diagnostics are collected at regular intervals and can be consumed by other systems
 //! for display, logging, or analysis purposes. The module integrates with Bevy's diagnostic
@@ -59,17 +58,10 @@ impl SimulationDiagnosticsPlugin {
     pub const BARYCENTER_Y_PATH: DiagnosticPath = DiagnosticPath::const_new("barycenter/y");
     pub const BARYCENTER_Z_PATH: DiagnosticPath = DiagnosticPath::const_new("barycenter/z");
 
-    pub const CAMERA_X_PATH: DiagnosticPath = DiagnosticPath::const_new("camera/x");
-    pub const CAMERA_Y_PATH: DiagnosticPath = DiagnosticPath::const_new("camera/y");
-    pub const CAMERA_Z_PATH: DiagnosticPath = DiagnosticPath::const_new("camera/z");
-
     const DIAGNOSTIC_PATHS: &'static [DiagnosticPath] = &[
         Self::BARYCENTER_X_PATH,
         Self::BARYCENTER_Y_PATH,
         Self::BARYCENTER_Z_PATH,
-        Self::CAMERA_X_PATH,
-        Self::CAMERA_Y_PATH,
-        Self::CAMERA_Z_PATH,
     ];
 
     fn register_diagnostics(&self, app: &mut App) {
@@ -97,24 +89,6 @@ impl SimulationDiagnosticsPlugin {
             diagnostics.add_measurement(&Self::BARYCENTER_Z_PATH, || barycenter.z);
         }
     }
-
-    fn update_camera_diagnostics(
-        camera_transform: Single<&Transform, With<Camera>>,
-        mut diagnostics: Diagnostics,
-        state: ResMut<SimulationDiagnosticsState>,
-    ) {
-        if state.update_timer.finished() {
-            diagnostics.add_measurement(&Self::CAMERA_X_PATH, || {
-                camera_transform.translation.x as f64
-            });
-            diagnostics.add_measurement(&Self::CAMERA_Y_PATH, || {
-                camera_transform.translation.y as f64
-            });
-            diagnostics.add_measurement(&Self::CAMERA_Z_PATH, || {
-                camera_transform.translation.z as f64
-            });
-        }
-    }
 }
 
 impl Plugin for SimulationDiagnosticsPlugin {
@@ -130,7 +104,6 @@ impl Plugin for SimulationDiagnosticsPlugin {
             (
                 Self::update_timer_ticks,
                 Self::update_barycenter_diagnostics,
-                Self::update_camera_diagnostics,
             )
                 .chain(),
         );

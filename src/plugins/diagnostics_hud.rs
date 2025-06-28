@@ -11,7 +11,6 @@
 //! - **Frame Count**: Total number of frames rendered since application start
 //! - **FPS (Frames Per Second)**: Current rendering performance
 //! - **Barycenter Position**: Real-time coordinates of the system's center of mass
-//! - **Camera Position**: Current 3D position of the simulation camera
 //!
 //! # Features
 //!
@@ -65,9 +64,6 @@ struct FpsTextNode;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
 struct BarycenterTextNode;
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct CameraTextNode;
 
 // TODO: change detection
 #[derive(Resource, Reflect, Debug)]
@@ -199,13 +195,6 @@ impl DiagnosticsHudPlugin {
                 (
                     hud_row_node.clone(),
                     children![
-                        (Text::new("Camera"), bold_text_font.clone()),
-                        (CameraTextNode, Text::new("-"), regular_text_font.clone()),
-                    ],
-                ),
-                (
-                    hud_row_node.clone(),
-                    children![
                         (Text::new("Body count"), bold_text_font.clone()),
                         (
                             Text::new(format!("{}", **body_count)),
@@ -273,29 +262,6 @@ impl DiagnosticsHudPlugin {
             }
         }
     }
-
-    fn update_camera_text(
-        diagnostics: Res<DiagnosticsStore>,
-        mut camera_text: Single<&mut Text, With<CameraTextNode>>,
-        state: Res<DiagnosticsHudState>,
-    ) {
-        if state.refresh_timer.finished() {
-            if let (Some(camera_x), Some(camera_y), Some(camera_z)) = (
-                diagnostics.get(&SimulationDiagnosticsPlugin::CAMERA_X_PATH),
-                diagnostics.get(&SimulationDiagnosticsPlugin::CAMERA_Y_PATH),
-                diagnostics.get(&SimulationDiagnosticsPlugin::CAMERA_Z_PATH),
-            ) {
-                if let (Some(camera_x), Some(camera_y), Some(camera_z)) = (
-                    camera_x.smoothed(),
-                    camera_y.smoothed(),
-                    camera_z.smoothed(),
-                ) {
-                    ***camera_text =
-                        format!("({:.2}, {:.2}, {:.2})", camera_x, camera_y, camera_z,);
-                }
-            }
-        }
-    }
 }
 
 impl Plugin for DiagnosticsHudPlugin {
@@ -313,7 +279,6 @@ impl Plugin for DiagnosticsHudPlugin {
                 Self::update_frame_count_text,
                 Self::update_fps_text,
                 Self::update_barycenter_text,
-                Self::update_camera_text,
             ),
         );
     }
