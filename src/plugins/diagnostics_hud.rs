@@ -44,7 +44,7 @@
 //! });
 //! ```
 
-use crate::plugins::diagnostics::SimulationDiagnosticsPlugin;
+use crate::plugins::simulation_diagnostics::SimulationDiagnosticsPlugin;
 use crate::resources::BodyCount;
 use bevy::asset::AssetPath;
 use bevy::asset::io::AssetSourceId;

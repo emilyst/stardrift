@@ -6,9 +6,9 @@ mod resources;
 mod systems;
 mod utils;
 
-use crate::plugins::diagnostics::SimulationDiagnosticsPlugin;
 use crate::plugins::diagnostics_hud::DiagnosticsHudPlugin;
 use crate::plugins::simulation::SimulationPlugin;
+use crate::plugins::simulation_diagnostics::SimulationDiagnosticsPlugin;
 use avian3d::prelude::*;
 use bevy::diagnostic::EntityCountDiagnosticsPlugin;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
