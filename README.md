@@ -23,7 +23,8 @@ interactive camera controls.
 - **Visual effects**: Bloom effects and tone mapping for enhanced visual quality
 - **Barycenter visualization**: Cross-hair indicator showing the system's center of mass with toggle controls
 - **Octree visualization**: Real-time wireframe rendering of the spatial partitioning structure
-- **Interactive visualization controls**: Toggle octree display, barycenter gizmos, and adjust visualization depth levels
+- **Interactive visualization controls**: Toggle octree display, barycenter gizmos, and adjust visualization depth
+  levels
 
 ### User Interface
 
@@ -103,17 +104,17 @@ npx http-server out
 
 ### Controls
 
-| Key/Action      | Function                                   |
-|-----------------|--------------------------------------------|
-| **Mouse**       | Pan and orbit camera around the simulation |
-| **Mouse Wheel** | Zoom in/out                                |
-| **Space**       | Pause/Resume simulation                    |
-| **N**           | Restart simulation with new random bodies |
-| **O**           | Toggle octree visualization on/off         |
-| **C**           | Toggle barycenter gizmo visibility on/off  |
+| Key/Action      | Function                                        |
+|-----------------|-------------------------------------------------|
+| **Mouse**       | Pan and orbit camera around the simulation      |
+| **Mouse Wheel** | Zoom in/out                                     |
+| **Space**       | Pause/Resume simulation                         |
+| **N**           | Restart simulation with new random bodies       |
+| **O**           | Toggle octree visualization on/off              |
+| **C**           | Toggle barycenter gizmo visibility on/off       |
 | **0-9**         | Set octree visualization depth (0 = all levels) |
-| **Escape**      | Quit application                           |
-| **Touch**       | Pan, orbit, and zoom (mobile/tablet)       |
+| **Escape**      | Quit application                                |
+| **Touch**       | Pan, orbit, and zoom (mobile/tablet)            |
 
 ### Camera Behavior
 
@@ -123,11 +124,13 @@ npx http-server out
 
 ### Configuration
 
-The simulation features a comprehensive configuration system that allows customization of physics, rendering, and UI parameters. Configuration is managed through TOML files and supports XDG config directory standards.
+The simulation features a comprehensive configuration system that allows customization of physics, rendering, and UI
+parameters. Configuration is managed through TOML files and supports XDG config directory standards.
 
 #### Configuration Categories
 
 **Physics Configuration:**
+
 - **Body count**: Number of bodies in the simulation (default: 100)
 - **Gravitational constant**: Strength of gravitational interactions (default: 1e1)
 - **Octree theta**: Barnes-Hut approximation parameter for accuracy/performance balance (default: 0.5)
@@ -136,22 +139,26 @@ The simulation features a comprehensive configuration system that allows customi
 - **Force calculation**: Minimum distance and maximum force limits
 
 **Rendering Configuration:**
+
 - **Temperature range**: Min/max temperature for stellar color mapping (default: 2000-15000K)
 - **Bloom intensity**: Visual bloom effect strength (default: 100.0)
 - **Saturation intensity**: Color saturation level (default: 3.0)
 - **Camera settings**: Radius multiplier for camera positioning
 
 **UI Configuration:**
+
 - **Button styling**: Padding, gaps, margins, and border radius
 - **Font settings**: Font size and other text properties
 
 #### Configuration File Location
 
 The configuration is automatically loaded from the XDG config directory:
+
 - **Linux/macOS**: `~/.config/many_body_simulation/config.toml`
 - **Windows**: `%APPDATA%/many_body_simulation/config.toml`
 
-If no configuration file exists, the application uses sensible defaults and can generate a configuration file for customization.
+If no configuration file exists, the application uses sensible defaults and can generate a configuration file for
+customization.
 
 ## Technical Details
 
@@ -159,7 +166,8 @@ If no configuration file exists, the application uses sensible defaults and can 
 
 - **Engine**: Bevy 0.16.* (Entity Component System game engine)
 - **Physics**: Avian3D with f64 precision and parallel processing
-- **Spatial Optimization**: Barnes-Hut octree algorithm with configurable theta parameter for accuracy/performance balance
+- **Spatial Optimization**: Barnes-Hut octree algorithm with configurable theta parameter for accuracy/performance
+  balance
 - **Rendering**: Bevy's PBR (Physically Based Rendering) pipeline with real-time octree wireframe visualization
 - **Random Number Generation**: ChaCha8 algorithm for efficient PRNG
 - **Mathematical Utilities**: Advanced sphere surface distribution algorithms and statistical validation
@@ -205,36 +213,42 @@ If no configuration file exists, the application uses sensible defaults and can 
 
 ## Project Structure
 
-The codebase is organized using a modular architecture designed for maintainability, scalability, and ease of use by AI agents. The structure follows Rust best practices and separates concerns clearly:
+The codebase is organized using a modular architecture designed for maintainability, scalability, and ease of use by AI
+agents. The structure follows Rust best practices and separates concerns clearly:
 
 ```
 src/
-├── main.rs                 # Application entry point and plugin registration
-├── components/             # Bevy ECS components
-│   └── mod.rs             # UI and simulation components
-├── config.rs              # Configuration management system
-├── plugins/               # Bevy plugins for modular functionality
+├── main.rs                       # Application entry point and plugin registration
+├── components/                   # Bevy ECS components
+│   └── mod.rs                    # UI and simulation components
+├── config.rs                     # Configuration management system
+├── states.rs                     # Application state management
+├── plugins/                      # Bevy plugins for modular functionality
 │   ├── mod.rs
-│   ├── simulation.rs      # Main simulation plugin orchestrating all systems
-│   ├── diagnostics.rs     # Simulation metrics and diagnostics plugin
-│   └── diagnostics_hud.rs # Real-time HUD display plugin
-├── resources/             # Bevy ECS resources (global state)
-│   └── mod.rs            # Shared resources like RNG, constants, and octree
-├── systems/              # Bevy ECS systems (game logic)
+│   ├── simulation.rs             # Main simulation plugin orchestrating all systems
+│   ├── simulation_diagnostics.rs # Simulation metrics and diagnostics plugin
+│   ├── diagnostics_hud.rs        # Real-time HUD display plugin
+│   └── embedded_assets.rs        # Embedded asset management plugin
+├── resources/                    # Bevy ECS resources (global state)
+│   └── mod.rs                    # Shared resources like RNG, constants, and octree
+├── systems/                      # Bevy ECS systems (game logic)
 │   ├── mod.rs
-│   ├── physics.rs        # Physics simulation and body management
-│   ├── camera.rs         # Camera controls and barycenter following
-│   ├── input.rs          # Keyboard and interaction handling
-│   ├── ui.rs             # User interface systems
-│   └── visualization.rs  # Octree and visual debugging systems
-├── utils/                # Utility modules
+│   ├── physics.rs                # Physics simulation and body management
+│   ├── camera.rs                 # Camera controls and barycenter following
+│   ├── input.rs                  # Keyboard and interaction handling
+│   ├── ui.rs                     # User interface systems
+│   ├── visualization.rs          # Octree and visual debugging systems
+│   ├── config.rs                 # Configuration system management
+│   ├── loading.rs                # Asset and resource loading systems
+│   └── simulation_actions.rs     # Simulation control and action handling
+├── utils/                        # Utility modules
 │   ├── mod.rs
-│   ├── math.rs           # Mathematical functions and algorithms
-│   └── color.rs          # Color and material utilities
-└── physics/              # Physics-specific modules
+│   ├── math.rs                   # Mathematical functions and algorithms
+│   └── color.rs                  # Color and material utilities
+└── physics/                      # Physics-specific modules
     ├── mod.rs
-    ├── stars.rs          # Stellar physics and realistic body generation
-    └── octree.rs         # Barnes-Hut octree implementation
+    ├── stars.rs                  # Stellar physics and realistic body generation
+    └── octree.rs                 # Barnes-Hut octree implementation
 ```
 
 ### Design Principles
@@ -249,13 +263,20 @@ src/
 ### Key Modules
 
 - **`plugins/simulation.rs`**: Central orchestrator that coordinates all simulation systems
+- **`plugins/simulation_diagnostics.rs`**: Simulation metrics and performance diagnostics
+- **`plugins/diagnostics_hud.rs`**: Real-time HUD display for simulation information
+- **`plugins/embedded_assets.rs`**: Embedded asset management for web deployment
 - **`systems/physics.rs`**: Core physics calculations including octree rebuilding and force application
+- **`systems/loading.rs`**: Asset and resource loading management
+- **`systems/simulation_actions.rs`**: Simulation control and user action handling
 - **`resources/mod.rs`**: Shared state including RNG, gravitational constants, and octree data
 - **`utils/math.rs`**: Mathematical utilities for sphere distribution and random vector generation
 - **`config.rs`**: Centralized configuration management with serialization support
+- **`states.rs`**: Application state management and transitions
 - **`physics/octree.rs`**: High-performance Barnes-Hut spatial partitioning implementation
 
-This structure enables easy extension, testing, and maintenance while providing clear entry points for understanding and modifying the simulation behavior.
+This structure enables easy extension, testing, and maintenance while providing clear entry points for understanding and
+modifying the simulation behavior.
 
 ## Development
 
