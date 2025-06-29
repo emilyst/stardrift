@@ -15,7 +15,6 @@ use crate::states::{AppState, LoadingState};
 use avian3d::prelude::*;
 use bevy::diagnostic::EntityCountDiagnosticsPlugin;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::diagnostic::SystemInformationDiagnosticsPlugin;
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
@@ -41,10 +40,6 @@ fn main() {
         SystemInformationDiagnosticsPlugin,
         SimulationPlugin,
     ));
-
-    if !cfg!(target_arch = "wasm32") {
-        app.add_plugins(LogDiagnosticsPlugin::default());
-    };
 
     // Initialize app states after DefaultPlugins (which includes StatesPlugin)
     app.init_state::<AppState>();
