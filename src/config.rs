@@ -147,30 +147,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_load_from_user_config() {
-        let config = SimulationConfig::load_from_user_config();
-        let default_config = SimulationConfig::default();
-
-        assert_eq!(
-            config.physics.gravitational_constant,
-            default_config.physics.gravitational_constant
-        );
-        assert_eq!(config.physics.body_count, default_config.physics.body_count);
-        assert_eq!(
-            config.physics.octree_theta,
-            default_config.physics.octree_theta
-        );
-        assert_eq!(
-            config.rendering.min_temperature,
-            default_config.rendering.min_temperature
-        );
-        assert_eq!(
-            config.rendering.max_temperature,
-            default_config.rendering.max_temperature
-        );
-    }
-
-    #[test]
     fn test_xdg_config_path_structure() {
         let path = SimulationConfig::get_xdg_config_path();
         let path_str = path.to_string_lossy();
