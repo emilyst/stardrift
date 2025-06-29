@@ -32,7 +32,7 @@ pub fn restart_simulation(
     pan_orbit_camera.target_focus = Vec3::ZERO;
     pan_orbit_camera.force_update = true;
 
-    **rng = SharedRng::from_optional_seed(config.physics.rng_seed);
+    **rng = SharedRng::default();
 
     spawn_simulation_bodies(commands, meshes, materials, rng, ***body_count, config);
 }
