@@ -3,21 +3,11 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Resource, Serialize, Deserialize, Clone, Debug)]
+#[derive(Resource, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct SimulationConfig {
     pub physics: PhysicsConfig,
     pub rendering: RenderingConfig,
     pub ui: UiConfig,
-}
-
-impl Default for SimulationConfig {
-    fn default() -> Self {
-        Self {
-            physics: PhysicsConfig::default(),
-            rendering: RenderingConfig::default(),
-            ui: UiConfig::default(),
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -111,13 +101,11 @@ impl SimulationConfig {
         config_dir.join("stardrift").join("config.toml")
     }
 
-    /// Load configuration from the XDG config path, falling back to defaults if it doesn't exist
     pub fn load_from_user_config() -> Self {
         let config_path = Self::get_xdg_config_path();
         Self::load_or_default(config_path.to_string_lossy().as_ref())
     }
 
-    /// Load configuration from a file, falling back to defaults if the file doesn't exist
     pub fn load_or_default(path: &str) -> Self {
         match std::fs::read_to_string(path) {
             Ok(content) => match toml::from_str(&content) {
@@ -137,14 +125,12 @@ impl SimulationConfig {
         }
     }
 
-    /// Save configuration to a file
     pub fn save(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let content = toml::to_string_pretty(self)?;
         std::fs::write(path, content)?;
         Ok(())
     }
 
-    /// Save configuration to the XDG config path
     pub fn save_to_user_config(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config_path = Self::get_xdg_config_path();
 
