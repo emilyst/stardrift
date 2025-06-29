@@ -1,8 +1,8 @@
 //! Diagnostics HUD (Heads-Up Display) module.
 //!
 //! This module provides a visual overlay that displays real-time diagnostic information
-//! for the many-body simulation. The HUD shows key performance and simulation metrics
-//! in an easy-to-read format overlaid on the main simulation view.
+//! for the N-body simulation. The HUD shows key performance and simulation metrics in an
+//! easy-to-read format overlaid on the main simulation view.
 //!
 //! # Displayed Information
 //!

@@ -108,7 +108,7 @@ impl SimulationConfig {
             PathBuf::from(".")
         };
 
-        config_dir.join("many_body_simulation").join("config.toml")
+        config_dir.join("stardrift").join("config.toml")
     }
 
     /// Load configuration from the XDG config path, falling back to defaults if it doesn't exist
@@ -189,7 +189,7 @@ mod tests {
         let path = SimulationConfig::get_xdg_config_path();
         let path_str = path.to_string_lossy();
 
-        assert!(path_str.ends_with("many_body_simulation/config.toml"));
+        assert!(path_str.ends_with("stardrift/config.toml"));
         assert!(path_str.contains(".config") || path_str.starts_with("/"));
     }
 

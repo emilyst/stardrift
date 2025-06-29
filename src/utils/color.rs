@@ -1,6 +1,6 @@
 //! Color utilities for temperature-based color conversion and bloom effects.
 //!
-//! This module provides comprehensive color management capabilities for the many-body simulation,
+//! This module provides comprehensive color management capabilities for the N-body simulation,
 //! focusing on physically-based color temperature conversion and visual enhancement through
 //! bloom effects. It enables realistic color representation of celestial bodies based on their
 //! temperature characteristics.

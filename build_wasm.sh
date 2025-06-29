@@ -19,8 +19,8 @@ wasm-bindgen \
     --no-typescript \
     --target web \
     --out-dir ./out/ \
-    --out-name "many_body_simulation" \
-    ./target/wasm32-unknown-unknown/wasm/many_body_simulation.wasm
+    --out-name "stardrift" \
+    ./target/wasm32-unknown-unknown/wasm/stardrift.wasm
 
 cp index.html ./out/
 

@@ -1,6 +1,6 @@
 //! Simulation diagnostics module.
 //!
-//! This module provides diagnostic tracking capabilities for the many-body simulation.
+//! This module provides diagnostic tracking capabilities for the N-body simulation.
 //! It collects and monitors key simulation metrics including:
 //!
 //! - **Barycenter position**: Tracks the X, Y, and Z coordinates of the system's center of mass

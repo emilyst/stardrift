@@ -1,6 +1,6 @@
-# Many Body Simulation
+# Stardrift
 
-A high-performance 3D gravitational many-body simulation built with Rust, Bevy game engine, and Avian3D physics. This
+A high-performance 3D gravitational N-body simulation built with Rust, Bevy game engine, and Avian3D physics. This
 project simulates the gravitational interactions between multiple celestial bodies with real-time visualization and
 interactive camera controls.
 
@@ -53,8 +53,8 @@ interactive camera controls.
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/emilyst/many_body_simulation.git
-cd many_body_simulation
+git clone https://github.com/emilyst/stardrift.git
+cd stardrift
 ```
 
 ### Native Build
@@ -154,8 +154,8 @@ parameters. Configuration is managed through TOML files and supports XDG config 
 
 The configuration is automatically loaded from the XDG config directory:
 
-- **Linux/macOS**: `~/.config/many_body_simulation/config.toml`
-- **Windows**: `%APPDATA%/many_body_simulation/config.toml`
+- **Linux/macOS**: `~/.config/stardrift/config.toml`
+- **Windows**: `%APPDATA%/stardrift/config.toml`
 
 If no configuration file exists, the application uses sensible defaults and can generate a configuration file for
 customization.
