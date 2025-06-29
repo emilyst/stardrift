@@ -3,6 +3,23 @@
 version = 4
 
 [[package]]
+name = "Stardrift"
+version = "0.0.1"
+dependencies = [
+ "avian3d",
+ "bevy",
+ "bevy_panorbit_camera",
+ "getrandom 0.3.3",
+ "libm",
+ "rand 0.9.1",
+ "rand_chacha 0.9.0",
+ "serde",
+ "toml",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "accesskit"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4183,23 +4200,6 @@ name = "stackfuture"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6eae92052b72ef70dafa16eddbabffc77e5ca3574be2f7bc1127b36f0a7ad7f2"
-
-[[package]]
-name = "stardrift"
-version = "0.0.1"
-dependencies = [
- "avian3d",
- "bevy",
- "bevy_panorbit_camera",
- "getrandom 0.3.3",
- "libm",
- "rand 0.9.1",
- "rand_chacha 0.9.0",
- "serde",
- "toml",
- "wasm-bindgen",
- "web-sys",
-]
 
 [[package]]
 name = "static_assertions"
