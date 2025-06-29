@@ -32,7 +32,7 @@ impl Plugin for SimulationPlugin {
         let config = SimulationConfig::load_from_user_config();
 
         app.insert_resource(config.clone());
-        app.init_resource::<SharedRng>();
+        app.insert_resource(SharedRng::from_optional_seed(config.physics.rng_seed));
         app.insert_resource(GravitationalConstant(config.physics.gravitational_constant));
         app.insert_resource(BodyCount(config.physics.body_count));
         app.init_resource::<CurrentBarycenter>();

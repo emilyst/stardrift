@@ -31,6 +31,7 @@ pub struct PhysicsConfig {
     pub max_body_radius: Scalar,
     pub force_calculation_min_distance: Scalar,
     pub force_calculation_max_force: Scalar,
+    pub rng_seed: Option<u64>,
 }
 
 impl Default for PhysicsConfig {
@@ -49,6 +50,7 @@ impl Default for PhysicsConfig {
             max_body_radius: 20.0,
             force_calculation_min_distance: 10.0,
             force_calculation_max_force: 1e4,
+            rng_seed: None,
         }
     }
 }
