@@ -17,6 +17,7 @@ use bevy::diagnostic::EntityCountDiagnosticsPlugin;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::diagnostic::SystemInformationDiagnosticsPlugin;
 use bevy::prelude::*;
+use bevy::window::WindowMode;
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
 
 fn main() {
@@ -25,7 +26,10 @@ fn main() {
     app.add_plugins((
         DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
+                fullsize_content_view: true,
+                mode: WindowMode::Windowed,
                 title: "Stardrift".to_string(),
+                titlebar_transparent: true,
                 ..default()
             }),
             ..default()
