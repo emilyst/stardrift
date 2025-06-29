@@ -91,11 +91,8 @@ The script will:
 After building, serve the `out/` directory with any HTTP server:
 
 ```bash
-# Using Python
-python -m http.server 8000 --directory out
-
-# Using Node.js (if you have http-server installed)
-npx http-server out
+cargo install miniserve
+miniserve out -p 8000 --index index.html
 
 # Then open http://localhost:8000 in your browser
 ```
