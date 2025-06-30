@@ -49,7 +49,6 @@ fn main() {
                         on_thread_spawn: None,
                         on_thread_destroy: None,
                     },
-                    // keep the defaults for everything else
                     ..default()
                 },
             }),
