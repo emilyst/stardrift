@@ -4,6 +4,9 @@ use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use bevy::prelude::*;
 
+const PADDING_FACTOR: Scalar = 0.1;
+const DEFAULT_LEAF_THRESHOLD: usize = 4;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Aabb3d {
     pub min: Vector,
@@ -15,10 +18,12 @@ impl Aabb3d {
         Self { min, max }
     }
 
+    #[inline]
     pub fn center(&self) -> Vector {
         (self.min + self.max) * 0.5
     }
 
+    #[inline]
     pub fn size(&self) -> Vector {
         self.max - self.min
     }
@@ -59,9 +64,11 @@ impl Aabb3d {
 #[derive(Debug)]
 pub struct Octree {
     pub root: Option<OctreeNode>,
-    pub theta: Scalar,        // Barnes-Hut approximation parameter
-    pub min_distance: Scalar, // Minimum distance for force calculation
-    pub max_force: Scalar,    // Maximum force magnitude
+    pub theta: Scalar,            // Barnes-Hut approximation parameter
+    pub min_distance: Scalar,     // Minimum distance for force calculation
+    pub max_force: Scalar,        // Maximum force magnitude
+    pub leaf_threshold: usize,    // Maximum bodies per leaf node
+    min_distance_squared: Scalar, // Cached value to avoid repeated multiplication
 }
 
 impl Octree {
@@ -71,11 +78,26 @@ impl Octree {
             theta,
             min_distance,
             max_force,
+            leaf_threshold: DEFAULT_LEAF_THRESHOLD,
+            min_distance_squared: min_distance * min_distance,
         }
     }
 
+    pub fn with_leaf_threshold(mut self, leaf_threshold: usize) -> Self {
+        self.leaf_threshold = leaf_threshold;
+        self
+    }
+
     pub fn get_bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
-        let mut bounds = Vec::new();
+        // Estimate capacity based on max_depth (8^depth nodes at each level)
+        let estimated_capacity = match max_depth {
+            Some(depth) => (0..=depth)
+                .map(|d| 8_usize.pow(d as u32))
+                .sum::<usize>()
+                .min(1024),
+            None => 64, // Conservative estimate for unbounded depth
+        };
+        let mut bounds = Vec::with_capacity(estimated_capacity);
         if let Some(root) = &self.root {
             self.collect_bounds(root, &mut bounds, 0, max_depth);
         }
@@ -105,46 +127,67 @@ impl Octree {
     }
 
     pub fn build(&mut self, bodies: impl IntoIterator<Item = OctreeBody>) {
-        let bodies: Vec<OctreeBody> = bodies.into_iter().collect();
+        let mut bodies_iter = bodies.into_iter();
 
-        if bodies.is_empty() {
-            self.root = None;
-            return;
+        let first_body = match bodies_iter.next() {
+            Some(body) => body,
+            None => {
+                self.root = None;
+                return;
+            }
+        };
+
+        let mut min = first_body.position;
+        let mut max = first_body.position;
+        // Pre-allocate with estimated capacity based on size hint
+        let estimated_capacity = bodies_iter.size_hint().0.max(1) + 1;
+        let mut bodies_vec = Vec::with_capacity(estimated_capacity);
+        bodies_vec.push(first_body);
+
+        for body in bodies_iter {
+            min.x = min.x.min(body.position.x);
+            min.y = min.y.min(body.position.y);
+            min.z = min.z.min(body.position.z);
+            max.x = max.x.max(body.position.x);
+            max.y = max.y.max(body.position.y);
+            max.z = max.z.max(body.position.z);
+            bodies_vec.push(body);
         }
 
-        let mut min = bodies[0].position;
-        let mut max = bodies[0].position;
-
-        for body in &bodies {
-            min = Vector::new(
-                min.x.min(body.position.x),
-                min.y.min(body.position.y),
-                min.z.min(body.position.z),
-            );
-            max = Vector::new(
-                max.x.max(body.position.x),
-                max.y.max(body.position.y),
-                max.z.max(body.position.z),
-            );
-        }
-
-        // Add some padding to ensure all bodies are inside
-        let padding = (max - min) * 0.1;
+        let padding = (max - min) * PADDING_FACTOR;
         min -= padding;
         max += padding;
 
         let bounds = Aabb3d::new(min, max);
-        self.root = Some(Self::build_node(bounds, bodies));
+        self.root = Some(Self::build_node(bounds, bodies_vec, self.leaf_threshold));
     }
 
-    fn build_node(bounds: Aabb3d, bodies: Vec<OctreeBody>) -> OctreeNode {
-        if bodies.len() <= 1 {
+    fn build_node(bounds: Aabb3d, bodies: Vec<OctreeBody>, leaf_threshold: usize) -> OctreeNode {
+        if bodies.len() <= leaf_threshold {
             return OctreeNode::External { bounds, bodies };
         }
 
         let center = bounds.center();
         let octants = bounds.subdivide_into_children();
-        let mut octant_bodies: [Vec<OctreeBody>; 8] = Default::default();
+
+        // Count bodies per octant first for better allocation
+        let mut octant_counts = [0usize; 8];
+        for body in &bodies {
+            let octant_index = Self::get_octant_index(body.position, center);
+            octant_counts[octant_index] += 1;
+        }
+
+        // Create vectors with exact capacity for non-empty octants
+        let mut octant_bodies: [Vec<OctreeBody>; 8] = [
+            Vec::with_capacity(octant_counts[0]),
+            Vec::with_capacity(octant_counts[1]),
+            Vec::with_capacity(octant_counts[2]),
+            Vec::with_capacity(octant_counts[3]),
+            Vec::with_capacity(octant_counts[4]),
+            Vec::with_capacity(octant_counts[5]),
+            Vec::with_capacity(octant_counts[6]),
+            Vec::with_capacity(octant_counts[7]),
+        ];
         let mut children: [Option<OctreeNode>; 8] = Default::default();
 
         for body in &bodies {
@@ -154,17 +197,21 @@ impl Octree {
 
         for (i, bodies_in_octant) in octant_bodies.into_iter().enumerate() {
             if !bodies_in_octant.is_empty() {
-                children[i] = Some(Self::build_node(octants[i], bodies_in_octant));
+                children[i] = Some(Self::build_node(
+                    octants[i],
+                    bodies_in_octant,
+                    leaf_threshold,
+                ));
             }
         }
 
-        let total_mass: Scalar = bodies.iter().map(|b| b.mass).sum();
+        let (total_mass, weighted_sum) = bodies
+            .iter()
+            .fold((0.0, Vector::ZERO), |(mass_acc, pos_acc), body| {
+                (mass_acc + body.mass, pos_acc + body.position * body.mass)
+            });
         let center_of_mass = if total_mass > 0.0 {
-            let weighted_pos: Vector = bodies
-                .iter()
-                .map(|b| b.position * b.mass)
-                .fold(Vector::ZERO, |acc, pos| acc + pos);
-            weighted_pos / total_mass
+            weighted_sum / total_mass
         } else {
             bounds.center()
         };
@@ -177,20 +224,11 @@ impl Octree {
         }
     }
 
+    #[inline]
     fn get_octant_index(position: Vector, center: Vector) -> usize {
-        let mut index = 0;
-
-        if position.x > center.x {
-            index |= 1;
-        }
-        if position.y > center.y {
-            index |= 2;
-        }
-        if position.z > center.z {
-            index |= 4;
-        }
-
-        index
+        ((position.x > center.x) as usize)
+            | (((position.y > center.y) as usize) << 1)
+            | (((position.z > center.z) as usize) << 2)
     }
 
     pub fn calculate_force(
@@ -212,12 +250,7 @@ impl Octree {
 
                 // Barnes-Hut criterion: if s/d < theta, treat as single body
                 if size / distance < self.theta {
-                    let virtual_body = OctreeBody {
-                        entity: Entity::PLACEHOLDER,
-                        position: *center_of_mass,
-                        mass: *total_mass,
-                    };
-                    self.calculate_direct_force(body, &virtual_body, g)
+                    self.calculate_force_from_point(body, *center_of_mass, *total_mass, g)
                 } else {
                     let mut force = Vector::ZERO;
                     for child in children.iter() {
@@ -239,20 +272,32 @@ impl Octree {
         }
     }
 
-    fn calculate_direct_force(&self, body1: &OctreeBody, body2: &OctreeBody, g: Scalar) -> Vector {
-        let direction = body2.position - body1.position;
+    #[inline]
+    fn calculate_force_from_point(
+        &self,
+        body: &OctreeBody,
+        point_position: Vector,
+        point_mass: Scalar,
+        g: Scalar,
+    ) -> Vector {
+        let direction = point_position - body.position;
         let distance_squared = direction.length_squared();
 
-        if distance_squared < (self.min_distance * self.min_distance) {
+        if distance_squared < self.min_distance_squared {
             return Vector::ZERO;
         }
 
         let distance = distance_squared.sqrt();
         let direction_normalized = direction / distance;
-        let force_magnitude = g * body1.mass * body2.mass / distance_squared;
+        let force_magnitude = g * body.mass * point_mass / distance_squared;
         let force_magnitude = force_magnitude.min(self.max_force);
 
         direction_normalized * force_magnitude
+    }
+
+    #[inline]
+    fn calculate_direct_force(&self, body1: &OctreeBody, body2: &OctreeBody, g: Scalar) -> Vector {
+        self.calculate_force_from_point(body1, body2.position, body2.mass, g)
     }
 }
 
