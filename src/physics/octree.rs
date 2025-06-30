@@ -104,7 +104,9 @@ impl Octree {
         }
     }
 
-    pub fn build(&mut self, bodies: Vec<OctreeBody>) {
+    pub fn build(&mut self, bodies: impl IntoIterator<Item = OctreeBody>) {
+        let bodies: Vec<OctreeBody> = bodies.into_iter().collect();
+
         if bodies.is_empty() {
             self.root = None;
             return;

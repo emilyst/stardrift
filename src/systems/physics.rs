@@ -81,16 +81,15 @@ pub fn rebuild_octree(
         return;
     }
 
-    let octree_bodies: Vec<OctreeBody> = all_bodies
-        .iter()
-        .map(|(entity, transform, mass)| OctreeBody {
-            entity,
-            position: Vector::from(transform.translation),
-            mass: mass.value(),
-        })
-        .collect();
-
-    octree.build(octree_bodies);
+    octree.build(
+        all_bodies
+            .iter()
+            .map(|(entity, transform, mass)| OctreeBody {
+                entity,
+                position: Vector::from(transform.translation),
+                mass: mass.value(),
+            }),
+    );
 }
 
 pub fn apply_gravitation_octree(
