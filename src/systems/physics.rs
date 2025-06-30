@@ -110,7 +110,6 @@ pub fn apply_gravitation_octree(
         });
 }
 
-// TODO: test
 pub fn update_barycenter(
     bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
     all_bodies: Query<(&Transform, &ComputedMass), With<RigidBody>>,
@@ -136,5 +135,232 @@ pub fn update_barycenter(
 
     if total_mass > 0.0 {
         **current_barycenter = weighted_positions / total_mass;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use avian3d::math::Vector;
+    use bevy::ecs::system::SystemState;
+
+    #[test]
+    fn test_update_barycenter_no_bodies() {
+        let mut world = World::new();
+        world.init_resource::<CurrentBarycenter>();
+        world.init_resource::<PreviousBarycenter>();
+
+        let initial_current = Vector::new(5.0, 5.0, 5.0);
+        **world.resource_mut::<CurrentBarycenter>() = initial_current;
+
+        // No bodies spawned at all
+        let mut system_state: SystemState<(
+            Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
+            Query<(&Transform, &ComputedMass), With<RigidBody>>,
+            ResMut<CurrentBarycenter>,
+            ResMut<PreviousBarycenter>,
+        )> = SystemState::new(&mut world);
+
+        let (bodies, all_bodies, current_barycenter, previous_barycenter) =
+            system_state.get_mut(&mut world);
+
+        update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+
+        // Should remain unchanged when no bodies exist
+        assert_eq!(**world.resource::<CurrentBarycenter>(), initial_current);
+        assert_eq!(**world.resource::<PreviousBarycenter>(), Vector::ZERO);
+    }
+
+    #[test]
+    fn test_update_barycenter_no_changed_bodies() {
+        let mut world = World::new();
+        world.init_resource::<CurrentBarycenter>();
+        world.init_resource::<PreviousBarycenter>();
+
+        world.spawn((
+            Transform::from_translation(Vec3::new(10.0, 0.0, 0.0)),
+            ComputedMass::new(5.0),
+            RigidBody::Dynamic,
+        ));
+
+        let mut system_state: SystemState<(
+            Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
+            Query<(&Transform, &ComputedMass), With<RigidBody>>,
+            ResMut<CurrentBarycenter>,
+            ResMut<PreviousBarycenter>,
+        )> = SystemState::new(&mut world);
+
+        {
+            let (bodies, all_bodies, current_barycenter, previous_barycenter) =
+                system_state.get_mut(&mut world);
+            update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+        }
+
+        let first_run_current = **world.resource::<CurrentBarycenter>();
+        let first_run_previous = **world.resource::<PreviousBarycenter>();
+
+        // Clear change detection to simulate no changes in the next frame
+        world.clear_trackers();
+
+        // Second run - no bodies should be marked as changed now
+        {
+            let (bodies, all_bodies, current_barycenter, previous_barycenter) =
+                system_state.get_mut(&mut world);
+            update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+        }
+
+        // Values should remain unchanged since no bodies were marked as changed
+        assert_eq!(**world.resource::<CurrentBarycenter>(), first_run_current);
+        assert_eq!(**world.resource::<PreviousBarycenter>(), first_run_previous);
+    }
+
+    #[test]
+    fn test_update_barycenter_single_body() {
+        let mut world = World::new();
+        world.init_resource::<CurrentBarycenter>();
+        world.init_resource::<PreviousBarycenter>();
+
+        let body_position = Vec3::new(5.0, 10.0, -3.0);
+        let body_mass = 2.0;
+
+        let entity = world
+            .spawn((
+                Transform::from_translation(body_position),
+                ComputedMass::new(body_mass),
+                RigidBody::Dynamic,
+            ))
+            .id();
+
+        world
+            .entity_mut(entity)
+            .get_mut::<Transform>()
+            .unwrap()
+            .set_changed();
+
+        let mut system_state: SystemState<(
+            Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
+            Query<(&Transform, &ComputedMass), With<RigidBody>>,
+            ResMut<CurrentBarycenter>,
+            ResMut<PreviousBarycenter>,
+        )> = SystemState::new(&mut world);
+
+        let (bodies, all_bodies, current_barycenter, previous_barycenter) =
+            system_state.get_mut(&mut world);
+
+        update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+
+        // For a single body, barycenter should be at the body's position
+        let expected_barycenter = Vector::from(body_position);
+        assert_eq!(**world.resource::<CurrentBarycenter>(), expected_barycenter);
+        assert_eq!(**world.resource::<PreviousBarycenter>(), Vector::ZERO);
+    }
+
+    #[test]
+    fn test_update_barycenter_multiple_bodies() {
+        let mut world = World::new();
+        world.init_resource::<CurrentBarycenter>();
+        world.init_resource::<PreviousBarycenter>();
+
+        // Set initial current barycenter
+        let initial_current = Vector::new(1.0, 1.0, 1.0);
+        **world.resource_mut::<CurrentBarycenter>() = initial_current;
+
+        let entity1 = world
+            .spawn((
+                Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+                ComputedMass::new(1.0),
+                RigidBody::Dynamic,
+            ))
+            .id();
+
+        world.spawn((
+            Transform::from_translation(Vec3::new(10.0, 0.0, 0.0)),
+            ComputedMass::new(3.0),
+            RigidBody::Dynamic,
+        ));
+
+        world.spawn((
+            Transform::from_translation(Vec3::new(0.0, 20.0, 0.0)),
+            ComputedMass::new(2.0),
+            RigidBody::Dynamic,
+        ));
+
+        // Mark one body as changed
+        world
+            .entity_mut(entity1)
+            .get_mut::<Transform>()
+            .unwrap()
+            .set_changed();
+
+        let mut system_state: SystemState<(
+            Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
+            Query<(&Transform, &ComputedMass), With<RigidBody>>,
+            ResMut<CurrentBarycenter>,
+            ResMut<PreviousBarycenter>,
+        )> = SystemState::new(&mut world);
+
+        let (bodies, all_bodies, current_barycenter, previous_barycenter) =
+            system_state.get_mut(&mut world);
+
+        update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+
+        // Calculate expected barycenter manually
+        // weighted_sum = (0,0,0)*1 + (10,0,0)*3 + (0,20,0)*2 = (30, 40, 0)
+        // total_mass = 1 + 3 + 2 = 6
+        // barycenter = (30, 40, 0) / 6 = (5, 6.666..., 0)
+        let expected_barycenter = Vector::new(5.0, 40.0 / 6.0, 0.0);
+
+        let current_barycenter = **world.resource::<CurrentBarycenter>();
+        let previous_barycenter = **world.resource::<PreviousBarycenter>();
+
+        // Use approximate equality for floating point comparison
+        assert!((current_barycenter.x - expected_barycenter.x).abs() < 1e-10);
+        assert!((current_barycenter.y - expected_barycenter.y).abs() < 1e-10);
+        assert!((current_barycenter.z - expected_barycenter.z).abs() < 1e-10);
+
+        // Previous barycenter should be the initial current value
+        assert_eq!(previous_barycenter, initial_current);
+    }
+
+    #[test]
+    fn test_update_barycenter_zero_total_mass() {
+        let mut world = World::new();
+        world.init_resource::<CurrentBarycenter>();
+        world.init_resource::<PreviousBarycenter>();
+
+        let initial_current = Vector::new(5.0, 5.0, 5.0);
+        **world.resource_mut::<CurrentBarycenter>() = initial_current;
+
+        // Create a body with zero mass
+        let entity = world
+            .spawn((
+                Transform::from_translation(Vec3::new(10.0, 10.0, 10.0)),
+                ComputedMass::new(0.0),
+                RigidBody::Dynamic,
+            ))
+            .id();
+
+        world
+            .entity_mut(entity)
+            .get_mut::<Transform>()
+            .unwrap()
+            .set_changed();
+
+        let mut system_state: SystemState<(
+            Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
+            Query<(&Transform, &ComputedMass), With<RigidBody>>,
+            ResMut<CurrentBarycenter>,
+            ResMut<PreviousBarycenter>,
+        )> = SystemState::new(&mut world);
+
+        let (bodies, all_bodies, current_barycenter, previous_barycenter) =
+            system_state.get_mut(&mut world);
+
+        update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+
+        // With zero total mass, current barycenter should remain unchanged
+        assert_eq!(**world.resource::<CurrentBarycenter>(), initial_current);
+        // Previous should be updated to the initial current value
+        assert_eq!(**world.resource::<PreviousBarycenter>(), initial_current);
     }
 }
