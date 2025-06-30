@@ -71,10 +71,16 @@ pub fn spawn_simulation_bodies(
 }
 
 pub fn rebuild_octree(
-    bodies: Query<(Entity, &Transform, &ComputedMass), With<RigidBody>>,
+    bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
+    all_bodies: Query<(Entity, &Transform, &ComputedMass), With<RigidBody>>,
     mut octree: ResMut<GravitationalOctree>,
 ) {
-    let octree_bodies: Vec<OctreeBody> = bodies
+    // Only recalculate if any body has moved
+    if bodies.is_empty() {
+        return;
+    }
+
+    let octree_bodies: Vec<OctreeBody> = all_bodies
         .iter()
         .map(|(entity, transform, mass)| OctreeBody {
             entity,
