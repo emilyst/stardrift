@@ -61,6 +61,7 @@ pub fn spawn_simulation_bodies(
             Collider::sphere(radius),
             GravityScale(0.0),
             RigidBody::Dynamic,
+            ExternalForce::ZERO,
             MeshMaterial3d(material),
             Mesh3d(mesh),
         ));
@@ -93,26 +94,26 @@ pub fn rebuild_octree(
 }
 
 pub fn apply_gravitation_octree(
-    time: Res<Time<Fixed>>,
     g: Res<GravitationalConstant>,
     octree: Res<GravitationalOctree>,
-    mut bodies: Query<(Entity, &Transform, &ComputedMass, &mut LinearVelocity), With<RigidBody>>,
+    mut bodies: Query<(Entity, &Transform, &ComputedMass, &mut ExternalForce), With<RigidBody>>,
 ) {
-    let delta_time = time.delta_secs_f64();
     let gravitational_constant = **g;
 
     bodies
         .par_iter_mut()
-        .for_each(|(entity, transform, mass, mut velocity)| {
+        .for_each(|(entity, transform, mass, mut external_force)| {
             let body = OctreeBody {
                 entity,
                 position: Vector::from(transform.translation),
                 mass: mass.value(),
             };
 
-            let force = octree.calculate_force(&body, octree.root.as_ref(), gravitational_constant);
-            let acceleration = force * mass.inverse();
-            **velocity += acceleration * delta_time;
+            external_force.set_force(octree.calculate_force(
+                &body,
+                octree.root.as_ref(),
+                gravitational_constant,
+            ));
         });
 }
 
