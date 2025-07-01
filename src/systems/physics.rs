@@ -24,7 +24,6 @@ pub fn spawn_simulation_bodies(
     body_count: usize,
     config: &SimulationConfig,
 ) {
-    // Pre-calculate common values
     let body_distribution_sphere_radius = math::min_sphere_radius_for_surface_distribution(
         body_count,
         config.physics.body_distribution_sphere_radius_multiplier,
@@ -37,7 +36,6 @@ pub fn spawn_simulation_bodies(
     let bloom_intensity = config.rendering.bloom_intensity;
     let saturation_intensity = config.rendering.saturation_intensity;
 
-    // Prepare batch data for efficient spawning
     let mut spawn_data = Vec::with_capacity(body_count);
 
     for _ in 0..body_count {
@@ -67,13 +65,11 @@ pub fn spawn_simulation_bodies(
         ));
     }
 
-    // Batch spawn all entities for better performance
     commands.spawn_batch(spawn_data);
 }
 
 pub fn rebuild_octree(
-    bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
-    all_bodies: Query<(Entity, &Transform, &ComputedMass), With<RigidBody>>,
+    bodies: Query<(Entity, &Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
     mut octree: ResMut<GravitationalOctree>,
 ) {
     // Only recalculate if any body has moved
@@ -81,21 +77,20 @@ pub fn rebuild_octree(
         return;
     }
 
-    octree.build(
-        all_bodies
-            .iter()
-            .map(|(entity, transform, mass)| OctreeBody {
-                entity,
-                position: Vector::from(transform.translation),
-                mass: mass.value(),
-            }),
-    );
+    octree.build(bodies.iter().map(|(entity, transform, mass)| OctreeBody {
+        entity,
+        position: Vector::from(transform.translation),
+        mass: mass.value(),
+    }));
 }
 
 pub fn apply_gravitation_octree(
     g: Res<GravitationalConstant>,
     octree: Res<GravitationalOctree>,
-    mut bodies: Query<(Entity, &Transform, &ComputedMass, &mut ExternalForce), With<RigidBody>>,
+    mut bodies: Query<
+        (Entity, &Transform, &ComputedMass, &mut ExternalForce),
+        (With<RigidBody>, Changed<Transform>),
+    >,
 ) {
     let gravitational_constant = **g;
 
@@ -118,18 +113,16 @@ pub fn apply_gravitation_octree(
 
 pub fn update_barycenter(
     bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
-    all_bodies: Query<(&Transform, &ComputedMass), With<RigidBody>>,
     mut current_barycenter: ResMut<CurrentBarycenter>,
     mut previous_barycenter: ResMut<PreviousBarycenter>,
 ) {
-    // Only recalculate if any body has moved
     if bodies.is_empty() {
         return;
     }
 
     **previous_barycenter = **current_barycenter;
 
-    let (weighted_positions, total_mass): (Vector, Scalar) = all_bodies
+    let (weighted_positions, total_mass): (Vector, Scalar) = bodies
         .iter()
         .map(|(transform, mass)| {
             let mass = mass.value();
@@ -162,15 +155,13 @@ mod tests {
         // No bodies spawned at all
         let mut system_state: SystemState<(
             Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
-            Query<(&Transform, &ComputedMass), With<RigidBody>>,
             ResMut<CurrentBarycenter>,
             ResMut<PreviousBarycenter>,
         )> = SystemState::new(&mut world);
 
-        let (bodies, all_bodies, current_barycenter, previous_barycenter) =
-            system_state.get_mut(&mut world);
+        let (bodies, current_barycenter, previous_barycenter) = system_state.get_mut(&mut world);
 
-        update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+        update_barycenter(bodies, current_barycenter, previous_barycenter);
 
         // Should remain unchanged when no bodies exist
         assert_eq!(**world.resource::<CurrentBarycenter>(), initial_current);
@@ -191,15 +182,14 @@ mod tests {
 
         let mut system_state: SystemState<(
             Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
-            Query<(&Transform, &ComputedMass), With<RigidBody>>,
             ResMut<CurrentBarycenter>,
             ResMut<PreviousBarycenter>,
         )> = SystemState::new(&mut world);
 
         {
-            let (bodies, all_bodies, current_barycenter, previous_barycenter) =
+            let (bodies, current_barycenter, previous_barycenter) =
                 system_state.get_mut(&mut world);
-            update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+            update_barycenter(bodies, current_barycenter, previous_barycenter);
         }
 
         let first_run_current = **world.resource::<CurrentBarycenter>();
@@ -210,9 +200,9 @@ mod tests {
 
         // Second run - no bodies should be marked as changed now
         {
-            let (bodies, all_bodies, current_barycenter, previous_barycenter) =
+            let (bodies, current_barycenter, previous_barycenter) =
                 system_state.get_mut(&mut world);
-            update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+            update_barycenter(bodies, current_barycenter, previous_barycenter);
         }
 
         // Values should remain unchanged since no bodies were marked as changed
@@ -245,15 +235,13 @@ mod tests {
 
         let mut system_state: SystemState<(
             Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
-            Query<(&Transform, &ComputedMass), With<RigidBody>>,
             ResMut<CurrentBarycenter>,
             ResMut<PreviousBarycenter>,
         )> = SystemState::new(&mut world);
 
-        let (bodies, all_bodies, current_barycenter, previous_barycenter) =
-            system_state.get_mut(&mut world);
+        let (bodies, current_barycenter, previous_barycenter) = system_state.get_mut(&mut world);
 
-        update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+        update_barycenter(bodies, current_barycenter, previous_barycenter);
 
         // For a single body, barycenter should be at the body's position
         let expected_barycenter = Vector::from(body_position);
@@ -300,15 +288,13 @@ mod tests {
 
         let mut system_state: SystemState<(
             Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
-            Query<(&Transform, &ComputedMass), With<RigidBody>>,
             ResMut<CurrentBarycenter>,
             ResMut<PreviousBarycenter>,
         )> = SystemState::new(&mut world);
 
-        let (bodies, all_bodies, current_barycenter, previous_barycenter) =
-            system_state.get_mut(&mut world);
+        let (bodies, current_barycenter, previous_barycenter) = system_state.get_mut(&mut world);
 
-        update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+        update_barycenter(bodies, current_barycenter, previous_barycenter);
 
         // Calculate expected barycenter manually
         // weighted_sum = (0,0,0)*1 + (10,0,0)*3 + (0,20,0)*2 = (30, 40, 0)
@@ -354,15 +340,13 @@ mod tests {
 
         let mut system_state: SystemState<(
             Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
-            Query<(&Transform, &ComputedMass), With<RigidBody>>,
             ResMut<CurrentBarycenter>,
             ResMut<PreviousBarycenter>,
         )> = SystemState::new(&mut world);
 
-        let (bodies, all_bodies, current_barycenter, previous_barycenter) =
-            system_state.get_mut(&mut world);
+        let (bodies, current_barycenter, previous_barycenter) = system_state.get_mut(&mut world);
 
-        update_barycenter(bodies, all_bodies, current_barycenter, previous_barycenter);
+        update_barycenter(bodies, current_barycenter, previous_barycenter);
 
         // With zero total mass, current barycenter should remain unchanged
         assert_eq!(**world.resource::<CurrentBarycenter>(), initial_current);
