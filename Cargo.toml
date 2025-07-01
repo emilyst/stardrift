@@ -92,7 +92,14 @@ version = "*"
 default-features = false
 features = ["3d", "enhanced-determinism", "f64", "parallel", "parry-f64"]
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["csv", "csv_output", "html_reports"] }
+
 [target.wasm32-unknown-unknown.dependencies]
 wasm-bindgen = "0.*"
 web-sys = "0.*"
 getrandom = { version = "0.*", features = ["wasm_js"] }
+
+[[bench]]
+name = "physics_benchmarks"
+harness = false

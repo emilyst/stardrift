@@ -1,11 +1,11 @@
-mod components;
-mod config;
-mod physics;
-mod plugins;
-mod resources;
-mod states;
-mod systems;
-mod utils;
+pub mod components;
+pub mod config;
+pub mod physics;
+pub mod plugins;
+pub mod resources;
+pub mod states;
+pub mod systems;
+pub mod utils;
 
 use crate::plugins::diagnostics_hud::DiagnosticsHudPlugin;
 use crate::plugins::embedded_assets::EmbeddedAssetsPlugin;
