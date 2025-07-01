@@ -228,15 +228,15 @@ fn bench_octree_pool_reuse(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("without_pool", count), &count, |b, _| {
             b.iter(|| {
                 let mut octree1 = Octree::new(theta, min_distance, max_force);
-                octree1.build(black_box(&bodies));
+                octree1.build(black_box(bodies.clone()));
                 black_box(&octree1);
 
                 let mut octree2 = Octree::new(theta, min_distance, max_force);
-                octree2.build(black_box(&bodies));
+                octree2.build(black_box(bodies.clone()));
                 black_box(&octree2);
 
                 let mut octree3 = Octree::new(theta, min_distance, max_force);
-                octree3.build(black_box(&bodies));
+                octree3.build(black_box(bodies.clone()));
                 black_box(&octree3);
             });
         });
@@ -247,13 +247,13 @@ fn bench_octree_pool_reuse(c: &mut Criterion) {
                 let mut octree =
                     Octree::with_pool_capacity(theta, min_distance, max_force, 50, 100);
 
-                octree.build(black_box(&bodies));
+                octree.build(black_box(bodies.clone()));
                 black_box(&octree);
 
-                octree.build(black_box(&bodies));
+                octree.build(black_box(bodies.clone()));
                 black_box(&octree);
 
-                octree.build(black_box(&bodies));
+                octree.build(black_box(bodies.clone()));
                 black_box(&octree);
             });
         });
