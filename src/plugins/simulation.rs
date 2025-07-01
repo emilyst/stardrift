@@ -4,7 +4,6 @@ use crate::resources::*;
 use crate::states::AppState;
 use crate::states::LoadingState;
 use crate::systems::camera;
-use crate::systems::config;
 use crate::systems::input;
 use crate::systems::loading;
 use crate::systems::physics;
@@ -153,9 +152,5 @@ impl Plugin for SimulationPlugin {
         );
 
         app.add_systems(Update, input::quit_on_escape.in_set(SimulationSet::Input));
-        app.add_systems(
-            Last,
-            config::save_config_on_exit.in_set(SimulationSet::Configuration),
-        );
     }
 }
