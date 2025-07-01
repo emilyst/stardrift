@@ -120,9 +120,9 @@ impl Octree {
         bounds.push(node.bounds());
 
         if let OctreeNode::Internal { children, .. } = node {
-            for child in children.iter().flatten() {
+            children.iter().flatten().for_each(|child| {
                 self.collect_bounds(child, bounds, current_depth + 1, max_depth);
-            }
+            });
         }
     }
 
@@ -144,7 +144,7 @@ impl Octree {
         let mut bodies_vec = Vec::with_capacity(estimated_capacity);
         bodies_vec.push(first_body);
 
-        for body in bodies_iter {
+        bodies_iter.for_each(|body| {
             min.x = min.x.min(body.position.x);
             min.y = min.y.min(body.position.y);
             min.z = min.z.min(body.position.z);
@@ -152,7 +152,7 @@ impl Octree {
             max.y = max.y.max(body.position.y);
             max.z = max.z.max(body.position.z);
             bodies_vec.push(body);
-        }
+        });
 
         let padding = (max - min) * PADDING_FACTOR;
         min -= padding;
@@ -172,10 +172,10 @@ impl Octree {
 
         // Count bodies per octant first for better allocation
         let mut octant_counts = [0usize; 8];
-        for body in &bodies {
+        bodies.iter().for_each(|body| {
             let octant_index = Self::get_octant_index(body.position, center);
             octant_counts[octant_index] += 1;
-        }
+        });
 
         // Create vectors with exact capacity for non-empty octants
         let mut octant_bodies: [Vec<OctreeBody>; 8] = [
@@ -190,10 +190,10 @@ impl Octree {
         ];
         let mut children: [Option<OctreeNode>; 8] = Default::default();
 
-        for body in &bodies {
+        bodies.iter().for_each(|body| {
             let octant_index = Self::get_octant_index(body.position, center);
             octant_bodies[octant_index].push(*body);
-        }
+        });
 
         for (i, bodies_in_octant) in octant_bodies.into_iter().enumerate() {
             if !bodies_in_octant.is_empty() {
@@ -253,19 +253,19 @@ impl Octree {
                     self.calculate_force_from_point(body, *center_of_mass, *total_mass, g)
                 } else {
                     let mut force = Vector::ZERO;
-                    for child in children.iter() {
+                    children.iter().for_each(|child| {
                         force += self.calculate_force(body, child.as_ref(), g);
-                    }
+                    });
                     force
                 }
             }
             Some(OctreeNode::External { bodies, .. }) => {
                 let mut force = Vector::ZERO;
-                for other_body in bodies {
+                bodies.iter().for_each(|other_body| {
                     if other_body.entity != body.entity {
                         force += self.calculate_direct_force(body, other_body, g);
                     }
-                }
+                });
                 force
             }
             None => Vector::ZERO,

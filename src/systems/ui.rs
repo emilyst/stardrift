@@ -151,8 +151,9 @@ pub fn handle_octree_button(
     >,
     mut settings: ResMut<OctreeVisualizationSettings>,
 ) {
-    for (interaction, mut color) in &mut interaction_query {
-        match *interaction {
+    interaction_query
+        .iter_mut()
+        .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
                 simulation_actions::toggle_octree_visualization(&mut settings);
@@ -163,8 +164,7 @@ pub fn handle_octree_button(
             Interaction::None => {
                 *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
             }
-        }
-    }
+        });
 }
 
 pub fn handle_barycenter_gizmo_button(
@@ -174,8 +174,9 @@ pub fn handle_barycenter_gizmo_button(
     >,
     mut settings: ResMut<BarycenterGizmoVisibility>,
 ) {
-    for (interaction, mut color) in &mut interaction_query {
-        match *interaction {
+    interaction_query
+        .iter_mut()
+        .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
                 simulation_actions::toggle_barycenter_gizmo_visibility(&mut settings);
@@ -186,8 +187,7 @@ pub fn handle_barycenter_gizmo_button(
             Interaction::None => {
                 *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
             }
-        }
-    }
+        });
 }
 
 pub fn handle_restart_button(
@@ -207,8 +207,9 @@ pub fn handle_restart_button(
     mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
     config: Res<SimulationConfig>,
 ) {
-    for (interaction, mut color) in &mut interaction_query {
-        match *interaction {
+    interaction_query
+        .iter_mut()
+        .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
 
@@ -232,8 +233,7 @@ pub fn handle_restart_button(
             Interaction::None => {
                 *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
             }
-        }
-    }
+        });
 }
 
 pub fn handle_pause_button(
@@ -245,8 +245,9 @@ pub fn handle_pause_button(
     mut next_state: ResMut<NextState<AppState>>,
     mut time: ResMut<Time<Physics>>,
 ) {
-    for (interaction, mut color) in &mut interaction_query {
-        match *interaction {
+    interaction_query
+        .iter_mut()
+        .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
                 simulation_actions::toggle_pause_simulation(
@@ -261,8 +262,7 @@ pub fn handle_pause_button(
             Interaction::None => {
                 *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
             }
-        }
-    }
+        });
 }
 
 pub fn update_octree_button_text(
@@ -275,19 +275,19 @@ pub fn update_octree_button_text(
         return;
     }
 
-    for button_entity in &button_query {
+    button_query.iter().for_each(|button_entity| {
         if let Ok(children) = children_query.get(button_entity) {
-            for child in children {
-                if let Ok(mut text) = text_query.get_mut(*child) {
+            children.iter().for_each(|child| {
+                if let Ok(mut text) = text_query.get_mut(child) {
                     text.0 = if settings.enabled {
                         "Hide Octree (O)".to_string()
                     } else {
                         "Show Octree (O)".to_string()
                     };
                 }
-            }
+            });
         }
-    }
+    });
 }
 
 pub fn update_barycenter_gizmo_button_text(
