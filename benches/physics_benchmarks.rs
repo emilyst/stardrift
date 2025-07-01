@@ -213,6 +213,55 @@ fn bench_complete_physics_cycle_extreme_body_counts(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_octree_pool_reuse(c: &mut Criterion) {
+    let mut group = c.benchmark_group("octree_pool_reuse");
+
+    let body_counts = [100, 500, 1_000, 2_000, 5_000];
+    let theta = 0.5;
+    let min_distance = 10.0;
+    let max_force = 1e4;
+
+    for &count in &body_counts {
+        let bodies = generate_test_bodies(count, 100);
+
+        // Benchmark without pool (new octree each time)
+        group.bench_with_input(BenchmarkId::new("without_pool", count), &count, |b, _| {
+            b.iter(|| {
+                let mut octree1 = Octree::new(theta, min_distance, max_force);
+                octree1.build(black_box(&bodies));
+                black_box(&octree1);
+
+                let mut octree2 = Octree::new(theta, min_distance, max_force);
+                octree2.build(black_box(&bodies));
+                black_box(&octree2);
+
+                let mut octree3 = Octree::new(theta, min_distance, max_force);
+                octree3.build(black_box(&bodies));
+                black_box(&octree3);
+            });
+        });
+
+        // Benchmark with pool (reuse same octree instance)
+        group.bench_with_input(BenchmarkId::new("with_pool", count), &count, |b, _| {
+            b.iter(|| {
+                let mut octree =
+                    Octree::with_pool_capacity(theta, min_distance, max_force, 50, 100);
+
+                octree.build(black_box(&bodies));
+                black_box(&octree);
+
+                octree.build(black_box(&bodies));
+                black_box(&octree);
+
+                octree.build(black_box(&bodies));
+                black_box(&octree);
+            });
+        });
+    }
+
+    group.finish();
+}
+
 criterion::criterion_group!(
     benches,
     bench_octree_construction,
@@ -221,6 +270,7 @@ criterion::criterion_group!(
     bench_octree_force_calculation_theta,
     bench_complete_physics_cycle,
     bench_complete_physics_cycle_extreme_body_counts,
+    bench_octree_pool_reuse,
 );
 
 criterion::criterion_main!(benches);

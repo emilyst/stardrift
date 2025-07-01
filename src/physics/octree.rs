@@ -3,9 +3,85 @@
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use bevy::prelude::*;
+use std::collections::VecDeque;
 
 const PADDING_FACTOR: Scalar = 0.1;
 const DEFAULT_LEAF_THRESHOLD: usize = 4;
+
+// TODO: pool diagnostics?
+
+#[derive(Debug)]
+pub struct OctreeNodePool {
+    internal_nodes: VecDeque<Box<[Option<OctreeNode>; 8]>>,
+    external_bodies: VecDeque<Vec<OctreeBody>>,
+}
+
+impl OctreeNodePool {
+    pub fn new() -> Self {
+        Self {
+            internal_nodes: VecDeque::new(),
+            external_bodies: VecDeque::new(),
+        }
+    }
+
+    pub fn with_capacity(internal_capacity: usize, external_capacity: usize) -> Self {
+        Self {
+            internal_nodes: VecDeque::with_capacity(internal_capacity),
+            external_bodies: VecDeque::with_capacity(external_capacity),
+        }
+    }
+
+    pub fn get_internal_children(&mut self) -> Box<[Option<OctreeNode>; 8]> {
+        self.internal_nodes
+            .pop_front()
+            .unwrap_or_else(|| Box::new([None, None, None, None, None, None, None, None]))
+    }
+
+    pub fn get_external_bodies(&mut self, capacity: usize) -> Vec<OctreeBody> {
+        if let Some(mut bodies) = self.external_bodies.pop_front() {
+            bodies.clear();
+            bodies.reserve(capacity);
+            bodies
+        } else {
+            Vec::with_capacity(capacity)
+        }
+    }
+
+    pub fn return_internal_children(&mut self, mut children: Box<[Option<OctreeNode>; 8]>) {
+        for child in children.iter_mut() {
+            if let Some(node) = child.take() {
+                self.return_node(node);
+            }
+        }
+
+        self.internal_nodes.push_back(children);
+    }
+
+    pub fn return_external_bodies(&mut self, mut bodies: Vec<OctreeBody>) {
+        bodies.clear();
+        self.external_bodies.push_back(bodies);
+    }
+
+    pub fn return_node(&mut self, node: OctreeNode) {
+        match node {
+            OctreeNode::Internal { children, .. } => {
+                self.return_internal_children(children);
+            }
+            OctreeNode::External { bodies, .. } => {
+                self.return_external_bodies(bodies);
+            }
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.internal_nodes.clear();
+        self.external_bodies.clear();
+    }
+
+    pub fn stats(&self) -> (usize, usize) {
+        (self.internal_nodes.len(), self.external_bodies.len())
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Aabb3d {
@@ -64,11 +140,12 @@ impl Aabb3d {
 #[derive(Debug)]
 pub struct Octree {
     pub root: Option<OctreeNode>,
-    pub theta: Scalar,            // Barnes-Hut approximation parameter
-    pub min_distance: Scalar,     // Minimum distance for force calculation
-    pub max_force: Scalar,        // Maximum force magnitude
-    pub leaf_threshold: usize,    // Maximum bodies per leaf node
-    min_distance_squared: Scalar, // Cached value to avoid repeated multiplication
+    pub theta: Scalar,                // Barnes-Hut approximation parameter
+    pub min_distance: Scalar,         // Minimum distance for force calculation
+    pub max_force: Scalar,            // Maximum force magnitude
+    pub leaf_threshold: usize,        // Maximum bodies per leaf node
+    min_distance_squared: Scalar,     // Cached value to avoid repeated multiplication
+    octree_node_pool: OctreeNodePool, // Pool for reusing node allocations
 }
 
 impl Octree {
@@ -80,12 +157,39 @@ impl Octree {
             max_force,
             leaf_threshold: DEFAULT_LEAF_THRESHOLD,
             min_distance_squared: min_distance * min_distance,
+            octree_node_pool: OctreeNodePool::new(),
         }
     }
 
     pub fn with_leaf_threshold(mut self, leaf_threshold: usize) -> Self {
         self.leaf_threshold = leaf_threshold;
         self
+    }
+
+    pub fn with_pool_capacity(
+        theta: Scalar,
+        min_distance: Scalar,
+        max_force: Scalar,
+        internal_capacity: usize,
+        external_capacity: usize,
+    ) -> Self {
+        Self {
+            root: None,
+            theta,
+            min_distance,
+            max_force,
+            leaf_threshold: DEFAULT_LEAF_THRESHOLD,
+            min_distance_squared: min_distance * min_distance,
+            octree_node_pool: OctreeNodePool::with_capacity(internal_capacity, external_capacity),
+        }
+    }
+
+    pub fn pool_stats(&self) -> (usize, usize) {
+        self.octree_node_pool.stats()
+    }
+
+    pub fn clear_pool(&mut self) {
+        self.octree_node_pool.clear();
     }
 
     pub fn get_bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
@@ -127,6 +231,10 @@ impl Octree {
     }
 
     pub fn build(&mut self, bodies: impl IntoIterator<Item = OctreeBody>) {
+        if let Some(old_root) = self.root.take() {
+            self.octree_node_pool.return_node(old_root);
+        }
+
         let mut bodies_iter = bodies.into_iter();
 
         let first_body = match bodies_iter.next() {
@@ -159,12 +267,30 @@ impl Octree {
         max += padding;
 
         let bounds = Aabb3d::new(min, max);
-        self.root = Some(Self::build_node(bounds, bodies_vec, self.leaf_threshold));
+        self.root = Some(Self::build_node(
+            bounds,
+            bodies_vec,
+            self.leaf_threshold,
+            &mut self.octree_node_pool,
+        ));
     }
 
-    fn build_node(bounds: Aabb3d, bodies: Vec<OctreeBody>, leaf_threshold: usize) -> OctreeNode {
+    fn build_node(
+        bounds: Aabb3d,
+        bodies: Vec<OctreeBody>,
+        leaf_threshold: usize,
+        pool: &mut OctreeNodePool,
+    ) -> OctreeNode {
         if bodies.len() <= leaf_threshold {
-            return OctreeNode::External { bounds, bodies };
+            let pooled_bodies = pool.get_external_bodies(bodies.len());
+            let mut external_bodies = pooled_bodies;
+
+            external_bodies.extend(bodies);
+
+            return OctreeNode::External {
+                bounds,
+                bodies: external_bodies,
+            };
         }
 
         let center = bounds.center();
@@ -177,18 +303,19 @@ impl Octree {
             octant_counts[octant_index] += 1;
         });
 
-        // Create vectors with exact capacity for non-empty octants
+        // Create vectors with exact capacity for non-empty octants using pool
         let mut octant_bodies: [Vec<OctreeBody>; 8] = [
-            Vec::with_capacity(octant_counts[0]),
-            Vec::with_capacity(octant_counts[1]),
-            Vec::with_capacity(octant_counts[2]),
-            Vec::with_capacity(octant_counts[3]),
-            Vec::with_capacity(octant_counts[4]),
-            Vec::with_capacity(octant_counts[5]),
-            Vec::with_capacity(octant_counts[6]),
-            Vec::with_capacity(octant_counts[7]),
+            pool.get_external_bodies(octant_counts[0]),
+            pool.get_external_bodies(octant_counts[1]),
+            pool.get_external_bodies(octant_counts[2]),
+            pool.get_external_bodies(octant_counts[3]),
+            pool.get_external_bodies(octant_counts[4]),
+            pool.get_external_bodies(octant_counts[5]),
+            pool.get_external_bodies(octant_counts[6]),
+            pool.get_external_bodies(octant_counts[7]),
         ];
-        let mut children: [Option<OctreeNode>; 8] = Default::default();
+
+        let mut children = pool.get_internal_children();
 
         bodies.iter().for_each(|body| {
             let octant_index = Self::get_octant_index(body.position, center);
@@ -201,7 +328,10 @@ impl Octree {
                     octants[i],
                     bodies_in_octant,
                     leaf_threshold,
+                    pool,
                 ));
+            } else {
+                pool.return_external_bodies(bodies_in_octant);
             }
         }
 
@@ -220,7 +350,7 @@ impl Octree {
             bounds,
             center_of_mass,
             total_mass,
-            children: Box::new(children),
+            children,
         }
     }
 
@@ -436,6 +566,166 @@ mod tests {
             bodies.len(),
             "Number of bodies in octree should match input bodies"
         );
+    }
+
+    #[test]
+    fn test_node_pool_basic_functionality() {
+        let mut pool = OctreeNodePool::new();
+
+        // Test getting and returning internal children
+        let children1 = pool.get_internal_children();
+        let children2 = pool.get_internal_children();
+
+        // Initially pool should be empty
+        assert_eq!(pool.stats(), (0, 0));
+
+        // Return one children array
+        pool.return_internal_children(children1);
+        assert_eq!(pool.stats(), (1, 0));
+
+        // Get it back - should reuse the returned one
+        let children3 = pool.get_internal_children();
+        assert_eq!(pool.stats(), (0, 0));
+
+        // Test external bodies
+        let bodies1 = pool.get_external_bodies(10);
+        let bodies2 = pool.get_external_bodies(5);
+
+        pool.return_external_bodies(bodies1);
+        assert_eq!(pool.stats(), (0, 1));
+
+        let bodies3 = pool.get_external_bodies(15);
+        assert_eq!(pool.stats(), (0, 0));
+
+        // Clean up
+        pool.return_internal_children(children2);
+        pool.return_internal_children(children3);
+        pool.return_external_bodies(bodies2);
+        pool.return_external_bodies(bodies3);
+    }
+
+    #[test]
+    fn test_octree_pool_integration() {
+        let mut octree = Octree::with_pool_capacity(0.5, 10.0, 1e4, 10, 10).with_leaf_threshold(1); // Force tree creation with small leaf threshold
+
+        // Initially pool should be empty
+        assert_eq!(octree.pool_stats(), (0, 0));
+
+        // Create enough bodies to force tree structure creation
+        let bodies = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(-5.0, -5.0, -5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(5.0, 5.0, 5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(2),
+                position: Vector::new(-5.0, 5.0, -5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(3),
+                position: Vector::new(5.0, -5.0, 5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(4),
+                position: Vector::new(-5.0, -5.0, 5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(5),
+                position: Vector::new(5.0, 5.0, -5.0),
+                mass: 1000.0,
+            },
+        ];
+
+        // Build the octree
+        octree.build(bodies.clone());
+
+        // Pool should still be empty (nodes are in use)
+        assert_eq!(octree.pool_stats(), (0, 0));
+
+        // Build again with fewer bodies - should return old nodes to pool
+        let new_bodies = vec![
+            OctreeBody {
+                entity: Entity::from_raw(6),
+                position: Vector::new(0.0, 0.0, 0.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(7),
+                position: Vector::new(1.0, 1.0, 1.0),
+                mass: 1000.0,
+            },
+        ];
+
+        octree.build(new_bodies);
+
+        // Pool should now have some returned nodes
+        let (internal_count, external_count) = octree.pool_stats();
+        assert!(
+            internal_count > 0 || external_count > 0,
+            "Pool should have some returned nodes"
+        );
+
+        // Build again - should reuse nodes from pool
+        octree.build(bodies);
+
+        // Verify the octree still works correctly
+        assert!(octree.root.is_some());
+        let total_bodies = count_bodies_in_node(octree.root.as_ref());
+        assert_eq!(total_bodies, 6);
+    }
+
+    #[test]
+    fn test_pool_clear_functionality() {
+        let mut octree = Octree::with_pool_capacity(0.5, 10.0, 1e4, 5, 5);
+
+        // Build and rebuild to populate the pool
+        let bodies = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(-1.0, -1.0, -1.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(1.0, 1.0, 1.0),
+                mass: 1000.0,
+            },
+        ];
+
+        octree.build(bodies.clone());
+        octree.build(vec![]); // Empty build to return nodes to pool
+
+        // Pool should have some nodes
+        let (internal_count, external_count) = octree.pool_stats();
+        assert!(internal_count > 0 || external_count > 0);
+
+        // Clear the pool
+        octree.clear_pool();
+        assert_eq!(octree.pool_stats(), (0, 0));
+
+        // Should still work after clearing
+        octree.build(bodies);
+        assert!(octree.root.is_some());
+    }
+
+    #[test]
+    fn test_pool_with_capacity() {
+        let octree = Octree::with_pool_capacity(0.5, 10.0, 1e4, 20, 30);
+        assert_eq!(octree.pool_stats(), (0, 0)); // Should start empty but have capacity
+
+        // Test that it has the same functionality as regular octree
+        assert_eq!(octree.theta, 0.5);
+        assert_eq!(octree.min_distance, 10.0);
+        assert_eq!(octree.max_force, 1e4);
     }
 
     fn count_bodies_in_node(node: Option<&OctreeNode>) -> usize {
