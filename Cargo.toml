@@ -1,5 +1,5 @@
 [package]
-name = "Stardrift"
+name = "stardrift"
 version = "0.0.1"
 edition = "2024"
 license = "CC0-1.0"
