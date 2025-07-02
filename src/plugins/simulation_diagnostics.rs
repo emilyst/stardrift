@@ -48,7 +48,7 @@ impl Default for SimulationDiagnosticsPlugin {
     fn default() -> Self {
         Self {
             max_history_length: DEFAULT_MAX_HISTORY_LENGTH,
-            smoothing_factor: 0.1,
+            smoothing_factor: 0.0,
             update_interval: Duration::from_secs_f64(1_f64 / 60_f64),
         }
     }

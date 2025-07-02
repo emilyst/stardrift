@@ -31,7 +31,7 @@ impl Default for PhysicsConfig {
             body_count: if cfg!(target_arch = "wasm32") {
                 100
             } else {
-                100
+                1000
             },
             octree_theta: 0.5,
             body_distribution_sphere_radius_multiplier: 200.0,

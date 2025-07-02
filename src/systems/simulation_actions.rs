@@ -16,6 +16,7 @@ pub fn restart_simulation(
     body_count: &Res<BodyCount>,
     current_barycenter: &mut ResMut<CurrentBarycenter>,
     previous_barycenter: &mut ResMut<PreviousBarycenter>,
+    initial_barycenter: &mut ResMut<InitialBarycenter>,
     octree: &mut ResMut<GravitationalOctree>,
     pan_orbit_camera: &mut Single<&mut PanOrbitCamera>,
     config: &Res<SimulationConfig>,
@@ -26,6 +27,10 @@ pub fn restart_simulation(
 
     ***current_barycenter = Vector::ZERO;
     ***previous_barycenter = Vector::ZERO;
+
+    // Reset barycenter initialization state
+    ***initial_barycenter = None;
+    commands.remove_resource::<BarycenterShiftingEnabled>();
 
     octree.build(vec![]);
 
