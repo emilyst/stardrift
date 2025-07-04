@@ -8,7 +8,9 @@ use bevy::core_pipeline::bloom::Bloom;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::pbr::ClusterConfig;
 use bevy::prelude::*;
-use bevy_panorbit_camera::{PanOrbitCamera, TouchControls, TrackpadBehavior};
+use bevy_panorbit_camera::PanOrbitCamera;
+use bevy_panorbit_camera::TouchControls;
+use bevy_panorbit_camera::TrackpadBehavior;
 
 pub fn spawn_camera(
     mut commands: Commands,
