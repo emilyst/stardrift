@@ -25,7 +25,7 @@ pub fn setup_ui(
         .spawn(Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
-            justify_content: JustifyContent::FlexStart,
+            justify_content: JustifyContent::Center,
             align_items: AlignItems::FlexEnd,
             ..default()
         })
