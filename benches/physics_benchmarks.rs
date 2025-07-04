@@ -2,12 +2,13 @@ use avian3d::math::Vector;
 use bevy::prelude::Entity;
 use criterion::BenchmarkId;
 use criterion::Criterion;
-use criterion::black_box;
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use std::hint::black_box;
 
-use stardrift::physics::octree::{Octree, OctreeBody};
+use stardrift::physics::octree::Octree;
+use stardrift::physics::octree::OctreeBody;
 
 fn generate_test_bodies(count: usize, seed: u64) -> Vec<OctreeBody> {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);

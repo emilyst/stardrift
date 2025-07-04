@@ -93,7 +93,7 @@ default-features = false
 features = ["3d", "enhanced-determinism", "f64", "parallel", "parry-f64"]
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["csv", "csv_output", "html_reports"] }
+criterion = { version = "0.6", features = ["csv_output", "html_reports"] }
 
 [target.wasm32-unknown-unknown.dependencies]
 wasm-bindgen = "0.*"
