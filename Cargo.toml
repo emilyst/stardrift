@@ -77,6 +77,9 @@ features = ["3d", "enhanced-determinism", "f64", "parallel", "parry-f64"]
 [dev-dependencies]
 criterion = { version = "0.6", features = ["csv_output", "html_reports"] }
 
+[features]
+diagnostics = []
+
 [target.wasm32-unknown-unknown.dependencies]
 wasm-bindgen = "0.*"
 web-sys = "0.*"

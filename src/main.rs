@@ -7,16 +7,21 @@ pub mod states;
 pub mod systems;
 pub mod utils;
 
+#[cfg(feature = "diagnostics")]
 use crate::plugins::diagnostics_hud::DiagnosticsHudPlugin;
 use crate::plugins::embedded_assets::EmbeddedAssetsPlugin;
 use crate::plugins::simulation::SimulationPlugin;
+#[cfg(feature = "diagnostics")]
 use crate::plugins::simulation_diagnostics::SimulationDiagnosticsPlugin;
 use crate::states::AppState;
 use crate::states::LoadingState;
 use avian3d::prelude::*;
 use bevy::app::TaskPoolThreadAssignmentPolicy;
+#[cfg(feature = "diagnostics")]
 use bevy::diagnostic::EntityCountDiagnosticsPlugin;
+#[cfg(feature = "diagnostics")]
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+#[cfg(feature = "diagnostics")]
 use bevy::diagnostic::SystemInformationDiagnosticsPlugin;
 use bevy::prelude::*;
 use bevy::tasks::available_parallelism;
@@ -53,12 +58,17 @@ fn main() {
                 },
             }),
         EmbeddedAssetsPlugin,
+        #[cfg(feature = "diagnostics")]
         DiagnosticsHudPlugin,
+        #[cfg(feature = "diagnostics")]
         EntityCountDiagnosticsPlugin,
+        #[cfg(feature = "diagnostics")]
         FrameTimeDiagnosticsPlugin::default(),
         PanOrbitCameraPlugin,
         PhysicsPlugins::default(),
+        #[cfg(feature = "diagnostics")]
         SimulationDiagnosticsPlugin::default(),
+        #[cfg(feature = "diagnostics")]
         SystemInformationDiagnosticsPlugin,
         SimulationPlugin,
     ));
