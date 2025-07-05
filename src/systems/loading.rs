@@ -170,7 +170,7 @@ fn spawn_single_body(
         config.physics.body_distribution_sphere_radius_multiplier,
         config.physics.body_distribution_min_distance,
     );
-    let position = math::random_unit_vector(&mut **rng) * body_distribution_sphere_radius;
+    let position = math::random_unit_vector(rng) * body_distribution_sphere_radius;
     let transform = Transform::from_translation(position.as_vec3());
     let radius = rng.random_range(config.physics.min_body_radius..=config.physics.max_body_radius);
     let mesh = meshes.add(
