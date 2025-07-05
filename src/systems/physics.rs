@@ -90,21 +90,17 @@ pub fn apply_gravitation_octree(
         (With<RigidBody>, Changed<Transform>),
     >,
 ) {
-    let gravitational_constant = **g;
-
     bodies
         .par_iter_mut()
         .for_each(|(entity, transform, mass, mut external_force)| {
-            let body = OctreeBody {
-                entity,
-                position: Vector::from(transform.translation),
-                mass: mass.value(),
-            };
-
             external_force.set_force(octree.calculate_force(
-                &body,
+                &OctreeBody {
+                    entity,
+                    position: Vector::from(transform.translation),
+                    mass: mass.value(),
+                },
                 octree.root.as_ref(),
-                gravitational_constant,
+                **g,
             ));
         });
 }
