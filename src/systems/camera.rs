@@ -32,7 +32,7 @@ pub fn spawn_camera(
         },
         Camera3d::default(),
         ClusterConfig::None,
-        Tonemapping::TonyMcMapface,
+        Tonemapping::AcesFitted,
         Bloom::NATURAL,
         Msaa::Off,
         PanOrbitCamera {

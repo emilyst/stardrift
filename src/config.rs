@@ -73,7 +73,7 @@ impl Default for RenderingConfig {
         Self {
             min_temperature: 2000.0,
             max_temperature: 15000.0,
-            bloom_intensity: 100.0,
+            bloom_intensity: 33.333,
             saturation_intensity: 3.0,
             camera_radius_multiplier: 2.0,
         }
