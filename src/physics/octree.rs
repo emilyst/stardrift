@@ -5,7 +5,6 @@ use avian3d::math::Vector;
 use bevy::prelude::*;
 use std::collections::VecDeque;
 
-const PADDING_FACTOR: Scalar = 0.1;
 const DEFAULT_LEAF_THRESHOLD: usize = 4;
 
 // TODO: pool diagnostics?
@@ -14,6 +13,12 @@ const DEFAULT_LEAF_THRESHOLD: usize = 4;
 pub struct OctreeNodePool {
     internal_nodes: VecDeque<Box<[Option<OctreeNode>; 8]>>,
     external_bodies: VecDeque<Vec<OctreeBody>>,
+}
+
+impl Default for OctreeNodePool {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl OctreeNodePool {
@@ -262,7 +267,7 @@ impl Octree {
             bodies_vec.push(body);
         });
 
-        let padding = (max - min) * PADDING_FACTOR;
+        let padding = (max - min) * 0.1;
         min -= padding;
         max += padding;
 
