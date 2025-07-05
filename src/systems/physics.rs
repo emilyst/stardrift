@@ -118,7 +118,7 @@ pub fn counteract_barycentric_drift(
 
     let updated_barycenter = weighted_positions / total_mass;
 
-    if total_mass <= f64::EPSILON {
+    if total_mass <= Scalar::EPSILON {
         return;
     }
 
@@ -133,7 +133,7 @@ pub fn counteract_barycentric_drift(
 
     let barycentric_drift = updated_barycenter - barycenter;
 
-    if barycentric_drift.length_squared() <= f64::EPSILON {
+    if barycentric_drift.length_squared() <= Scalar::EPSILON {
         return;
     }
 
