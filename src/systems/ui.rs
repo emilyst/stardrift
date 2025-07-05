@@ -1,7 +1,9 @@
 use crate::resources::*;
 use crate::states::AppState;
-use crate::systems::simulation_actions::{self, RestartSimulationEvent};
-use avian3d::prelude::*;
+use crate::systems::simulation_actions::{
+    RestartSimulationEvent, ToggleBarycenterGizmoVisibilityEvent, ToggleOctreeVisualizationEvent,
+    TogglePauseSimulationEvent,
+};
 use bevy::asset::AssetPath;
 use bevy::asset::io::AssetSourceId;
 use bevy::prelude::*;
@@ -164,14 +166,14 @@ pub fn handle_octree_button(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<OctreeToggleButton>),
     >,
-    mut settings: ResMut<OctreeVisualizationSettings>,
+    mut octree_events: EventWriter<ToggleOctreeVisualizationEvent>,
 ) {
     interaction_query
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                simulation_actions::toggle_octree_visualization(&mut settings);
+                octree_events.write(ToggleOctreeVisualizationEvent);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);
@@ -187,14 +189,14 @@ pub fn handle_barycenter_gizmo_button(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<BarycenterGizmoToggleButton>),
     >,
-    mut settings: ResMut<BarycenterGizmoVisibility>,
+    mut barycenter_events: EventWriter<ToggleBarycenterGizmoVisibilityEvent>,
 ) {
     interaction_query
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                simulation_actions::toggle_barycenter_gizmo_visibility(&mut settings);
+                barycenter_events.write(ToggleBarycenterGizmoVisibilityEvent);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);
@@ -233,20 +235,14 @@ pub fn handle_pause_button(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<PauseButton>),
     >,
-    mut current_state: Res<State<AppState>>,
-    mut next_state: ResMut<NextState<AppState>>,
-    mut time: ResMut<Time<Physics>>,
+    mut pause_events: EventWriter<TogglePauseSimulationEvent>,
 ) {
     interaction_query
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                simulation_actions::toggle_pause_simulation(
-                    &mut current_state,
-                    &mut next_state,
-                    &mut time,
-                );
+                pause_events.write(TogglePauseSimulationEvent);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);

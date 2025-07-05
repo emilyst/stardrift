@@ -8,7 +8,11 @@ use crate::systems::input;
 use crate::systems::loading;
 use crate::systems::physics;
 use crate::systems::physics::PhysicsSet;
-use crate::systems::simulation_actions::{self, RestartSimulationEvent};
+use crate::systems::simulation_actions;
+use crate::systems::simulation_actions::RestartSimulationEvent;
+use crate::systems::simulation_actions::ToggleBarycenterGizmoVisibilityEvent;
+use crate::systems::simulation_actions::ToggleOctreeVisualizationEvent;
+use crate::systems::simulation_actions::TogglePauseSimulationEvent;
 use crate::systems::ui;
 use crate::systems::visualization;
 #[cfg(feature = "diagnostics")]
@@ -54,6 +58,9 @@ impl Plugin for SimulationPlugin {
         app.init_resource::<LoadingProgress>();
 
         app.add_event::<RestartSimulationEvent>();
+        app.add_event::<ToggleOctreeVisualizationEvent>();
+        app.add_event::<ToggleBarycenterGizmoVisibilityEvent>();
+        app.add_event::<TogglePauseSimulationEvent>();
 
         #[cfg(feature = "diagnostics")]
         app.edit_schedule(FixedUpdate, |schedule| {
@@ -130,6 +137,9 @@ impl Plugin for SimulationPlugin {
                 input::toggle_barycenter_gizmo_visibility_on_c,
                 input::toggle_octree_visualization,
                 simulation_actions::handle_restart_simulation_event,
+                simulation_actions::handle_toggle_octree_visualization_event,
+                simulation_actions::handle_toggle_barycenter_gizmo_visibility_event,
+                simulation_actions::handle_toggle_pause_simulation_event,
             )
                 .in_set(SimulationSet::Input)
                 .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),

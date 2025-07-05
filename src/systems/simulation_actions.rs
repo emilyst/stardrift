@@ -9,6 +9,15 @@ use bevy_panorbit_camera::PanOrbitCamera;
 #[derive(Event)]
 pub struct RestartSimulationEvent;
 
+#[derive(Event)]
+pub struct ToggleOctreeVisualizationEvent;
+
+#[derive(Event)]
+pub struct ToggleBarycenterGizmoVisibilityEvent;
+
+#[derive(Event)]
+pub struct TogglePauseSimulationEvent;
+
 pub fn handle_restart_simulation_event(
     mut restart_events: EventReader<RestartSimulationEvent>,
     mut commands: Commands,
@@ -47,28 +56,41 @@ pub fn handle_restart_simulation_event(
     });
 }
 
-pub fn toggle_octree_visualization(settings: &mut ResMut<OctreeVisualizationSettings>) {
-    settings.enabled = !settings.enabled;
-}
-
-pub fn toggle_barycenter_gizmo_visibility(settings: &mut ResMut<BarycenterGizmoVisibility>) {
-    settings.enabled = !settings.enabled;
-}
-
-pub fn toggle_pause_simulation(
-    current_state: &mut Res<State<AppState>>,
-    next_state: &mut ResMut<NextState<AppState>>,
-    time: &mut ResMut<Time<Physics>>,
+pub fn handle_toggle_octree_visualization_event(
+    mut octree_events: EventReader<ToggleOctreeVisualizationEvent>,
+    mut settings: ResMut<OctreeVisualizationSettings>,
 ) {
-    match current_state.get() {
-        AppState::Running => {
-            next_state.set(AppState::Paused);
-            time.pause();
+    octree_events.read().for_each(|_| {
+        settings.enabled = !settings.enabled;
+    });
+}
+
+pub fn handle_toggle_barycenter_gizmo_visibility_event(
+    mut barycenter_events: EventReader<ToggleBarycenterGizmoVisibilityEvent>,
+    mut settings: ResMut<BarycenterGizmoVisibility>,
+) {
+    barycenter_events.read().for_each(|_| {
+        settings.enabled = !settings.enabled;
+    });
+}
+
+pub fn handle_toggle_pause_simulation_event(
+    mut pause_events: EventReader<TogglePauseSimulationEvent>,
+    current_state: Res<State<AppState>>,
+    mut next_state: ResMut<NextState<AppState>>,
+    mut time: ResMut<Time<Physics>>,
+) {
+    pause_events.read().for_each(|_| {
+        match current_state.get() {
+            AppState::Running => {
+                next_state.set(AppState::Paused);
+                time.pause();
+            }
+            AppState::Paused => {
+                next_state.set(AppState::Running);
+                time.unpause();
+            }
+            _ => {} // ignore Loading state
         }
-        AppState::Paused => {
-            next_state.set(AppState::Running);
-            time.unpause();
-        }
-        _ => {} // ignore Loading state
-    }
+    });
 }

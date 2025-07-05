@@ -1,7 +1,8 @@
 use crate::resources::*;
-use crate::states::AppState;
-use crate::systems::simulation_actions::{self, RestartSimulationEvent};
-use avian3d::prelude::*;
+use crate::systems::simulation_actions::{
+    RestartSimulationEvent, ToggleBarycenterGizmoVisibilityEvent, ToggleOctreeVisualizationEvent,
+    TogglePauseSimulationEvent,
+};
 use bevy::prelude::*;
 
 pub fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit>) {
@@ -21,22 +22,23 @@ pub fn restart_simulation_on_n(
 
 pub fn pause_physics_on_space(
     keys: Res<ButtonInput<KeyCode>>,
-    mut current_state: Res<State<AppState>>,
-    mut next_state: ResMut<NextState<AppState>>,
-    mut time: ResMut<Time<Physics>>,
+    mut pause_events: EventWriter<TogglePauseSimulationEvent>,
 ) {
     if keys.just_pressed(KeyCode::Space) {
-        simulation_actions::toggle_pause_simulation(&mut current_state, &mut next_state, &mut time);
+        pause_events.write(TogglePauseSimulationEvent);
     }
 }
 
 pub fn toggle_octree_visualization(
     keys: Res<ButtonInput<KeyCode>>,
     mut settings: ResMut<OctreeVisualizationSettings>,
+    mut octree_events: EventWriter<ToggleOctreeVisualizationEvent>,
 ) {
     for &keycode in keys.get_just_pressed() {
         match keycode {
-            KeyCode::KeyO => simulation_actions::toggle_octree_visualization(&mut settings),
+            KeyCode::KeyO => {
+                octree_events.write(ToggleOctreeVisualizationEvent);
+            }
             KeyCode::Digit0 => settings.max_depth = None,
             KeyCode::Digit1 => settings.max_depth = Some(1),
             KeyCode::Digit2 => settings.max_depth = Some(2),
@@ -54,12 +56,12 @@ pub fn toggle_octree_visualization(
 
 pub fn toggle_barycenter_gizmo_visibility_on_c(
     keys: Res<ButtonInput<KeyCode>>,
-    mut visibility: ResMut<BarycenterGizmoVisibility>,
+    mut barycenter_events: EventWriter<ToggleBarycenterGizmoVisibilityEvent>,
 ) {
     for &keycode in keys.get_just_pressed() {
         match keycode {
             KeyCode::KeyC => {
-                simulation_actions::toggle_barycenter_gizmo_visibility(&mut visibility)
+                barycenter_events.write(ToggleBarycenterGizmoVisibilityEvent);
             }
             _ => {}
         }
