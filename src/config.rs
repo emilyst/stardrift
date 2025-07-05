@@ -9,7 +9,6 @@ pub struct SimulationConfig {
     pub version: u32,
     pub physics: PhysicsConfig,
     pub rendering: RenderingConfig,
-    pub ui: UiConfig,
 }
 
 impl Default for SimulationConfig {
@@ -18,7 +17,6 @@ impl Default for SimulationConfig {
             version: 1,
             physics: PhysicsConfig::default(),
             rendering: RenderingConfig::default(),
-            ui: UiConfig::default(),
         }
     }
 }
@@ -75,27 +73,6 @@ impl Default for RenderingConfig {
             bloom_intensity: 100.0,
             saturation_intensity: 3.0,
             camera_radius_multiplier: 2.0,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct UiConfig {
-    pub button_padding: f32,
-    pub button_gap: f32,
-    pub button_margin: f32,
-    pub button_border_radius: f32,
-    pub font_size: f32,
-}
-
-impl Default for UiConfig {
-    fn default() -> Self {
-        Self {
-            button_padding: 5.0,
-            button_gap: 10.0,
-            button_margin: 10.0,
-            button_border_radius: 5.0,
-            font_size: 12.0,
         }
     }
 }
@@ -221,9 +198,6 @@ body_count = 999
 
 [rendering]
 bloom_intensity = 888.0
-
-[ui]
-font_size = 24.0
 "#;
 
         let temp_path = "test_config_no_version.toml";
@@ -274,13 +248,6 @@ max_temperature = 12000.0
 bloom_intensity = 888.0
 saturation_intensity = 4.0
 camera_radius_multiplier = 3.0
-
-[ui]
-button_padding = 8.0
-button_gap = 15.0
-button_margin = 15.0
-button_border_radius = 8.0
-font_size = 24.0
 "#;
 
         let temp_path = "test_config_with_version.toml";
@@ -294,7 +261,6 @@ font_size = 24.0
         assert_eq!(loaded_config.physics.body_count, 999);
         assert_eq!(loaded_config.physics.octree_theta, 0.7);
         assert_eq!(loaded_config.rendering.bloom_intensity, 888.0);
-        assert_eq!(loaded_config.ui.font_size, 24.0);
 
         let _ = fs::remove_file(temp_path);
     }
@@ -312,9 +278,6 @@ body_count = 999
 
 [rendering]
 bloom_intensity = 888.0
-
-[ui]
-font_size = 24.0
 "#;
 
         let temp_path = "test_config_version_zero.toml";

@@ -235,11 +235,10 @@ pub fn finalize_loading(
 pub fn setup_ui_after_loading(
     commands: Commands,
     asset_server: Res<AssetServer>,
-    config: Res<SimulationConfig>,
     mut loading_progress: ResMut<LoadingProgress>,
     mut next_app_state: ResMut<NextState<AppState>>,
 ) {
-    ui::setup_ui(commands, asset_server, config);
+    ui::setup_ui(commands, asset_server);
 
     loading_progress.progress = 1.0;
     loading_progress.current_message = "Loading complete!".to_string();
