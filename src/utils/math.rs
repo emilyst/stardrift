@@ -165,8 +165,7 @@ mod math_tests {
 
             assert!(
                 (length - 1.0).abs() < 1e-10,
-                "Vector length should be 1, but was: {}",
-                length
+                "Vector length should be 1, but was: {length}",
             );
         }
     }
