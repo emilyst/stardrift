@@ -1,4 +1,3 @@
-pub mod components;
 pub mod config;
 pub mod physics;
 pub mod plugins;

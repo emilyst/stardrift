@@ -1,4 +1,3 @@
-use crate::components::*;
 use crate::config::SimulationConfig;
 use crate::resources::*;
 use crate::states::AppState;
@@ -7,6 +6,12 @@ use crate::systems::ui;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy::render::mesh::SphereKind;
+
+#[derive(Component)]
+pub struct LoadingScreen;
+
+#[derive(Component)]
+pub struct LoadingProgressBar;
 
 pub fn setup_loading_screen(mut commands: Commands, mut loading_progress: ResMut<LoadingProgress>) {
     loading_progress.progress = 0.0;

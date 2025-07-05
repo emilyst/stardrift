@@ -1,4 +1,3 @@
-use crate::components::*;
 use crate::config::SimulationConfig;
 use crate::resources::*;
 use crate::states::AppState;
@@ -14,6 +13,18 @@ const BUTTON_FONT_SIZE_PX: f32 = 12.0;
 const BUTTON_GAP_PX: f32 = 10.0;
 const BUTTON_MARGIN_PX: f32 = 10.0;
 const BUTTON_PADDING_PX: f32 = 5.0;
+
+#[derive(Component)]
+pub struct OctreeToggleButton;
+
+#[derive(Component)]
+pub struct RestartSimulationButton;
+
+#[derive(Component)]
+pub struct BarycenterGizmoToggleButton;
+
+#[derive(Component)]
+pub struct PauseButton;
 
 pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     let embedded_asset_source = &AssetSourceId::from("embedded");
