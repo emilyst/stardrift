@@ -58,12 +58,9 @@ pub fn toggle_barycenter_gizmo_visibility_on_c(
     >,
 ) {
     for &keycode in keys.get_just_pressed() {
-        match keycode {
-            KeyCode::KeyC => {
-                barycenter_events
+        if keycode == KeyCode::KeyC {
+            barycenter_events
                 .write(systems::simulation_actions::ToggleBarycenterGizmoVisibilityEvent);
-            }
-            _ => {}
         }
     }
 }

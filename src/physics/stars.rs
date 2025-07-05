@@ -221,15 +221,15 @@ pub(crate) fn spawn_realistic_stellar_bodies(
     for _ in 0..**body_count {
         let body_distribution_sphere_radius =
             utils::math::min_sphere_radius_for_surface_distribution(**body_count, 1000.0, 0.001);
-        let position = utils::math::random_unit_vector(&mut *rng) * body_distribution_sphere_radius;
+        let position = utils::math::random_unit_vector(&mut rng) * body_distribution_sphere_radius;
         let transform = Transform::from_translation(position.as_vec3());
 
-        let mass_solar = sample_stellar_mass_kroupa(&mut *rng);
+        let mass_solar = sample_stellar_mass_kroupa(&mut rng);
 
         let age_gyr = rng.random_range(0.1..stellar_population_max_age_gyr);
 
         let (radius_solar, luminosity_solar, temperature, is_evolved) =
-            apply_stellar_evolution(mass_solar, age_gyr, &mut *rng);
+            apply_stellar_evolution(mass_solar, age_gyr, &mut rng);
 
         let radius_sim = radius_solar * stellar_params.solar_radius;
         let mass_sim = mass_solar * stellar_params.solar_mass;
@@ -254,7 +254,7 @@ pub(crate) fn spawn_realistic_stellar_bodies(
         );
 
         commands.spawn((
-            Name::new(format!("Star-{:.2}M☉-{:.0}K", mass_solar, temperature)),
+            Name::new(format!("Star-{mass_solar:.2}M☉-{temperature:.0}K")),
             transform,
             Collider::sphere(radius_sim),
             GravityScale(0.0),
