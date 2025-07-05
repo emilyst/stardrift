@@ -43,7 +43,6 @@
 //! });
 //! ```
 
-use crate::plugins::simulation_diagnostics::SimulationDiagnosticsPlugin;
 use crate::resources::BodyCount;
 use bevy::asset::AssetPath;
 use bevy::asset::io::AssetSourceId;
@@ -57,9 +56,6 @@ struct FrameCountTextNode;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
 struct FpsTextNode;
-
-#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
-struct BarycenterTextNode;
 
 // TODO: change detection
 #[derive(Resource, Reflect, Debug)]
@@ -164,17 +160,6 @@ impl DiagnosticsHudPlugin {
                 (
                     hud_row_node.clone(),
                     children![
-                        (Text::new("Barycenter"), bold_text_font.clone()),
-                        (
-                            BarycenterTextNode,
-                            Text::new("-"),
-                            regular_text_font.clone()
-                        ),
-                    ],
-                ),
-                (
-                    hud_row_node.clone(),
-                    children![
                         (Text::new("Body count"), bold_text_font.clone()),
                         (
                             Text::new(format!("{}", **body_count)),
@@ -217,31 +202,6 @@ impl DiagnosticsHudPlugin {
             }
         }
     }
-
-    fn update_barycenter_text(
-        diagnostics: Res<DiagnosticsStore>,
-        mut barycenter_text: Single<&mut Text, With<BarycenterTextNode>>,
-        state: Res<DiagnosticsHudState>,
-    ) {
-        if state.refresh_timer.finished() {
-            if let (Some(barycenter_x), Some(barycenter_y), Some(barycenter_z)) = (
-                diagnostics.get(&SimulationDiagnosticsPlugin::BARYCENTER_X_PATH),
-                diagnostics.get(&SimulationDiagnosticsPlugin::BARYCENTER_Y_PATH),
-                diagnostics.get(&SimulationDiagnosticsPlugin::BARYCENTER_Z_PATH),
-            ) {
-                if let (Some(barycenter_x), Some(barycenter_y), Some(barycenter_z)) = (
-                    barycenter_x.smoothed(),
-                    barycenter_y.smoothed(),
-                    barycenter_z.smoothed(),
-                ) {
-                    ***barycenter_text = format!(
-                        "({:.2}, {:.2}, {:.2})",
-                        barycenter_x, barycenter_y, barycenter_z,
-                    );
-                }
-            }
-        }
-    }
 }
 
 impl Plugin for DiagnosticsHudPlugin {
@@ -255,7 +215,6 @@ impl Plugin for DiagnosticsHudPlugin {
                 Self::advance_refresh_timer,
                 Self::update_frame_count_text,
                 Self::update_fps_text,
-                Self::update_barycenter_text,
             ),
         );
     }

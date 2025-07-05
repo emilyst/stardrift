@@ -23,12 +23,10 @@
 //! app.add_plugins(SimulationDiagnosticsPlugin::default());
 //! ```
 
-use crate::resources::CurrentBarycenter;
 use crate::states::AppState;
 use bevy::diagnostic::DEFAULT_MAX_HISTORY_LENGTH;
 use bevy::diagnostic::Diagnostic;
 use bevy::diagnostic::DiagnosticPath;
-use bevy::diagnostic::Diagnostics;
 use bevy::diagnostic::RegisterDiagnostic;
 use bevy::prelude::*;
 use core::time::Duration;
@@ -55,15 +53,7 @@ impl Default for SimulationDiagnosticsPlugin {
 }
 
 impl SimulationDiagnosticsPlugin {
-    pub const BARYCENTER_X_PATH: DiagnosticPath = DiagnosticPath::const_new("barycenter/x");
-    pub const BARYCENTER_Y_PATH: DiagnosticPath = DiagnosticPath::const_new("barycenter/y");
-    pub const BARYCENTER_Z_PATH: DiagnosticPath = DiagnosticPath::const_new("barycenter/z");
-
-    const DIAGNOSTIC_PATHS: &'static [DiagnosticPath] = &[
-        Self::BARYCENTER_X_PATH,
-        Self::BARYCENTER_Y_PATH,
-        Self::BARYCENTER_Z_PATH,
-    ];
+    const DIAGNOSTIC_PATHS: &'static [DiagnosticPath] = &[];
 
     fn register_diagnostics(&self, app: &mut App) {
         for path in Self::DIAGNOSTIC_PATHS {
@@ -78,18 +68,6 @@ impl SimulationDiagnosticsPlugin {
     fn update_timer_ticks(mut state: ResMut<SimulationDiagnosticsState>, time: Res<Time>) {
         state.update_timer.tick(time.delta());
     }
-
-    fn update_barycenter_diagnostics(
-        barycenter: Res<CurrentBarycenter>,
-        mut diagnostics: Diagnostics,
-        state: ResMut<SimulationDiagnosticsState>,
-    ) {
-        if state.update_timer.finished() {
-            diagnostics.add_measurement(&Self::BARYCENTER_X_PATH, || barycenter.x);
-            diagnostics.add_measurement(&Self::BARYCENTER_Y_PATH, || barycenter.y);
-            diagnostics.add_measurement(&Self::BARYCENTER_Z_PATH, || barycenter.z);
-        }
-    }
 }
 
 impl Plugin for SimulationDiagnosticsPlugin {
@@ -102,12 +80,7 @@ impl Plugin for SimulationDiagnosticsPlugin {
 
         app.add_systems(
             FixedPostUpdate,
-            (
-                Self::update_timer_ticks,
-                Self::update_barycenter_diagnostics,
-            )
-                .chain()
-                .run_if(in_state(AppState::Running)),
+            Self::update_timer_ticks.run_if(in_state(AppState::Running)),
         );
     }
 }

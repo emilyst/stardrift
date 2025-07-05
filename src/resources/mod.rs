@@ -49,10 +49,7 @@ impl Default for BodyCount {
 }
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
-pub struct CurrentBarycenter(pub Vector);
-
-#[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
-pub struct InitialBarycenter(pub Option<Vector>);
+pub struct Barycenter(pub Option<Vector>);
 
 #[derive(Resource, Deref, DerefMut, Debug)]
 pub struct GravitationalOctree(pub Octree);
@@ -79,14 +76,6 @@ impl Default for BarycenterGizmoVisibility {
         Self { enabled: false }
     }
 }
-
-#[derive(Event)]
-pub struct BarycenterInitialized {
-    pub initial_position: Vector,
-}
-
-#[derive(Resource)]
-pub struct BarycenterShiftingEnabled;
 
 #[derive(Resource, Default)]
 pub struct LoadingProgress {

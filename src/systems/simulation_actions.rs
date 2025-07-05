@@ -2,7 +2,6 @@ use crate::config::SimulationConfig;
 use crate::resources::*;
 use crate::states::AppState;
 use crate::systems::physics::spawn_simulation_bodies;
-use avian3d::math::Vector;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCamera;
@@ -14,21 +13,16 @@ pub fn restart_simulation(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     rng: &mut ResMut<SharedRng>,
     body_count: &Res<BodyCount>,
-    current_barycenter: &mut ResMut<CurrentBarycenter>,
-    initial_barycenter: &mut ResMut<InitialBarycenter>,
+    barycenter: &mut ResMut<Barycenter>,
     octree: &mut ResMut<GravitationalOctree>,
     pan_orbit_camera: &mut Single<&mut PanOrbitCamera>,
     config: &Res<SimulationConfig>,
 ) {
-    for entity in simulation_bodies {
+    simulation_bodies.iter().for_each(|entity| {
         commands.entity(entity).despawn();
-    }
+    });
 
-    ***current_barycenter = Vector::ZERO;
-
-    // Reset barycenter initialization state
-    ***initial_barycenter = None;
-    commands.remove_resource::<BarycenterShiftingEnabled>();
+    ***barycenter = None;
 
     octree.build(vec![]);
 

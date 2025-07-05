@@ -34,9 +34,7 @@ impl Plugin for SimulationPlugin {
         app.insert_resource(SharedRng::from_optional_seed(config.physics.initial_seed));
         app.insert_resource(GravitationalConstant(config.physics.gravitational_constant));
         app.insert_resource(BodyCount(config.physics.body_count));
-        app.init_resource::<CurrentBarycenter>();
-        app.init_resource::<InitialBarycenter>();
-        app.add_event::<BarycenterInitialized>();
+        app.init_resource::<Barycenter>();
         app.insert_resource(GravitationalOctree::new(Octree::new(
             config.physics.octree_theta,
             config.physics.force_calculation_min_distance,
@@ -58,12 +56,7 @@ impl Plugin for SimulationPlugin {
 
         app.configure_sets(
             FixedUpdate,
-            (
-                PhysicsSet::BuildOctree,
-                PhysicsSet::ApplyForces,
-                PhysicsSet::UpdateBarycenter,
-            )
-                .chain(),
+            (PhysicsSet::BuildOctree, PhysicsSet::ApplyForces).chain(),
         );
 
         app.configure_sets(
@@ -97,16 +90,8 @@ impl Plugin for SimulationPlugin {
                 physics::apply_gravitation_octree
                     .in_set(PhysicsSet::ApplyForces)
                     .run_if(in_state(AppState::Running)),
-                physics::update_barycenter
-                    .in_set(PhysicsSet::UpdateBarycenter)
+                physics::counteract_barycentric_drift
                     .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
-                physics::enable_barycenter_shifting
-                    .after(PhysicsSet::UpdateBarycenter)
-                    .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
-                camera::shift_bodies_to_initial_barycenter
-                    .after(physics::enable_barycenter_shifting)
-                    .run_if(in_state(AppState::Running).or(in_state(AppState::Paused)))
-                    .run_if(resource_exists::<BarycenterShiftingEnabled>),
             ),
         );
         app.add_systems(
@@ -123,11 +108,7 @@ impl Plugin for SimulationPlugin {
         );
         app.add_systems(
             Update,
-            (
-                camera::draw_barycenter_gizmo,
-                camera::update_camera_focus_to_initial_barycenter,
-            )
-                .chain()
+            camera::draw_barycenter_gizmo
                 .in_set(SimulationSet::Camera)
                 .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
         );

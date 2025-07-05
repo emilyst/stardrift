@@ -13,7 +13,6 @@ use rand::Rng;
 pub enum PhysicsSet {
     BuildOctree,
     ApplyForces,
-    UpdateBarycenter,
 }
 
 pub fn spawn_simulation_bodies(
@@ -110,46 +109,39 @@ pub fn apply_gravitation_octree(
         });
 }
 
-pub fn update_barycenter(
-    bodies: Query<(&Transform, &ComputedMass), With<RigidBody>>,
-    mut current_barycenter: ResMut<CurrentBarycenter>,
-    mut initial_barycenter: ResMut<InitialBarycenter>,
-    mut barycenter_events: EventWriter<BarycenterInitialized>,
+pub fn counteract_barycentric_drift(
+    mut bodies: Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
+    mut barycenter: ResMut<Barycenter>,
 ) {
-    if bodies.is_empty() {
+    let (weighted_positions, total_mass): (Vector, Scalar) = bodies
+        .iter()
+        .map(|(transform, mass)| (Vector::from(transform.translation), mass.value()))
+        .fold((Vector::ZERO, 0.0), |(pos_acc, mass_acc), (pos, mass)| {
+            (pos_acc + pos * mass, mass_acc + mass)
+        });
+
+    let updated_barycenter = weighted_positions / total_mass;
+
+    if total_mass <= f64::EPSILON {
         return;
     }
 
-    let (weighted_positions, total_mass): (Vector, Scalar) = bodies
-        .iter()
-        .map(|(transform, mass)| {
-            let mass = mass.value();
-            (Vector::from(transform.translation) * mass, mass)
-        })
-        .fold((Vector::ZERO, 0.0), |(pos_acc, mass_acc), (pos, mass)| {
-            (pos_acc + pos, mass_acc + mass)
-        });
-
-    if total_mass > 0.0 {
-        **current_barycenter = weighted_positions / total_mass;
-
-        // Set initial barycenter if this is the first calculation
-        if initial_barycenter.is_none() {
-            **initial_barycenter = Some(**current_barycenter);
-
-            barycenter_events.write(BarycenterInitialized {
-                initial_position: **current_barycenter,
-            });
-        }
+    if !updated_barycenter.is_finite() {
+        return;
     }
-}
 
-pub fn enable_barycenter_shifting(
-    mut events: EventReader<BarycenterInitialized>,
-    mut commands: Commands,
-) {
-    for event in events.read() {
-        info!("Barycenter initialized at: {:?}", event.initial_position);
-        commands.insert_resource(BarycenterShiftingEnabled);
+    let Some(barycenter) = **barycenter else {
+        **barycenter = Some(updated_barycenter);
+        return;
+    };
+
+    let barycentric_drift = updated_barycenter - barycenter;
+
+    if barycentric_drift.length_squared() <= f64::EPSILON {
+        return;
     }
+
+    bodies.iter_mut().for_each(|(mut transform, _)| {
+        transform.translation += -barycentric_drift.as_vec3();
+    });
 }
