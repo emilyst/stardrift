@@ -98,7 +98,8 @@ impl Plugin for SimulationPlugin {
                     .run_if(in_state(AppState::Running)),
                 physics::counteract_barycentric_drift
                     .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
-            ),
+            )
+                .chain(),
         );
         app.add_systems(
             Update,
