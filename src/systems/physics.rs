@@ -72,7 +72,6 @@ pub fn rebuild_octree(
     bodies: Query<(Entity, &Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
     mut octree: ResMut<GravitationalOctree>,
 ) {
-    // Only recalculate if any body has moved
     if bodies.is_empty() {
         return;
     }
@@ -138,7 +137,6 @@ pub fn update_barycenter(
         if initial_barycenter.is_none() {
             **initial_barycenter = Some(**current_barycenter);
 
-            // Send event instead of setting flag
             barycenter_events.write(BarycenterInitialized {
                 initial_position: **current_barycenter,
             });
