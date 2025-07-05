@@ -1,4 +1,4 @@
-use crate::physics::octree::Octree;
+use crate::physics;
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use bevy::prelude::*;
@@ -49,10 +49,10 @@ impl Default for BodyCount {
 pub struct Barycenter(pub Option<Vector>);
 
 #[derive(Resource, Deref, DerefMut, Debug)]
-pub struct GravitationalOctree(pub Octree);
+pub struct GravitationalOctree(pub physics::octree::Octree);
 
 impl GravitationalOctree {
-    pub fn new(octree: Octree) -> Self {
+    pub fn new(octree: physics::octree::Octree) -> Self {
         Self(octree)
     }
 }

@@ -8,14 +8,6 @@ pub mod states;
 pub mod systems;
 pub mod utils;
 
-#[cfg(feature = "diagnostics")]
-use crate::plugins::diagnostics_hud::DiagnosticsHudPlugin;
-use crate::plugins::embedded_assets::EmbeddedAssetsPlugin;
-use crate::plugins::simulation::SimulationPlugin;
-#[cfg(feature = "diagnostics")]
-use crate::plugins::simulation_diagnostics::SimulationDiagnosticsPlugin;
-use crate::states::AppState;
-use crate::states::LoadingState;
 use avian3d::prelude::*;
 use bevy::app::TaskPoolThreadAssignmentPolicy;
 #[cfg(feature = "diagnostics")]
@@ -58,9 +50,9 @@ fn main() {
                     ..default()
                 },
             }),
-        EmbeddedAssetsPlugin,
+        plugins::embedded_assets::EmbeddedAssetsPlugin,
         #[cfg(feature = "diagnostics")]
-        DiagnosticsHudPlugin,
+        plugins::diagnostics_hud::DiagnosticsHudPlugin,
         #[cfg(feature = "diagnostics")]
         EntityCountDiagnosticsPlugin,
         #[cfg(feature = "diagnostics")]
@@ -68,15 +60,15 @@ fn main() {
         PanOrbitCameraPlugin,
         PhysicsPlugins::default(),
         #[cfg(feature = "diagnostics")]
-        SimulationDiagnosticsPlugin::default(),
+        plugins::simulation_diagnostics::SimulationDiagnosticsPlugin::default(),
         #[cfg(feature = "diagnostics")]
         SystemInformationDiagnosticsPlugin,
-        SimulationPlugin,
+        plugins::simulation::SimulationPlugin,
     ));
 
     // Initialize app states after DefaultPlugins (which includes StatesPlugin)
-    app.init_state::<AppState>();
-    app.add_sub_state::<LoadingState>();
+    app.init_state::<states::AppState>();
+    app.add_sub_state::<states::LoadingState>();
 
     app.run();
 }

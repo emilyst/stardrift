@@ -1,7 +1,7 @@
-use crate::config::SimulationConfig;
-use crate::resources::*;
-use crate::states::AppState;
-use crate::systems::physics::spawn_simulation_bodies;
+use crate::config;
+use crate::resources;
+use crate::states;
+use crate::systems;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCamera;
@@ -24,12 +24,12 @@ pub fn handle_restart_simulation_event(
     simulation_bodies: Query<Entity, With<RigidBody>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<SharedRng>,
-    body_count: Res<BodyCount>,
-    mut barycenter: ResMut<Barycenter>,
-    mut octree: ResMut<GravitationalOctree>,
+    mut rng: ResMut<resources::SharedRng>,
+    body_count: Res<resources::BodyCount>,
+    mut barycenter: ResMut<resources::Barycenter>,
+    mut octree: ResMut<resources::GravitationalOctree>,
     mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
-    config: Res<SimulationConfig>,
+    config: Res<config::SimulationConfig>,
 ) {
     restart_events.read().for_each(|_| {
         simulation_bodies.iter().for_each(|entity| {
@@ -43,9 +43,9 @@ pub fn handle_restart_simulation_event(
         pan_orbit_camera.target_focus = Vec3::ZERO;
         pan_orbit_camera.force_update = true;
 
-        *rng = SharedRng::default();
+        *rng = resources::SharedRng::default();
 
-        spawn_simulation_bodies(
+        systems::physics::spawn_simulation_bodies(
             &mut commands,
             &mut meshes,
             &mut materials,
@@ -58,7 +58,7 @@ pub fn handle_restart_simulation_event(
 
 pub fn handle_toggle_octree_visualization_event(
     mut octree_events: EventReader<ToggleOctreeVisualizationEvent>,
-    mut settings: ResMut<OctreeVisualizationSettings>,
+    mut settings: ResMut<resources::OctreeVisualizationSettings>,
 ) {
     octree_events.read().for_each(|_| {
         settings.enabled = !settings.enabled;
@@ -67,7 +67,7 @@ pub fn handle_toggle_octree_visualization_event(
 
 pub fn handle_toggle_barycenter_gizmo_visibility_event(
     mut barycenter_events: EventReader<ToggleBarycenterGizmoVisibilityEvent>,
-    mut settings: ResMut<BarycenterGizmoVisibility>,
+    mut settings: ResMut<resources::BarycenterGizmoVisibility>,
 ) {
     barycenter_events.read().for_each(|_| {
         settings.enabled = !settings.enabled;
@@ -76,18 +76,18 @@ pub fn handle_toggle_barycenter_gizmo_visibility_event(
 
 pub fn handle_toggle_pause_simulation_event(
     mut pause_events: EventReader<TogglePauseSimulationEvent>,
-    current_state: Res<State<AppState>>,
-    mut next_state: ResMut<NextState<AppState>>,
+    current_state: Res<State<states::AppState>>,
+    mut next_state: ResMut<NextState<states::AppState>>,
     mut time: ResMut<Time<Physics>>,
 ) {
     pause_events.read().for_each(|_| {
         match current_state.get() {
-            AppState::Running => {
-                next_state.set(AppState::Paused);
+            states::AppState::Running => {
+                next_state.set(states::AppState::Paused);
                 time.pause();
             }
-            AppState::Paused => {
-                next_state.set(AppState::Running);
+            states::AppState::Paused => {
+                next_state.set(states::AppState::Running);
                 time.unpause();
             }
             _ => {} // ignore Loading state

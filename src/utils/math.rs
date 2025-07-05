@@ -1,4 +1,4 @@
-use crate::resources::SharedRng;
+use crate::resources;
 use avian3d::math;
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
@@ -53,7 +53,7 @@ pub(crate) fn min_sphere_radius_for_surface_distribution(
     corrected_minimum_radius
 }
 
-pub(crate) fn random_unit_vector(rng: &mut SharedRng) -> Vector {
+pub(crate) fn random_unit_vector(rng: &mut resources::SharedRng) -> Vector {
     let theta = rng.random_range(0.0..=2.0 * math::PI);
     let phi = libm::acos(rng.random_range(-1.0..=1.0));
     let r = 1.0;
@@ -73,7 +73,7 @@ mod math_tests {
     #[test]
     fn test_random_unit_vector_coordinate_moments_uniformity() {
         let count_of_samples = 100_000;
-        let mut rng = SharedRng::default();
+        let mut rng = resources::SharedRng::default();
 
         let mut sum_x = 0.0;
         let mut sum_y = 0.0;
@@ -160,7 +160,7 @@ mod math_tests {
     #[test]
     fn test_random_unit_vector_properties() {
         for _ in 0..100_000 {
-            let v = random_unit_vector(&mut SharedRng::default());
+            let v = random_unit_vector(&mut resources::SharedRng::default());
             let length = libm::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 
             assert!(

@@ -1,6 +1,8 @@
 use avian3d::math::Scalar;
 use bevy::prelude::*;
-use config::{Config, ConfigError, File};
+use config::Config;
+use config::ConfigError;
+use config::File;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

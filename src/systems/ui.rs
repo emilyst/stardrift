@@ -1,9 +1,6 @@
-use crate::resources::*;
-use crate::states::AppState;
-use crate::systems::simulation_actions::{
-    RestartSimulationEvent, ToggleBarycenterGizmoVisibilityEvent, ToggleOctreeVisualizationEvent,
-    TogglePauseSimulationEvent,
-};
+use crate::resources;
+use crate::states;
+use crate::systems;
 use bevy::asset::AssetPath;
 use bevy::asset::io::AssetSourceId;
 use bevy::prelude::*;
@@ -166,14 +163,14 @@ pub fn handle_octree_button(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<OctreeToggleButton>),
     >,
-    mut octree_events: EventWriter<ToggleOctreeVisualizationEvent>,
+    mut octree_events: EventWriter<systems::simulation_actions::ToggleOctreeVisualizationEvent>,
 ) {
     interaction_query
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                octree_events.write(ToggleOctreeVisualizationEvent);
+                octree_events.write(systems::simulation_actions::ToggleOctreeVisualizationEvent);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);
@@ -189,14 +186,17 @@ pub fn handle_barycenter_gizmo_button(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<BarycenterGizmoToggleButton>),
     >,
-    mut barycenter_events: EventWriter<ToggleBarycenterGizmoVisibilityEvent>,
+    mut barycenter_events: EventWriter<
+        systems::simulation_actions::ToggleBarycenterGizmoVisibilityEvent,
+    >,
 ) {
     interaction_query
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                barycenter_events.write(ToggleBarycenterGizmoVisibilityEvent);
+                barycenter_events
+                    .write(systems::simulation_actions::ToggleBarycenterGizmoVisibilityEvent);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);
@@ -212,14 +212,14 @@ pub fn handle_restart_button(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<RestartSimulationButton>),
     >,
-    mut restart_events: EventWriter<RestartSimulationEvent>,
+    mut restart_events: EventWriter<systems::simulation_actions::RestartSimulationEvent>,
 ) {
     interaction_query
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                restart_events.write(RestartSimulationEvent);
+                restart_events.write(systems::simulation_actions::RestartSimulationEvent);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);
@@ -235,14 +235,14 @@ pub fn handle_pause_button(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<PauseButton>),
     >,
-    mut pause_events: EventWriter<TogglePauseSimulationEvent>,
+    mut pause_events: EventWriter<systems::simulation_actions::TogglePauseSimulationEvent>,
 ) {
     interaction_query
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                pause_events.write(TogglePauseSimulationEvent);
+                pause_events.write(systems::simulation_actions::TogglePauseSimulationEvent);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);
@@ -257,7 +257,7 @@ pub fn update_octree_button_text(
     button_query: Query<Entity, With<OctreeToggleButton>>,
     children_query: Query<&Children>,
     mut text_query: Query<&mut Text>,
-    settings: Res<OctreeVisualizationSettings>,
+    settings: Res<resources::OctreeVisualizationSettings>,
 ) {
     if !settings.is_changed() {
         return;
@@ -282,7 +282,7 @@ pub fn update_barycenter_gizmo_button_text(
     button_query: Query<Entity, With<BarycenterGizmoToggleButton>>,
     children_query: Query<&Children>,
     mut text_query: Query<&mut Text>,
-    settings: Res<BarycenterGizmoVisibility>,
+    settings: Res<resources::BarycenterGizmoVisibility>,
 ) {
     if !settings.is_changed() {
         return;
@@ -307,15 +307,15 @@ pub fn update_pause_button_text(
     button_query: Query<Entity, With<PauseButton>>,
     children_query: Query<&Children>,
     mut text_query: Query<&mut Text>,
-    current_state: Res<State<AppState>>,
+    current_state: Res<State<states::AppState>>,
 ) {
     for button_entity in &button_query {
         if let Ok(children) = children_query.get(button_entity) {
             for child in children {
                 if let Ok(mut text) = text_query.get_mut(*child) {
                     let new_text = match current_state.get() {
-                        AppState::Running => "Pause (Space)".to_string(),
-                        AppState::Paused => "Resume (Space)".to_string(),
+                        states::AppState::Running => "Pause (Space)".to_string(),
+                        states::AppState::Paused => "Resume (Space)".to_string(),
                         _ => String::new(), // ignore Loading state
                     };
 
@@ -334,11 +334,11 @@ mod ui_tests {
 
     #[test]
     fn test_octree_button_text_logic() {
-        let enabled_settings = OctreeVisualizationSettings {
+        let enabled_settings = resources::OctreeVisualizationSettings {
             enabled: true,
             max_depth: None,
         };
-        let disabled_settings = OctreeVisualizationSettings {
+        let disabled_settings = resources::OctreeVisualizationSettings {
             enabled: false,
             max_depth: None,
         };

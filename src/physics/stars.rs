@@ -1,7 +1,5 @@
-use crate::resources::{BodyCount, SharedRng};
-use crate::utils::color;
-use crate::utils::math;
-use crate::*;
+use crate::resources;
+use crate::utils;
 use avian3d::math::Scalar;
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -214,16 +212,16 @@ pub(crate) fn spawn_realistic_stellar_bodies(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<SharedRng>,
-    body_count: Res<BodyCount>,
+    mut rng: ResMut<resources::SharedRng>,
+    body_count: Res<resources::BodyCount>,
 ) {
     let stellar_params = StellarParameters::new();
     let stellar_population_max_age_gyr = 10.0; // Assume 10 billion year old stellar population
 
     for _ in 0..**body_count {
         let body_distribution_sphere_radius =
-            math::min_sphere_radius_for_surface_distribution(**body_count, 1000.0, 0.001);
-        let position = math::random_unit_vector(&mut *rng) * body_distribution_sphere_radius;
+            utils::math::min_sphere_radius_for_surface_distribution(**body_count, 1000.0, 0.001);
+        let position = utils::math::random_unit_vector(&mut *rng) * body_distribution_sphere_radius;
         let transform = Transform::from_translation(position.as_vec3());
 
         let mass_solar = sample_stellar_mass_kroupa(&mut *rng);
@@ -248,7 +246,7 @@ pub(crate) fn spawn_realistic_stellar_bodies(
 
         let bloom_intensity = (luminosity_solar * 100.0).clamp(100.0, 10000.0);
         let saturation_intensity = if is_evolved { 1.0 } else { 2.0 };
-        let material = color::emissive_material_for_temp(
+        let material = utils::color::emissive_material_for_temp(
             &mut materials,
             temperature,
             bloom_intensity,
