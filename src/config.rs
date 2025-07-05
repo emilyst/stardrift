@@ -4,8 +4,10 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::io;
 use std::path::PathBuf;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), not(target_family = "windows"), feature = "xdg_support"))]
 use xdg::BaseDirectories;
+#[cfg(all(not(target_arch = "wasm32"), target_family = "windows"))]
+use std::env;
 
 #[derive(Resource, Serialize, Deserialize, Clone, Debug)]
 pub struct SimulationConfig {
@@ -79,9 +81,34 @@ impl Default for RenderingConfig {
 }
 
 impl SimulationConfig {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), not(target_family = "windows"), feature = "xdg_support"))]
     fn get_xdg_config_path() -> io::Result<PathBuf> {
         BaseDirectories::with_prefix("stardrift").place_config_file("config.toml")
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), not(target_family = "windows"), not(feature = "xdg_support")))]
+    fn get_xdg_config_path() -> io::Result<PathBuf> {
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "XDG support is not enabled. Enable the 'xdg_support' feature to use XDG paths."
+        ))
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), target_family = "windows"))]
+    fn get_xdg_config_path() -> io::Result<PathBuf> {
+        match env::var("APPDATA") {
+            Ok(app_data) => {
+                let mut path = PathBuf::from(app_data);
+                path.push("stardrift");
+                std::fs::create_dir_all(&path)?;
+                path.push("config.toml");
+                Ok(path)
+            }
+            Err(_) => Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "APPDATA environment variable not found",
+            )),
+        }
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -153,6 +180,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(all(not(target_arch = "wasm32"), not(target_family = "windows"), feature = "xdg_support"))]
     fn test_xdg_config_path_structure() {
         let path = SimulationConfig::get_xdg_config_path();
         let binding = path.unwrap();
@@ -160,6 +188,17 @@ mod tests {
 
         assert!(path_str.ends_with("stardrift/config.toml"));
         assert!(path_str.contains(".config") || path_str.starts_with("/"));
+    }
+
+    #[test]
+    #[cfg(all(not(target_arch = "wasm32"), target_family = "windows"))]
+    fn test_windows_config_path_structure() {
+        let path = SimulationConfig::get_xdg_config_path();
+        let binding = path.unwrap();
+        let path_str = binding.to_string_lossy();
+
+        assert!(path_str.ends_with("stardrift\\config.toml"));
+        assert!(path_str.contains("AppData"));
     }
 
     #[test]

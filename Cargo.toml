@@ -39,7 +39,7 @@ rand = "0.9"
 rand_chacha = "0.9"
 serde = { version = "1", features = ["derive"] }
 toml = "0.*"
-xdg = "3"
+xdg = { version = "3", optional = true }
 
 [dependencies.bevy]
 version = "0.16.*"
@@ -80,6 +80,7 @@ criterion = { version = "0.6", features = ["csv_output", "html_reports"] }
 
 [features]
 diagnostics = []
+xdg_support = ["xdg"]
 
 [target.wasm32-unknown-unknown.dependencies]
 wasm-bindgen = "0.*"
