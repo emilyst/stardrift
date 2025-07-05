@@ -2,6 +2,7 @@ use avian3d::math::Scalar;
 use bevy::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
+use std::io;
 use std::path::PathBuf;
 #[cfg(not(target_arch = "wasm32"))]
 use xdg::BaseDirectories;
@@ -79,20 +80,26 @@ impl Default for RenderingConfig {
 
 impl SimulationConfig {
     #[cfg(not(target_arch = "wasm32"))]
-    fn get_xdg_config_path() -> PathBuf {
-        BaseDirectories::with_prefix("stardrift")
-            .place_config_file("config.toml")
-            .unwrap_or_else(|_| PathBuf::from(".").join("stardrift.toml"))
+    fn get_xdg_config_path() -> io::Result<PathBuf> {
+        BaseDirectories::with_prefix("stardrift").place_config_file("config.toml")
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn get_xdg_config_path() -> PathBuf {
-        PathBuf::from(".").join("stardrift.toml")
+    fn get_xdg_config_path() -> io::Result<PathBuf> {
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "XDG config path not supported on WebAssembly",
+        ))
     }
 
     pub fn load_from_user_config() -> Self {
-        let config_path = Self::get_xdg_config_path();
-        Self::load_or_default(config_path.to_string_lossy().as_ref())
+        match Self::get_xdg_config_path() {
+            Ok(path) => Self::load_or_default(path.to_string_lossy().as_ref()),
+            Err(e) => {
+                warn!("Failed to get config path: {}. Using defaults.", e);
+                Self::default()
+            }
+        }
     }
 
     pub fn load_or_default(path: &str) -> Self {
@@ -100,7 +107,7 @@ impl SimulationConfig {
             Ok(content) => match toml::from_str::<Self>(&content) {
                 Ok(config) => {
                     if config.version < SimulationConfig::default().version {
-                        info!(
+                        warn!(
                             "Config file {} has version {} which is outdated. Ignoring and using defaults.",
                             path, config.version
                         );
@@ -110,23 +117,15 @@ impl SimulationConfig {
                     }
                 }
                 Err(e) => {
-                    // Check if the error is due to missing version field
-                    if e.to_string().contains("missing field `version`") {
-                        info!(
-                            "Config file {} missing version field. Ignoring and using defaults.",
-                            path
-                        );
-                    } else {
-                        warn!(
-                            "Failed to parse config file {}: {}. Using defaults.",
-                            path, e
-                        );
-                    }
+                    warn!(
+                        "Failed to load config file {}: {}. Using defaults.",
+                        path, e
+                    );
                     Self::default()
                 }
             },
             Err(_) => {
-                info!("Config file {} not found. Using defaults.", path);
+                warn!("Config file {} not found. Using defaults.", path);
                 Self::default()
             }
         }
@@ -139,7 +138,7 @@ impl SimulationConfig {
     }
 
     pub fn save_to_user_config(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let config_path = Self::get_xdg_config_path();
+        let config_path = Self::get_xdg_config_path()?;
 
         if let Some(parent) = config_path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -156,7 +155,8 @@ mod tests {
     #[test]
     fn test_xdg_config_path_structure() {
         let path = SimulationConfig::get_xdg_config_path();
-        let path_str = path.to_string_lossy();
+        let binding = path.unwrap();
+        let path_str = binding.to_string_lossy();
 
         assert!(path_str.ends_with("stardrift/config.toml"));
         assert!(path_str.contains(".config") || path_str.starts_with("/"));
@@ -166,8 +166,10 @@ mod tests {
     fn test_save_and_load_config() {
         use std::fs;
 
-        let mut config = SimulationConfig::default();
-        config.version = 2;
+        let mut config = SimulationConfig {
+            version: 2,
+            ..Default::default()
+        };
         config.physics.gravitational_constant = 42.0;
         config.physics.body_count = 123;
         config.rendering.bloom_intensity = 999.0;
