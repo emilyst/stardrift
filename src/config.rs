@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
 use std::path::PathBuf;
+#[cfg(not(target_arch = "wasm32"))]
 use xdg::BaseDirectories;
 
 #[derive(Resource, Serialize, Deserialize, Clone, Debug)]
@@ -77,10 +78,16 @@ impl Default for RenderingConfig {
 }
 
 impl SimulationConfig {
+    #[cfg(not(target_arch = "wasm32"))]
     fn get_xdg_config_path() -> PathBuf {
         BaseDirectories::with_prefix("stardrift")
             .place_config_file("config.toml")
             .unwrap_or_else(|_| PathBuf::from(".").join("stardrift.toml"))
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn get_xdg_config_path() -> PathBuf {
+        PathBuf::from(".").join("stardrift.toml")
     }
 
     pub fn load_from_user_config() -> Self {
