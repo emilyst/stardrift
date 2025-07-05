@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
 use std::path::PathBuf;
+use xdg::BaseDirectories;
 
 #[derive(Resource, Serialize, Deserialize, Clone, Debug)]
 pub struct SimulationConfig {
@@ -74,17 +75,10 @@ impl Default for RenderingConfig {
 }
 
 impl SimulationConfig {
-    /// Get the XDG config directory path for the application
     fn get_xdg_config_path() -> PathBuf {
-        let config_dir = if let Ok(xdg_config_home) = std::env::var("XDG_CONFIG_HOME") {
-            PathBuf::from(xdg_config_home)
-        } else if let Ok(home) = std::env::var("HOME") {
-            PathBuf::from(home).join(".config")
-        } else {
-            PathBuf::from(".")
-        };
-
-        config_dir.join("stardrift").join("config.toml")
+        BaseDirectories::with_prefix("stardrift")
+            .place_config_file("config.toml")
+            .unwrap_or_else(|_| PathBuf::from(".").join("stardrift.toml"))
     }
 
     pub fn load_from_user_config() -> Self {
