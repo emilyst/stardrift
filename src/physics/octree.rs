@@ -4,8 +4,19 @@ use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use bevy::prelude::*;
 use std::collections::VecDeque;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 
 // TODO: pool diagnostics?
+
+#[derive(Debug, Clone)]
+pub struct OctreeStats {
+    pub node_count: usize,
+    pub body_count: usize,
+    pub total_mass: Scalar,
+    pub center_of_mass: Vector,
+    pub force_calculation_count: u64,
+}
 
 #[derive(Debug)]
 pub struct OctreeNodePool {
@@ -143,12 +154,13 @@ impl Aabb3d {
 #[derive(Debug)]
 pub struct Octree {
     pub root: Option<OctreeNode>,
-    pub theta: Scalar,                // Barnes-Hut approximation parameter
-    pub min_distance: Scalar,         // Minimum distance for force calculation
-    pub max_force: Scalar,            // Maximum force magnitude
-    pub leaf_threshold: usize,        // Maximum bodies per leaf node
-    min_distance_squared: Scalar,     // Cached value to avoid repeated multiplication
-    octree_node_pool: OctreeNodePool, // Pool for reusing node allocations
+    pub theta: Scalar,                  // Barnes-Hut approximation parameter
+    pub min_distance: Scalar,           // Minimum distance for force calculation
+    pub max_force: Scalar,              // Maximum force magnitude
+    pub leaf_threshold: usize,          // Maximum bodies per leaf node
+    min_distance_squared: Scalar,       // Cached value to avoid repeated multiplication
+    octree_node_pool: OctreeNodePool,   // Pool for reusing node allocations
+    force_calculation_count: AtomicU64, // Counter for force calculations performed
 }
 
 impl Octree {
@@ -161,6 +173,7 @@ impl Octree {
             leaf_threshold: 4,
             min_distance_squared: min_distance * min_distance,
             octree_node_pool: OctreeNodePool::new(),
+            force_calculation_count: AtomicU64::new(0),
         }
     }
 
@@ -184,11 +197,31 @@ impl Octree {
             leaf_threshold: 4,
             min_distance_squared: min_distance * min_distance,
             octree_node_pool: OctreeNodePool::with_capacity(internal_capacity, external_capacity),
+            force_calculation_count: AtomicU64::new(0),
         }
     }
 
     pub fn pool_stats(&self) -> (usize, usize) {
         self.octree_node_pool.stats()
+    }
+
+    pub fn octree_stats(&self) -> OctreeStats {
+        match &self.root {
+            Some(root) => OctreeStats {
+                node_count: root.count_nodes(),
+                body_count: root.count_bodies(),
+                total_mass: root.total_mass(),
+                center_of_mass: root.center_of_mass(),
+                force_calculation_count: self.force_calculation_count.load(Ordering::Relaxed),
+            },
+            None => OctreeStats {
+                node_count: 0,
+                body_count: 0,
+                total_mass: 0.0,
+                center_of_mass: Vector::ZERO,
+                force_calculation_count: 0,
+            },
+        }
     }
 
     pub fn clear_pool(&mut self) {
@@ -398,6 +431,8 @@ impl Octree {
             return Vector::ZERO;
         }
 
+        self.force_calculation_count.fetch_add(1, Ordering::Relaxed);
+
         let distance = distance_squared.sqrt();
         let direction_normalized = direction / distance;
         let force_magnitude = g * body.mass * point_mass / distance_squared;
@@ -473,6 +508,19 @@ impl OctreeNode {
         }
     }
 
+    pub fn count_nodes(&self) -> usize {
+        match self {
+            OctreeNode::External { .. } => 1,
+            OctreeNode::Internal { children, .. } => {
+                1 + children
+                    .iter()
+                    .flatten()
+                    .map(|child| child.count_nodes())
+                    .sum::<usize>()
+            }
+        }
+    }
+
     pub fn is_leaf(&self) -> bool {
         matches!(self, OctreeNode::External { .. })
     }
@@ -491,7 +539,9 @@ impl OctreeNode {
                 if bodies.is_empty() {
                     return Vector::ZERO;
                 }
+
                 let total_mass: Scalar = bodies.iter().map(|b| b.mass).sum();
+
                 if total_mass > 0.0 {
                     bodies
                         .iter()
@@ -1132,6 +1182,113 @@ mod tests {
         assert!(
             empty_bounds.is_empty(),
             "Empty octree should return no bounds"
+        );
+    }
+
+    #[test]
+    fn test_octree_stats() {
+        let mut octree = Octree::new(0.5, 1.0, 1e4);
+
+        // Test empty octree stats
+        let empty_stats = octree.octree_stats();
+        assert_eq!(empty_stats.node_count, 0);
+        assert_eq!(empty_stats.body_count, 0);
+        assert_eq!(empty_stats.total_mass, 0.0);
+        assert_eq!(empty_stats.center_of_mass, Vector::ZERO);
+        assert_eq!(empty_stats.force_calculation_count, 0);
+
+        // Create test bodies
+        let bodies = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(0.0, 0.0, 0.0),
+                mass: 100.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(10.0, 0.0, 0.0),
+                mass: 200.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(2),
+                position: Vector::new(0.0, 10.0, 0.0),
+                mass: 300.0,
+            },
+        ];
+
+        octree.build(bodies.clone());
+
+        // Test populated octree stats
+        let stats = octree.octree_stats();
+        assert!(stats.node_count > 0, "Should have nodes");
+        assert_eq!(stats.body_count, 3, "Should count all bodies");
+        assert_eq!(stats.total_mass, 600.0, "Should sum all masses");
+
+        // Center of mass should be weighted average
+        let expected_com = (Vector::new(0.0, 0.0, 0.0) * 100.0
+            + Vector::new(10.0, 0.0, 0.0) * 200.0
+            + Vector::new(0.0, 10.0, 0.0) * 300.0)
+            / 600.0;
+        assert!(
+            (stats.center_of_mass - expected_com).length() < 1e-10,
+            "Center of mass should be correct"
+        );
+
+        // Test force calculation counter
+        let initial_count = stats.force_calculation_count;
+        let _force = octree.calculate_force(&bodies[0], octree.root.as_ref(), 1.0);
+        let updated_stats = octree.octree_stats();
+        assert!(
+            updated_stats.force_calculation_count > initial_count,
+            "Force calculation count should increase"
+        );
+    }
+
+    #[test]
+    fn test_count_nodes() {
+        let mut octree = Octree::new(0.5, 1.0, 1e4).with_leaf_threshold(1);
+
+        // Single body should create one external node
+        let single_body = vec![OctreeBody {
+            entity: Entity::from_raw(0),
+            position: Vector::new(0.0, 0.0, 0.0),
+            mass: 100.0,
+        }];
+        octree.build(single_body);
+        let stats = octree.octree_stats();
+        assert_eq!(stats.node_count, 1, "Single body should create one node");
+
+        octree = Octree::new(0.5, 1.0, 1e4).with_leaf_threshold(1);
+
+        // Multiple bodies spread out should create internal nodes (with leaf_threshold=1)
+        let multiple_bodies = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(-10.0, -10.0, -10.0),
+                mass: 100.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(10.0, 10.0, 10.0),
+                mass: 100.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(2),
+                position: Vector::new(-10.0, 10.0, -10.0),
+                mass: 100.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(3),
+                position: Vector::new(10.0, -10.0, 10.0),
+                mass: 100.0,
+            },
+        ];
+        octree.build(multiple_bodies);
+        let stats = octree.octree_stats();
+
+        assert_eq!(
+            stats.node_count, 5,
+            "Four bodies should create five nodes (including the root node)"
         );
     }
 }
