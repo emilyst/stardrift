@@ -4,11 +4,23 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::path::PathBuf;
 
-#[derive(Resource, Serialize, Deserialize, Clone, Debug, Default)]
+#[derive(Resource, Serialize, Deserialize, Clone, Debug)]
 pub struct SimulationConfig {
+    pub version: u32,
     pub physics: PhysicsConfig,
     pub rendering: RenderingConfig,
     pub ui: UiConfig,
+}
+
+impl Default for SimulationConfig {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            physics: PhysicsConfig::default(),
+            rendering: RenderingConfig::default(),
+            ui: UiConfig::default(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -109,13 +121,31 @@ impl SimulationConfig {
 
     pub fn load_or_default(path: &str) -> Self {
         match std::fs::read_to_string(path) {
-            Ok(content) => match toml::from_str(&content) {
-                Ok(config) => config,
+            Ok(content) => match toml::from_str::<Self>(&content) {
+                Ok(config) => {
+                    if config.version < SimulationConfig::default().version {
+                        info!(
+                            "Config file {} has version {} which is outdated. Ignoring and using defaults.",
+                            path, config.version
+                        );
+                        Self::default()
+                    } else {
+                        config
+                    }
+                }
                 Err(e) => {
-                    warn!(
-                        "Failed to parse config file {}: {}. Using defaults.",
-                        path, e
-                    );
+                    // Check if the error is due to missing version field
+                    if e.to_string().contains("missing field `version`") {
+                        info!(
+                            "Config file {} missing version field. Ignoring and using defaults.",
+                            path
+                        );
+                    } else {
+                        warn!(
+                            "Failed to parse config file {}: {}. Using defaults.",
+                            path, e
+                        );
+                    }
                     Self::default()
                 }
             },
@@ -161,6 +191,7 @@ mod tests {
         use std::fs;
 
         let mut config = SimulationConfig::default();
+        config.version = 2;
         config.physics.gravitational_constant = 42.0;
         config.physics.body_count = 123;
         config.rendering.bloom_intensity = 999.0;
@@ -170,9 +201,142 @@ mod tests {
 
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
+        assert_eq!(loaded_config.version, 2);
         assert_eq!(loaded_config.physics.gravitational_constant, 42.0);
         assert_eq!(loaded_config.physics.body_count, 123);
         assert_eq!(loaded_config.rendering.bloom_intensity, 999.0);
+
+        let _ = fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_config_without_version_ignored() {
+        use std::fs;
+
+        // Create a config file without version field
+        let config_content = r#"
+[physics]
+gravitational_constant = 99.0
+body_count = 999
+
+[rendering]
+bloom_intensity = 888.0
+
+[ui]
+font_size = 24.0
+"#;
+
+        let temp_path = "test_config_no_version.toml";
+        fs::write(temp_path, config_content).expect("Failed to write test config");
+
+        let loaded_config = SimulationConfig::load_or_default(temp_path);
+
+        // Should use defaults since version is missing
+        let default_config = SimulationConfig::default();
+        assert_eq!(loaded_config.version, default_config.version);
+        assert_eq!(
+            loaded_config.physics.gravitational_constant,
+            default_config.physics.gravitational_constant
+        );
+        assert_eq!(
+            loaded_config.physics.body_count,
+            default_config.physics.body_count
+        );
+        assert_eq!(
+            loaded_config.rendering.bloom_intensity,
+            default_config.rendering.bloom_intensity
+        );
+
+        let _ = fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_config_with_version_loaded() {
+        use std::fs;
+
+        // Create a complete config file with version field
+        let config_content = r#"version = 2
+
+[physics]
+gravitational_constant = 99.0
+body_count = 999
+octree_theta = 0.7
+body_distribution_sphere_radius_multiplier = 250.0
+body_distribution_min_distance = 0.002
+min_body_radius = 6.0
+max_body_radius = 12.0
+force_calculation_min_distance = 15.0
+force_calculation_max_force = 2000.0
+
+[rendering]
+min_temperature = 3000.0
+max_temperature = 12000.0
+bloom_intensity = 888.0
+saturation_intensity = 4.0
+camera_radius_multiplier = 3.0
+
+[ui]
+button_padding = 8.0
+button_gap = 15.0
+button_margin = 15.0
+button_border_radius = 8.0
+font_size = 24.0
+"#;
+
+        let temp_path = "test_config_with_version.toml";
+        fs::write(temp_path, config_content).expect("Failed to write test config");
+
+        let loaded_config = SimulationConfig::load_or_default(temp_path);
+
+        // Should load the actual values since version is present
+        assert_eq!(loaded_config.version, 2);
+        assert_eq!(loaded_config.physics.gravitational_constant, 99.0);
+        assert_eq!(loaded_config.physics.body_count, 999);
+        assert_eq!(loaded_config.physics.octree_theta, 0.7);
+        assert_eq!(loaded_config.rendering.bloom_intensity, 888.0);
+        assert_eq!(loaded_config.ui.font_size, 24.0);
+
+        let _ = fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_config_with_version_less_than_default_ignored() {
+        use std::fs;
+
+        // Create a config file with version 0 (less than default 1)
+        let config_content = r#"version = 0
+
+[physics]
+gravitational_constant = 99.0
+body_count = 999
+
+[rendering]
+bloom_intensity = 888.0
+
+[ui]
+font_size = 24.0
+"#;
+
+        let temp_path = "test_config_version_zero.toml";
+        fs::write(temp_path, config_content).expect("Failed to write test config");
+
+        let loaded_config = SimulationConfig::load_or_default(temp_path);
+
+        // Should use defaults since version is less than 1
+        let default_config = SimulationConfig::default();
+        assert_eq!(loaded_config.version, default_config.version);
+        assert_eq!(
+            loaded_config.physics.gravitational_constant,
+            default_config.physics.gravitational_constant
+        );
+        assert_eq!(
+            loaded_config.physics.body_count,
+            default_config.physics.body_count
+        );
+        assert_eq!(
+            loaded_config.rendering.bloom_intensity,
+            default_config.rendering.bloom_intensity
+        );
 
         let _ = fs::remove_file(temp_path);
     }
