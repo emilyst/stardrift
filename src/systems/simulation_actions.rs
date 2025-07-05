@@ -6,32 +6,45 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCamera;
 
-pub fn restart_simulation(
-    commands: &mut Commands,
-    simulation_bodies: &Query<Entity, With<RigidBody>>,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-    rng: &mut ResMut<SharedRng>,
-    body_count: &Res<BodyCount>,
-    barycenter: &mut ResMut<Barycenter>,
-    octree: &mut ResMut<GravitationalOctree>,
-    pan_orbit_camera: &mut Single<&mut PanOrbitCamera>,
-    config: &Res<SimulationConfig>,
+#[derive(Event)]
+pub struct RestartSimulationEvent;
+
+pub fn handle_restart_simulation_event(
+    mut restart_events: EventReader<RestartSimulationEvent>,
+    mut commands: Commands,
+    simulation_bodies: Query<Entity, With<RigidBody>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut rng: ResMut<SharedRng>,
+    body_count: Res<BodyCount>,
+    mut barycenter: ResMut<Barycenter>,
+    mut octree: ResMut<GravitationalOctree>,
+    mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
+    config: Res<SimulationConfig>,
 ) {
-    simulation_bodies.iter().for_each(|entity| {
-        commands.entity(entity).despawn();
+    restart_events.read().for_each(|_| {
+        simulation_bodies.iter().for_each(|entity| {
+            commands.entity(entity).despawn();
+        });
+
+        **barycenter = None;
+
+        octree.build(vec![]);
+
+        pan_orbit_camera.target_focus = Vec3::ZERO;
+        pan_orbit_camera.force_update = true;
+
+        *rng = SharedRng::default();
+
+        spawn_simulation_bodies(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            &mut rng,
+            **body_count,
+            &config,
+        );
     });
-
-    ***barycenter = None;
-
-    octree.build(vec![]);
-
-    pan_orbit_camera.target_focus = Vec3::ZERO;
-    pan_orbit_camera.force_update = true;
-
-    **rng = SharedRng::default();
-
-    spawn_simulation_bodies(commands, meshes, materials, rng, ***body_count, config);
 }
 
 pub fn toggle_octree_visualization(settings: &mut ResMut<OctreeVisualizationSettings>) {

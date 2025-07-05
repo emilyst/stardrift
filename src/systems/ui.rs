@@ -1,12 +1,10 @@
-use crate::config::SimulationConfig;
 use crate::resources::*;
 use crate::states::AppState;
-use crate::systems::simulation_actions;
+use crate::systems::simulation_actions::{self, RestartSimulationEvent};
 use avian3d::prelude::*;
 use bevy::asset::AssetPath;
 use bevy::asset::io::AssetSourceId;
 use bevy::prelude::*;
-use bevy_panorbit_camera::PanOrbitCamera;
 
 const BUTTON_BORDER_RADIUS_PX: f32 = 5.0;
 const BUTTON_FONT_SIZE_PX: f32 = 12.0;
@@ -212,35 +210,14 @@ pub fn handle_restart_button(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<RestartSimulationButton>),
     >,
-    mut commands: Commands,
-    simulation_bodies: Query<Entity, With<RigidBody>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<SharedRng>,
-    body_count: Res<BodyCount>,
-    mut barycenter: ResMut<Barycenter>,
-    mut octree: ResMut<GravitationalOctree>,
-    mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
-    config: Res<SimulationConfig>,
+    mut restart_events: EventWriter<RestartSimulationEvent>,
 ) {
     interaction_query
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-
-                simulation_actions::restart_simulation(
-                    &mut commands,
-                    &simulation_bodies,
-                    &mut meshes,
-                    &mut materials,
-                    &mut rng,
-                    &body_count,
-                    &mut barycenter,
-                    &mut octree,
-                    &mut pan_orbit_camera,
-                    &config,
-                );
+                restart_events.write(RestartSimulationEvent);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);

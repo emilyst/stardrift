@@ -1,10 +1,8 @@
-use crate::config::SimulationConfig;
 use crate::resources::*;
 use crate::states::AppState;
-use crate::systems::simulation_actions;
+use crate::systems::simulation_actions::{self, RestartSimulationEvent};
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use bevy_panorbit_camera::PanOrbitCamera;
 
 pub fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit>) {
     if keys.just_pressed(KeyCode::Escape) {
@@ -14,30 +12,10 @@ pub fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<App
 
 pub fn restart_simulation_on_n(
     keys: Res<ButtonInput<KeyCode>>,
-    mut commands: Commands,
-    simulation_bodies: Query<Entity, With<RigidBody>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<SharedRng>,
-    body_count: Res<BodyCount>,
-    mut barycenter: ResMut<Barycenter>,
-    mut octree: ResMut<GravitationalOctree>,
-    mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
-    config: Res<SimulationConfig>,
+    mut restart_events: EventWriter<RestartSimulationEvent>,
 ) {
     if keys.just_pressed(KeyCode::KeyN) {
-        simulation_actions::restart_simulation(
-            &mut commands,
-            &simulation_bodies,
-            &mut meshes,
-            &mut materials,
-            &mut rng,
-            &body_count,
-            &mut barycenter,
-            &mut octree,
-            &mut pan_orbit_camera,
-            &config,
-        );
+        restart_events.write(RestartSimulationEvent);
     }
 }
 
