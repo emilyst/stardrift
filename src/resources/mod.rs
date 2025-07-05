@@ -1,5 +1,6 @@
 use crate::physics::octree::Octree;
-use avian3d::math::{Scalar, Vector};
+use avian3d::math::Scalar;
+use avian3d::math::Vector;
 use bevy::prelude::*;
 use rand_chacha::ChaCha8Rng;
 use rand_chacha::rand_core::SeedableRng;
@@ -40,11 +41,7 @@ pub struct BodyCount(pub usize);
 
 impl Default for BodyCount {
     fn default() -> Self {
-        if cfg!(target_arch = "wasm32") {
-            Self(100)
-        } else {
-            Self(100)
-        }
+        Self(100)
     }
 }
 
@@ -66,15 +63,9 @@ pub struct OctreeVisualizationSettings {
     pub max_depth: Option<usize>, // None means show all levels
 }
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct BarycenterGizmoVisibility {
     pub enabled: bool,
-}
-
-impl Default for BarycenterGizmoVisibility {
-    fn default() -> Self {
-        Self { enabled: false }
-    }
 }
 
 #[derive(Resource, Default)]
