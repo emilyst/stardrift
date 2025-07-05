@@ -48,6 +48,8 @@ features = [
     "default_no_std",
     "libm",
     "zstd",
+    "reflect_functions",
+    "reflect_documentation",
     "bevy_ui",
     "bevy_asset",
     "bevy_color",
