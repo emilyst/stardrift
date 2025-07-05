@@ -14,6 +14,10 @@ const BUTTON_GAP_PX: f32 = 10.0;
 const BUTTON_MARGIN_PX: f32 = 10.0;
 const BUTTON_PADDING_PX: f32 = 5.0;
 
+const BUTTON_COLOR_NORMAL: Color = Color::srgba(0.1, 0.1, 0.1, 0.8);
+const BUTTON_COLOR_HOVERED: Color = Color::srgba(0.2, 0.2, 0.2, 0.8);
+const BUTTON_COLOR_PRESSED: Color = Color::srgba(0.3, 0.3, 0.3, 0.8);
+
 #[derive(Component)]
 pub struct OctreeToggleButton;
 
@@ -69,7 +73,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                 ..default()
                             },
                             BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
-                            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
+                            BackgroundColor(BUTTON_COLOR_NORMAL),
                             RestartSimulationButton,
                         ))
                         .with_children(|parent| {
@@ -94,7 +98,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                 ..default()
                             },
                             BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
-                            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
+                            BackgroundColor(BUTTON_COLOR_NORMAL),
                             OctreeToggleButton,
                         ))
                         .with_children(|parent| {
@@ -119,7 +123,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                 ..default()
                             },
                             BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
-                            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
+                            BackgroundColor(BUTTON_COLOR_NORMAL),
                             BarycenterGizmoToggleButton,
                         ))
                         .with_children(|parent| {
@@ -143,7 +147,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                 ..default()
                             },
                             BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
-                            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7)),
+                            BackgroundColor(BUTTON_COLOR_NORMAL),
                             PauseButton,
                         ))
                         .with_children(|parent| {
@@ -168,14 +172,14 @@ pub fn handle_octree_button(
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
-                *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_PRESSED);
                 simulation_actions::toggle_octree_visualization(&mut settings);
             }
             Interaction::Hovered => {
-                *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_HOVERED);
             }
             Interaction::None => {
-                *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_NORMAL);
             }
         });
 }
@@ -191,14 +195,14 @@ pub fn handle_barycenter_gizmo_button(
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
-                *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_PRESSED);
                 simulation_actions::toggle_barycenter_gizmo_visibility(&mut settings);
             }
             Interaction::Hovered => {
-                *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_HOVERED);
             }
             Interaction::None => {
-                *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_NORMAL);
             }
         });
 }
@@ -223,7 +227,7 @@ pub fn handle_restart_button(
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
-                *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_PRESSED);
 
                 simulation_actions::restart_simulation(
                     &mut commands,
@@ -239,10 +243,10 @@ pub fn handle_restart_button(
                 );
             }
             Interaction::Hovered => {
-                *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_HOVERED);
             }
             Interaction::None => {
-                *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_NORMAL);
             }
         });
 }
@@ -260,7 +264,7 @@ pub fn handle_pause_button(
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
-                *color = BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_PRESSED);
                 simulation_actions::toggle_pause_simulation(
                     &mut current_state,
                     &mut next_state,
@@ -268,10 +272,10 @@ pub fn handle_pause_button(
                 );
             }
             Interaction::Hovered => {
-                *color = BackgroundColor(Color::srgba(0.3, 0.3, 0.3, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_HOVERED);
             }
             Interaction::None => {
-                *color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.8));
+                *color = BackgroundColor(BUTTON_COLOR_NORMAL);
             }
         });
 }
