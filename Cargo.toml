@@ -34,12 +34,13 @@ opt-level = "z"
 
 [dependencies]
 bevy_panorbit_camera = "*"
+config = "0.15"
+directories = "6"
 libm = "0.2"
 rand = "0.9"
 rand_chacha = "0.9"
 serde = { version = "1", features = ["derive"] }
 toml = "0.*"
-xdg = { version = "3", optional = true }
 
 [dependencies.bevy]
 version = "0.16.*"
@@ -79,8 +80,8 @@ features = ["3d", "enhanced-determinism", "f64", "parallel", "parry-f64"]
 criterion = { version = "0.6", features = ["csv_output", "html_reports"] }
 
 [features]
+default = []
 diagnostics = []
-xdg_support = ["xdg"]
 
 [target.wasm32-unknown-unknown.dependencies]
 wasm-bindgen = "0.*"

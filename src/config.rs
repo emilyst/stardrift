@@ -1,17 +1,9 @@
 use avian3d::math::Scalar;
 use bevy::prelude::*;
-use serde::Deserialize;
-use serde::Serialize;
-#[cfg(all(not(target_arch = "wasm32"), target_family = "windows"))]
-use std::env;
-use std::io;
+use config::{Config, ConfigError, File};
+use directories::ProjectDirs;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    not(target_family = "windows"),
-    feature = "xdg_support"
-))]
-use xdg::BaseDirectories;
 
 #[derive(Resource, Serialize, Deserialize, Clone, Debug)]
 pub struct SimulationConfig {
@@ -85,86 +77,105 @@ impl Default for RenderingConfig {
 }
 
 impl SimulationConfig {
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        not(target_family = "windows"),
-        feature = "xdg_support"
-    ))]
-    fn get_xdg_config_path() -> io::Result<PathBuf> {
-        BaseDirectories::with_prefix("stardrift").place_config_file("config.toml")
-    }
-
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        not(target_family = "windows"),
-        not(feature = "xdg_support")
-    ))]
-    fn get_xdg_config_path() -> io::Result<PathBuf> {
-        Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "XDG support is not enabled. Enable the 'xdg_support' feature to use XDG paths.",
-        ))
-    }
-
-    #[cfg(all(not(target_arch = "wasm32"), target_family = "windows"))]
-    fn get_xdg_config_path() -> io::Result<PathBuf> {
-        match env::var("APPDATA") {
-            Ok(app_data) => {
-                let mut path = PathBuf::from(app_data);
-                path.push("stardrift");
-                std::fs::create_dir_all(&path)?;
-                path.push("config.toml");
-                Ok(path)
+    fn get_config_path() -> Result<PathBuf, ConfigError> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(proj_dirs) = ProjectDirs::from("", "", "Stardrift") {
+                let config_dir = proj_dirs.config_dir();
+                std::fs::create_dir_all(config_dir).map_err(|e| {
+                    ConfigError::Message(format!("Failed to create config dir: {e}"))
+                })?;
+                Ok(config_dir.join("config.toml"))
+            } else {
+                Err(ConfigError::Message(
+                    "Failed to determine config directory".into(),
+                ))
             }
-            Err(_) => Err(io::Error::new(
-                io::ErrorKind::NotFound,
-                "APPDATA environment variable not found",
-            )),
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            Err(ConfigError::Message(
+                "Config not supported on WebAssembly".into(),
+            ))
         }
     }
 
-    #[cfg(target_arch = "wasm32")]
-    fn get_xdg_config_path() -> io::Result<PathBuf> {
-        Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "XDG config path not supported on WebAssembly",
-        ))
+    fn load_config_with_source(source: File<config::FileSourceFile, config::FileFormat>) -> Self {
+        let config_result = Config::builder()
+            .add_source(config::File::from_str(
+                &toml::to_string(&Self::default()).unwrap(),
+                config::FileFormat::Toml,
+            ))
+            .add_source(source)
+            .build();
+
+        match config_result {
+            Ok(config) => match config.try_deserialize::<Self>() {
+                Ok(sim_config) => {
+                    if sim_config.version < Self::default().version {
+                        warn!(
+                            "Config version {} is outdated. Using defaults.",
+                            sim_config.version
+                        );
+                        warn!("Using default configuration due to outdated version");
+                        Self::default()
+                    } else {
+                        info!("Configuration loaded successfully");
+                        sim_config
+                    }
+                }
+                Err(e) => {
+                    warn!("Failed to deserialize config: {}. Using defaults.", e);
+                    Self::default()
+                }
+            },
+            Err(e) => {
+                warn!("Failed to load config: {}. Using defaults.", e);
+                Self::default()
+            }
+        }
     }
 
     pub fn load_from_user_config() -> Self {
-        match Self::get_xdg_config_path() {
-            Ok(path) => Self::load_or_default(path.to_string_lossy().as_ref()),
+        match Self::get_config_path() {
+            Ok(path) => {
+                info!("Using configuration path: {}", path.display());
+                let file_exists = path.exists();
+                if !file_exists {
+                    warn!("Configuration file not found, will use defaults");
+                }
+                Self::load_config_with_source(File::from(path).required(false))
+            }
             Err(e) => {
-                warn!("Failed to get config path: {}. Using defaults.", e);
+                warn!("Failed to determine configuration path: {}", e);
                 Self::default()
             }
         }
     }
 
     pub fn load_or_default(path: &str) -> Self {
+        info!("Attempting to load configuration from: {}", path);
         match std::fs::read_to_string(path) {
-            Ok(content) => match toml::from_str::<Self>(&content) {
-                Ok(config) => {
-                    if config.version < SimulationConfig::default().version {
-                        warn!(
-                            "Config file {} has version {} which is outdated. Ignoring and using defaults.",
-                            path, config.version
-                        );
+            Ok(content) => {
+                info!("Configuration file exists and was read successfully");
+                match toml::from_str::<toml::Value>(&content) {
+                    Ok(value) => {
+                        if value.get("version").is_none() {
+                            warn!("Config file {path} missing version field. Using defaults.");
+                            Self::default()
+                        } else {
+                            Self::load_config_with_source(File::with_name(path).required(false))
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to parse config file {path}: {e}. Using defaults.",);
                         Self::default()
-                    } else {
-                        config
                     }
                 }
-                Err(e) => {
-                    warn!(
-                        "Failed to load config file {}: {}. Using defaults.",
-                        path, e
-                    );
-                    Self::default()
-                }
-            },
+            }
             Err(_) => {
-                warn!("Config file {} not found. Using defaults.", path);
+                warn!("Config file {path} not found. Using defaults.");
                 Self::default()
             }
         }
@@ -176,14 +187,19 @@ impl SimulationConfig {
         Ok(())
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn save_to_user_config(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let config_path = Self::get_xdg_config_path()?;
+        let config_path =
+            Self::get_config_path().map_err(|e| format!("Failed to get config path: {e}"))?;
 
-        if let Some(parent) = config_path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
+        let content = toml::to_string_pretty(self)?;
+        std::fs::write(config_path, content)?;
+        Ok(())
+    }
 
-        self.save(config_path.to_string_lossy().as_ref())
+    #[cfg(target_arch = "wasm32")]
+    pub fn save_to_user_config(&self) -> Result<(), Box<dyn std::error::Error>> {
+        Err("Configuration saving not supported on WebAssembly".into())
     }
 }
 
@@ -192,29 +208,35 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        not(target_family = "windows"),
-        feature = "xdg_support"
-    ))]
-    fn test_xdg_config_path_structure() {
-        let path = SimulationConfig::get_xdg_config_path();
+    #[cfg(not(target_arch = "wasm32"))]
+    fn test_config_path_structure() {
+        let path = SimulationConfig::get_config_path();
         let binding = path.unwrap();
         let path_str = binding.to_string_lossy();
 
-        assert!(path_str.ends_with("stardrift/config.toml"));
-        assert!(path_str.contains(".config") || path_str.starts_with("/"));
+        assert!(path_str.ends_with("config.toml"));
+        assert!(path_str.contains("Stardrift"));
     }
 
     #[test]
-    #[cfg(all(not(target_arch = "wasm32"), target_family = "windows"))]
-    fn test_windows_config_path_structure() {
-        let path = SimulationConfig::get_xdg_config_path();
-        let binding = path.unwrap();
-        let path_str = binding.to_string_lossy();
+    #[cfg(target_arch = "wasm32")]
+    fn test_wasm_config_path_error() {
+        let path_result = SimulationConfig::get_config_path();
+        assert!(path_result.is_err());
 
-        assert!(path_str.ends_with("stardrift\\config.toml"));
-        assert!(path_str.contains("AppData"));
+        let error_message = path_result.unwrap_err().to_string();
+        assert!(error_message.contains("Config not supported on WebAssembly"));
+    }
+
+    #[test]
+    #[cfg(target_arch = "wasm32")]
+    fn test_wasm_save_to_user_config_error() {
+        let config = SimulationConfig::default();
+        let save_result = config.save_to_user_config();
+
+        assert!(save_result.is_err());
+        let error_message = save_result.unwrap_err().to_string();
+        assert!(error_message.contains("Configuration saving not supported on WebAssembly"));
     }
 
     #[test]
