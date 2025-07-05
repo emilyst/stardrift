@@ -10,7 +10,9 @@ use crate::systems::physics;
 use crate::systems::physics::PhysicsSet;
 use crate::systems::ui;
 use crate::systems::visualization;
+#[cfg(feature = "diagnostics")]
 use bevy::ecs::schedule::LogLevel;
+#[cfg(feature = "diagnostics")]
 use bevy::ecs::schedule::ScheduleBuildSettings;
 use bevy::prelude::*;
 
@@ -50,6 +52,7 @@ impl Plugin for SimulationPlugin {
         app.init_resource::<BarycenterGizmoVisibility>();
         app.init_resource::<LoadingProgress>();
 
+        #[cfg(feature = "diagnostics")]
         app.edit_schedule(FixedUpdate, |schedule| {
             schedule.set_build_settings(ScheduleBuildSettings {
                 ambiguity_detection: LogLevel::Warn,
