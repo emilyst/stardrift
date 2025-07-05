@@ -206,32 +206,9 @@ impl Octree {
         };
         let mut bounds = Vec::with_capacity(estimated_capacity);
         if let Some(root) = &self.root {
-            self.collect_bounds(root, &mut bounds, 0, max_depth);
+            root.collect_bounds(&mut bounds, 0, max_depth);
         }
         bounds
-    }
-
-    #[allow(clippy::only_used_in_recursion)]
-    fn collect_bounds(
-        &self,
-        node: &OctreeNode,
-        bounds: &mut Vec<Aabb3d>,
-        current_depth: usize,
-        max_depth: Option<usize>,
-    ) {
-        if let Some(max_depth) = max_depth {
-            if current_depth > max_depth {
-                return;
-            }
-        }
-
-        bounds.push(node.bounds());
-
-        if let OctreeNode::Internal { children, .. } = node {
-            children.iter().flatten().for_each(|child| {
-                self.collect_bounds(child, bounds, current_depth + 1, max_depth);
-            });
-        }
     }
 
     pub fn build(&mut self, bodies: impl IntoIterator<Item = OctreeBody>) {
@@ -463,6 +440,70 @@ impl OctreeNode {
             OctreeNode::External { bounds, .. } => *bounds,
         }
     }
+
+    pub fn collect_bounds(
+        &self,
+        bounds: &mut Vec<Aabb3d>,
+        current_depth: usize,
+        max_depth: Option<usize>,
+    ) {
+        if let Some(max_depth) = max_depth {
+            if current_depth > max_depth {
+                return;
+            }
+        }
+
+        bounds.push(self.bounds());
+
+        if let OctreeNode::Internal { children, .. } = self {
+            children.iter().flatten().for_each(|child| {
+                child.collect_bounds(bounds, current_depth + 1, max_depth);
+            });
+        }
+    }
+
+    pub fn count_bodies(&self) -> usize {
+        match self {
+            OctreeNode::External { bodies, .. } => bodies.len(),
+            OctreeNode::Internal { children, .. } => children
+                .iter()
+                .flatten()
+                .map(|child| child.count_bodies())
+                .sum(),
+        }
+    }
+
+    pub fn is_leaf(&self) -> bool {
+        matches!(self, OctreeNode::External { .. })
+    }
+
+    pub fn total_mass(&self) -> Scalar {
+        match self {
+            OctreeNode::Internal { total_mass, .. } => *total_mass,
+            OctreeNode::External { bodies, .. } => bodies.iter().map(|b| b.mass).sum(),
+        }
+    }
+
+    pub fn center_of_mass(&self) -> Vector {
+        match self {
+            OctreeNode::Internal { center_of_mass, .. } => *center_of_mass,
+            OctreeNode::External { bodies, .. } => {
+                if bodies.is_empty() {
+                    return Vector::ZERO;
+                }
+                let total_mass: Scalar = bodies.iter().map(|b| b.mass).sum();
+                if total_mass > 0.0 {
+                    bodies
+                        .iter()
+                        .map(|b| b.position * b.mass)
+                        .fold(Vector::ZERO, |acc, pos| acc + pos)
+                        / total_mass
+                } else {
+                    Vector::ZERO
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -562,7 +603,7 @@ mod tests {
         octree.build(bodies.clone());
 
         // Count total bodies in the octree
-        let total_bodies_in_octree = count_bodies_in_node(octree.root.as_ref());
+        let total_bodies_in_octree = octree.root.as_ref().map_or(0, |node| node.count_bodies());
 
         // Should equal the number of input bodies (no duplication)
         assert_eq!(
@@ -683,7 +724,7 @@ mod tests {
 
         // Verify the octree still works correctly
         assert!(octree.root.is_some());
-        let total_bodies = count_bodies_in_node(octree.root.as_ref());
+        let total_bodies = octree.root.as_ref().map_or(0, |node| node.count_bodies());
         assert_eq!(total_bodies, 6);
     }
 
@@ -732,14 +773,365 @@ mod tests {
         assert_eq!(octree.max_force, 1e4);
     }
 
-    fn count_bodies_in_node(node: Option<&OctreeNode>) -> usize {
-        match node {
-            Some(OctreeNode::External { bodies, .. }) => bodies.len(),
-            Some(OctreeNode::Internal { children, .. }) => children
-                .iter()
-                .map(|child| count_bodies_in_node(child.as_ref()))
-                .sum(),
-            None => 0,
+    #[test]
+    fn test_node_count_bodies() {
+        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(2);
+
+        // Test with single body (external node)
+        let single_body = vec![OctreeBody {
+            entity: Entity::from_raw(0),
+            position: Vector::new(0.0, 0.0, 0.0),
+            mass: 1000.0,
+        }];
+
+        octree.build(single_body);
+        let root = octree.root.as_ref().unwrap();
+        assert_eq!(root.count_bodies(), 1);
+
+        // Test with multiple bodies that create internal nodes
+        let multiple_bodies = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(-5.0, -5.0, -5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(5.0, 5.0, 5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(2),
+                position: Vector::new(-5.0, 5.0, -5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(3),
+                position: Vector::new(5.0, -5.0, 5.0),
+                mass: 1000.0,
+            },
+        ];
+
+        octree.build(multiple_bodies.clone());
+        let root = octree.root.as_ref().unwrap();
+        assert_eq!(root.count_bodies(), multiple_bodies.len());
+
+        // Test empty octree
+        octree.build(vec![]);
+        assert!(octree.root.is_none());
+    }
+
+    #[test]
+    fn test_node_is_leaf() {
+        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(1);
+
+        // Test external node (leaf)
+        let single_body = vec![OctreeBody {
+            entity: Entity::from_raw(0),
+            position: Vector::new(0.0, 0.0, 0.0),
+            mass: 1000.0,
+        }];
+
+        octree.build(single_body);
+        let root = octree.root.as_ref().unwrap();
+        assert!(root.is_leaf(), "Single body should create a leaf node");
+
+        // Test internal node (not leaf)
+        let multiple_bodies = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(-5.0, -5.0, -5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(5.0, 5.0, 5.0),
+                mass: 1000.0,
+            },
+        ];
+
+        octree.build(multiple_bodies);
+        let root = octree.root.as_ref().unwrap();
+        assert!(
+            !root.is_leaf(),
+            "Multiple bodies should create an internal node"
+        );
+    }
+
+    #[test]
+    fn test_node_total_mass() {
+        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(2);
+
+        // Test external node mass calculation
+        let bodies_external = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(0.0, 0.0, 0.0),
+                mass: 500.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(0.1, 0.1, 0.1),
+                mass: 300.0,
+            },
+        ];
+
+        octree.build(bodies_external.clone());
+        let root = octree.root.as_ref().unwrap();
+        let expected_mass: Scalar = bodies_external.iter().map(|b| b.mass).sum();
+        assert_eq!(root.total_mass(), expected_mass);
+
+        // Test internal node mass calculation
+        let bodies_internal = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(-5.0, -5.0, -5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(5.0, 5.0, 5.0),
+                mass: 2000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(2),
+                position: Vector::new(-5.0, 5.0, -5.0),
+                mass: 1500.0,
+            },
+        ];
+
+        octree.build(bodies_internal.clone());
+        let root = octree.root.as_ref().unwrap();
+        let expected_mass: Scalar = bodies_internal.iter().map(|b| b.mass).sum();
+        assert_eq!(root.total_mass(), expected_mass);
+
+        // Test with zero mass bodies
+        let zero_mass_bodies = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(0.0, 0.0, 0.0),
+                mass: 0.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(1.0, 1.0, 1.0),
+                mass: 0.0,
+            },
+        ];
+
+        octree.build(zero_mass_bodies);
+        let root = octree.root.as_ref().unwrap();
+        assert_eq!(root.total_mass(), 0.0);
+    }
+
+    #[test]
+    fn test_node_center_of_mass() {
+        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(2);
+
+        // Test external node center of mass calculation
+        let bodies_external = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(0.0, 0.0, 0.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(2.0, 0.0, 0.0),
+                mass: 1000.0,
+            },
+        ];
+
+        octree.build(bodies_external.clone());
+        let root = octree.root.as_ref().unwrap();
+        let center_of_mass = root.center_of_mass();
+
+        // Expected center of mass should be at (1.0, 0.0, 0.0) for equal masses
+        assert!(
+            (center_of_mass.x - 1.0).abs() < 1e-10,
+            "X coordinate should be 1.0"
+        );
+        assert!(center_of_mass.y.abs() < 1e-10, "Y coordinate should be 0.0");
+        assert!(center_of_mass.z.abs() < 1e-10, "Z coordinate should be 0.0");
+
+        // Test internal node center of mass calculation
+        let bodies_internal = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(-10.0, -10.0, -10.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(10.0, 10.0, 10.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(2),
+                position: Vector::new(-10.0, 10.0, -10.0),
+                mass: 2000.0,
+            },
+        ];
+
+        octree.build(bodies_internal.clone());
+        let root = octree.root.as_ref().unwrap();
+        let center_of_mass = root.center_of_mass();
+
+        // Verify center of mass is calculated correctly
+        assert!(
+            center_of_mass.is_finite(),
+            "Center of mass should be finite"
+        );
+
+        // Test with empty external node
+        let empty_bodies = vec![];
+        octree.build(empty_bodies);
+        assert!(octree.root.is_none());
+
+        // Test with zero mass bodies
+        let zero_mass_bodies = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(5.0, 5.0, 5.0),
+                mass: 0.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(-5.0, -5.0, -5.0),
+                mass: 0.0,
+            },
+        ];
+
+        octree.build(zero_mass_bodies);
+        let root = octree.root.as_ref().unwrap();
+        let center_of_mass = root.center_of_mass();
+        assert_eq!(
+            center_of_mass,
+            Vector::ZERO,
+            "Zero mass should result in zero center of mass"
+        );
+    }
+
+    #[test]
+    fn test_node_collect_bounds() {
+        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(1);
+
+        // Create bodies that will force tree subdivision
+        let bodies = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(-5.0, -5.0, -5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(5.0, 5.0, 5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(2),
+                position: Vector::new(-5.0, 5.0, -5.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(3),
+                position: Vector::new(5.0, -5.0, 5.0),
+                mass: 1000.0,
+            },
+        ];
+
+        octree.build(bodies);
+        let root = octree.root.as_ref().unwrap();
+
+        // Test collecting bounds without depth limit
+        let mut bounds = Vec::new();
+        root.collect_bounds(&mut bounds, 0, None);
+        assert!(
+            !bounds.is_empty(),
+            "Should collect at least the root bounds"
+        );
+
+        // Test collecting bounds with depth limit
+        let mut bounds_depth_0 = Vec::new();
+        root.collect_bounds(&mut bounds_depth_0, 0, Some(0));
+        assert_eq!(bounds_depth_0.len(), 1, "Depth 0 should only include root");
+
+        let mut bounds_depth_1 = Vec::new();
+        root.collect_bounds(&mut bounds_depth_1, 0, Some(1));
+        assert!(
+            bounds_depth_1.len() >= bounds_depth_0.len(),
+            "Depth 1 should include at least as many bounds as depth 0"
+        );
+
+        // Test that all bounds are valid
+        for bound in &bounds {
+            assert!(bound.min.x <= bound.max.x, "Bound min.x should be <= max.x");
+            assert!(bound.min.y <= bound.max.y, "Bound min.y should be <= max.y");
+            assert!(bound.min.z <= bound.max.z, "Bound min.z should be <= max.z");
         }
+
+        // Test with single body (external node)
+        let single_body = vec![OctreeBody {
+            entity: Entity::from_raw(0),
+            position: Vector::new(0.0, 0.0, 0.0),
+            mass: 1000.0,
+        }];
+
+        octree.build(single_body);
+        let root = octree.root.as_ref().unwrap();
+        let mut single_bounds = Vec::new();
+        root.collect_bounds(&mut single_bounds, 0, None);
+        assert_eq!(
+            single_bounds.len(),
+            1,
+            "Single body should produce one bound"
+        );
+    }
+
+    #[test]
+    fn test_octree_get_bounds_integration() {
+        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(1);
+
+        // Test that octree.get_bounds() uses the moved collect_bounds method correctly
+        let bodies = vec![
+            OctreeBody {
+                entity: Entity::from_raw(0),
+                position: Vector::new(-3.0, -3.0, -3.0),
+                mass: 1000.0,
+            },
+            OctreeBody {
+                entity: Entity::from_raw(1),
+                position: Vector::new(3.0, 3.0, 3.0),
+                mass: 1000.0,
+            },
+        ];
+
+        octree.build(bodies);
+
+        // Test get_bounds without depth limit
+        let bounds_unlimited = octree.get_bounds(None);
+        assert!(!bounds_unlimited.is_empty(), "Should return bounds");
+
+        // Test get_bounds with depth limit
+        let bounds_depth_0 = octree.get_bounds(Some(0));
+        assert_eq!(
+            bounds_depth_0.len(),
+            1,
+            "Depth 0 should return only root bounds"
+        );
+
+        let bounds_depth_1 = octree.get_bounds(Some(1));
+        assert!(
+            bounds_depth_1.len() >= bounds_depth_0.len(),
+            "Higher depth should return at least as many bounds"
+        );
+
+        // Test with empty octree
+        octree.build(vec![]);
+        let empty_bounds = octree.get_bounds(None);
+        assert!(
+            empty_bounds.is_empty(),
+            "Empty octree should return no bounds"
+        );
     }
 }
