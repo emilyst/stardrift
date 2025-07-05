@@ -5,8 +5,6 @@ use avian3d::math::Vector;
 use bevy::prelude::*;
 use std::collections::VecDeque;
 
-const DEFAULT_LEAF_THRESHOLD: usize = 4;
-
 // TODO: pool diagnostics?
 
 #[derive(Debug)]
@@ -160,7 +158,7 @@ impl Octree {
             theta,
             min_distance,
             max_force,
-            leaf_threshold: DEFAULT_LEAF_THRESHOLD,
+            leaf_threshold: 4,
             min_distance_squared: min_distance * min_distance,
             octree_node_pool: OctreeNodePool::new(),
         }
@@ -183,7 +181,7 @@ impl Octree {
             theta,
             min_distance,
             max_force,
-            leaf_threshold: DEFAULT_LEAF_THRESHOLD,
+            leaf_threshold: 4,
             min_distance_squared: min_distance * min_distance,
             octree_node_pool: OctreeNodePool::with_capacity(internal_capacity, external_capacity),
         }

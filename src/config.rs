@@ -15,7 +15,7 @@ pub struct SimulationConfig {
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
-            version: 1,
+            version: 2,
             physics: PhysicsConfig::default(),
             rendering: RenderingConfig::default(),
         }
@@ -27,6 +27,7 @@ pub struct PhysicsConfig {
     pub gravitational_constant: Scalar,
     pub body_count: usize,
     pub octree_theta: Scalar,
+    pub octree_leaf_threshold: usize,
     pub body_distribution_sphere_radius_multiplier: Scalar,
     pub body_distribution_min_distance: Scalar,
     pub min_body_radius: Scalar,
@@ -42,6 +43,7 @@ impl Default for PhysicsConfig {
             gravitational_constant: 1e1,
             body_count: 100,
             octree_theta: 0.5,
+            octree_leaf_threshold: 4,
             body_distribution_sphere_radius_multiplier: 200.0,
             body_distribution_min_distance: 0.001,
             min_body_radius: 5.0,
@@ -225,6 +227,7 @@ bloom_intensity = 888.0
 gravitational_constant = 99.0
 body_count = 999
 octree_theta = 0.7
+octree_leaf_threshold = 8
 body_distribution_sphere_radius_multiplier = 250.0
 body_distribution_min_distance = 0.002
 min_body_radius = 6.0
@@ -250,6 +253,7 @@ camera_radius_multiplier = 3.0
         assert_eq!(loaded_config.physics.gravitational_constant, 99.0);
         assert_eq!(loaded_config.physics.body_count, 999);
         assert_eq!(loaded_config.physics.octree_theta, 0.7);
+        assert_eq!(loaded_config.physics.octree_leaf_threshold, 8);
         assert_eq!(loaded_config.rendering.bloom_intensity, 888.0);
 
         let _ = fs::remove_file(temp_path);

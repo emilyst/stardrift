@@ -35,11 +35,14 @@ impl Plugin for SimulationPlugin {
         app.insert_resource(GravitationalConstant(config.physics.gravitational_constant));
         app.insert_resource(BodyCount(config.physics.body_count));
         app.init_resource::<Barycenter>();
-        app.insert_resource(GravitationalOctree::new(Octree::new(
-            config.physics.octree_theta,
-            config.physics.force_calculation_min_distance,
-            config.physics.force_calculation_max_force,
-        )));
+        app.insert_resource(GravitationalOctree::new(
+            Octree::new(
+                config.physics.octree_theta,
+                config.physics.force_calculation_min_distance,
+                config.physics.force_calculation_max_force,
+            )
+            .with_leaf_threshold(config.physics.octree_leaf_threshold),
+        ));
         app.insert_resource(OctreeVisualizationSettings {
             enabled: false,
             ..default()
