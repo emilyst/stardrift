@@ -66,6 +66,7 @@ pub fn spawn_simulation_bodies(
     commands.spawn_batch(spawn_data);
 }
 
+#[allow(clippy::type_complexity)]
 pub fn rebuild_octree(
     bodies: Query<(Entity, &Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
     mut octree: ResMut<resources::GravitationalOctree>,
@@ -85,6 +86,7 @@ pub fn rebuild_octree(
     );
 }
 
+#[allow(clippy::type_complexity)]
 pub fn apply_gravitation_octree(
     g: Res<resources::GravitationalConstant>,
     octree: Res<resources::GravitationalOctree>,

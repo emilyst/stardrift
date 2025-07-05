@@ -18,6 +18,7 @@ pub struct ToggleBarycenterGizmoVisibilityEvent;
 #[derive(Event)]
 pub struct TogglePauseSimulationEvent;
 
+#[allow(clippy::too_many_arguments)]
 pub fn handle_restart_simulation_event(
     mut restart_events: EventReader<RestartSimulationEvent>,
     mut commands: Commands,

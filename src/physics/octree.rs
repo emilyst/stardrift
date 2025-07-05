@@ -211,6 +211,7 @@ impl Octree {
         bounds
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn collect_bounds(
         &self,
         node: &OctreeNode,

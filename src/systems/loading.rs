@@ -104,6 +104,7 @@ pub fn advance_loading_step(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_bodies_async(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
