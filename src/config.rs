@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use config::Config;
 use config::ConfigError;
 use config::File;
+#[cfg(not(target_arch = "wasm32"))]
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
