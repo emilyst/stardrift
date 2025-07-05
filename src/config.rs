@@ -2,12 +2,16 @@ use avian3d::math::Scalar;
 use bevy::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
-use std::io;
-use std::path::PathBuf;
-#[cfg(all(not(target_arch = "wasm32"), not(target_family = "windows"), feature = "xdg_support"))]
-use xdg::BaseDirectories;
 #[cfg(all(not(target_arch = "wasm32"), target_family = "windows"))]
 use std::env;
+use std::io;
+use std::path::PathBuf;
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    not(target_family = "windows"),
+    feature = "xdg_support"
+))]
+use xdg::BaseDirectories;
 
 #[derive(Resource, Serialize, Deserialize, Clone, Debug)]
 pub struct SimulationConfig {
@@ -81,16 +85,24 @@ impl Default for RenderingConfig {
 }
 
 impl SimulationConfig {
-    #[cfg(all(not(target_arch = "wasm32"), not(target_family = "windows"), feature = "xdg_support"))]
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_family = "windows"),
+        feature = "xdg_support"
+    ))]
     fn get_xdg_config_path() -> io::Result<PathBuf> {
         BaseDirectories::with_prefix("stardrift").place_config_file("config.toml")
     }
 
-    #[cfg(all(not(target_arch = "wasm32"), not(target_family = "windows"), not(feature = "xdg_support")))]
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_family = "windows"),
+        not(feature = "xdg_support")
+    ))]
     fn get_xdg_config_path() -> io::Result<PathBuf> {
         Err(io::Error::new(
             io::ErrorKind::Unsupported,
-            "XDG support is not enabled. Enable the 'xdg_support' feature to use XDG paths."
+            "XDG support is not enabled. Enable the 'xdg_support' feature to use XDG paths.",
         ))
     }
 
@@ -180,7 +192,11 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg(all(not(target_arch = "wasm32"), not(target_family = "windows"), feature = "xdg_support"))]
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_family = "windows"),
+        feature = "xdg_support"
+    ))]
     fn test_xdg_config_path_structure() {
         let path = SimulationConfig::get_xdg_config_path();
         let binding = path.unwrap();
