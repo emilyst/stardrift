@@ -1,3 +1,5 @@
+#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
+
 pub mod config;
 pub mod physics;
 pub mod plugins;
