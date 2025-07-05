@@ -15,7 +15,6 @@ pub fn restart_simulation(
     rng: &mut ResMut<SharedRng>,
     body_count: &Res<BodyCount>,
     current_barycenter: &mut ResMut<CurrentBarycenter>,
-    previous_barycenter: &mut ResMut<PreviousBarycenter>,
     initial_barycenter: &mut ResMut<InitialBarycenter>,
     octree: &mut ResMut<GravitationalOctree>,
     pan_orbit_camera: &mut Single<&mut PanOrbitCamera>,
@@ -26,7 +25,6 @@ pub fn restart_simulation(
     }
 
     ***current_barycenter = Vector::ZERO;
-    ***previous_barycenter = Vector::ZERO;
 
     // Reset barycenter initialization state
     ***initial_barycenter = None;

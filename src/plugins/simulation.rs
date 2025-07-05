@@ -35,7 +35,6 @@ impl Plugin for SimulationPlugin {
         app.insert_resource(GravitationalConstant(config.physics.gravitational_constant));
         app.insert_resource(BodyCount(config.physics.body_count));
         app.init_resource::<CurrentBarycenter>();
-        app.init_resource::<PreviousBarycenter>();
         app.init_resource::<InitialBarycenter>();
         app.add_event::<BarycenterInitialized>();
         app.insert_resource(GravitationalOctree::new(Octree::new(

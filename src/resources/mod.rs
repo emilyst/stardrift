@@ -52,9 +52,6 @@ impl Default for BodyCount {
 pub struct CurrentBarycenter(pub Vector);
 
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
-pub struct PreviousBarycenter(pub Vector);
-
-#[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
 pub struct InitialBarycenter(pub Option<Vector>);
 
 #[derive(Resource, Deref, DerefMut, Debug)]
