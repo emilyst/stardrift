@@ -351,19 +351,9 @@ mod color_tests {
         for temp in (1000..=40000).step_by(500) {
             let (r, g, b) = rgb_for_temp(temp as f64);
 
-            assert!(r >= 0.0 && r <= 1.0, "Red out of range at {}K: {}", temp, r);
-            assert!(
-                g >= 0.0 && g <= 1.0,
-                "Green out of range at {}K: {}",
-                temp,
-                g
-            );
-            assert!(
-                b >= 0.0 && b <= 1.0,
-                "Blue out of range at {}K: {}",
-                temp,
-                b
-            );
+            assert!((0.0..=1.0).contains(&r), "R out of range at {temp}K: {r}");
+            assert!((0.0..=1.0).contains(&g), "G out of range at {temp}K: {g}",);
+            assert!((0.0..=1.0).contains(&b), "B out of range at {temp}K: {b}",);
         }
     }
 
