@@ -1,28 +1,3 @@
-//! Simulation diagnostics module.
-//!
-//! This module provides diagnostic tracking capabilities for the N-body simulation.
-//! It collects and monitors key simulation metrics including:
-//!
-//! - **Barycenter position**: Tracks the X, Y, and Z coordinates of the system's center of mass
-//!
-//! The diagnostics are collected at regular intervals and can be consumed by other systems
-//! for display, logging, or analysis purposes. The module integrates with Bevy's diagnostic
-//! system to provide standardized metric collection and history tracking.
-//!
-//! # Main Components
-//!
-//! - [`SimulationDiagnosticsPlugin`]: The main plugin that registers diagnostic paths and
-//!   systems for data collection
-//! - [`SimulationDiagnosticsState`]: Resource that manages the update timing for diagnostics
-//!
-//! # Usage
-//!
-//! Add the plugin to your Bevy app to enable simulation diagnostics:
-//!
-//! ```rust,ignore
-//! app.add_plugins(SimulationDiagnosticsPlugin::default());
-//! ```
-
 use crate::states::AppState;
 use bevy::diagnostic::DEFAULT_MAX_HISTORY_LENGTH;
 use bevy::diagnostic::Diagnostic;
