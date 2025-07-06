@@ -38,6 +38,8 @@ pub struct PhysicsConfig {
     pub force_calculation_min_distance: Scalar,
     pub force_calculation_max_force: Scalar,
     pub initial_seed: Option<u64>,
+    pub collision_restitution: Scalar,
+    pub collision_friction: Scalar,
 }
 
 impl Default for PhysicsConfig {
@@ -55,10 +57,12 @@ impl Default for PhysicsConfig {
                 force_calculation_min_distance: 10.0,
                 force_calculation_max_force: 1e4,
                 initial_seed: None,
+                collision_restitution: 0.8,
+                collision_friction: 0.1,
             }
         } else {
             Self {
-                gravitational_constant: 1e1,
+                gravitational_constant: 1e2,
                 body_count: 1000,
                 octree_theta: 2.0,
                 octree_leaf_threshold: 4,
@@ -66,9 +70,11 @@ impl Default for PhysicsConfig {
                 body_distribution_min_distance: 0.001,
                 min_body_radius: 5.0,
                 max_body_radius: 10.0,
-                force_calculation_min_distance: 10.0,
-                force_calculation_max_force: 1e4,
+                force_calculation_min_distance: 1.0,
+                force_calculation_max_force: 1e6,
                 initial_seed: None,
+                collision_restitution: 0.8,
+                collision_friction: 0.1,
             }
         }
     }

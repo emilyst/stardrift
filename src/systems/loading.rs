@@ -208,6 +208,8 @@ fn spawn_single_body(
         Collider::sphere(radius),
         GravityScale(0.0),
         RigidBody::Dynamic,
+        Restitution::new(config.physics.collision_restitution),
+        Friction::new(config.physics.collision_friction),
         MeshMaterial3d(material.clone()),
         Mesh3d(mesh),
     ));
