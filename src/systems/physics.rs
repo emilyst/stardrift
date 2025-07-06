@@ -1,12 +1,10 @@
 use crate::config;
 use crate::physics;
 use crate::resources;
-use crate::utils;
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use rand::Rng;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PhysicsSet {
@@ -22,46 +20,11 @@ pub fn spawn_simulation_bodies(
     body_count: usize,
     config: &config::SimulationConfig,
 ) {
-    let body_distribution_sphere_radius = utils::math::min_sphere_radius_for_surface_distribution(
-        body_count,
-        config.physics.body_distribution_sphere_radius_multiplier,
-        config.physics.body_distribution_min_distance,
-    );
-    let min_temp = config.rendering.min_temperature;
-    let max_temp = config.rendering.max_temperature;
-    let min_radius = config.physics.min_body_radius;
-    let max_radius = config.physics.max_body_radius;
-    let bloom_intensity = config.rendering.bloom_intensity;
-    let saturation_intensity = config.rendering.saturation_intensity;
+    use crate::components::body::factory;
 
-    let mut spawn_data = Vec::with_capacity(body_count);
-
-    for _ in 0..body_count {
-        let position = utils::math::random_unit_vector(rng) * body_distribution_sphere_radius;
-        let transform = Transform::from_translation(position.as_vec3());
-        let radius =
-            rng.random_range(config.physics.min_body_radius..=config.physics.max_body_radius);
-        let mesh = meshes.add(Sphere::new(radius as f32));
-
-        let temperature =
-            min_temp + (max_temp - min_temp) * (max_radius - radius) / (max_radius - min_radius);
-        let material = utils::color::emissive_material_for_temp(
-            materials,
-            temperature,
-            bloom_intensity,
-            saturation_intensity,
-        );
-
-        spawn_data.push((
-            transform,
-            Collider::sphere(radius),
-            GravityScale(0.0),
-            RigidBody::Dynamic,
-            ExternalForce::ZERO,
-            MeshMaterial3d(material),
-            Mesh3d(mesh),
-        ));
-    }
+    let spawn_data: Vec<crate::components::BodyBundle> = (0..body_count)
+        .map(|_| factory::create_random_body(meshes, materials, rng, config, body_count))
+        .collect();
 
     commands.spawn_batch(spawn_data);
 }

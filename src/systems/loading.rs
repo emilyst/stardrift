@@ -2,9 +2,7 @@ use crate::config;
 use crate::resources;
 use crate::states;
 use crate::systems;
-use avian3d::prelude::*;
 use bevy::prelude::*;
-use bevy::render::mesh::SphereKind;
 
 #[derive(Component)]
 pub struct LoadingScreen;
@@ -132,14 +130,16 @@ pub fn spawn_bodies_async(
             (progress.batch_size).min(progress.total_bodies - progress.bodies_spawned);
 
         for _ in 0..bodies_to_spawn {
-            spawn_single_body(
-                &mut commands,
+            use crate::components::body::factory;
+
+            let bundle = factory::create_random_body(
                 &mut meshes,
                 &mut materials,
                 &mut rng,
                 &config,
                 progress.total_bodies,
             );
+            commands.spawn(bundle);
             progress.bodies_spawned += 1;
         }
 
@@ -158,61 +158,6 @@ pub fn spawn_bodies_async(
             *spawning_progress = None;
         }
     }
-}
-
-fn spawn_single_body(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-    rng: &mut ResMut<resources::SharedRng>,
-    config: &config::SimulationConfig,
-    total_body_count: usize,
-) {
-    use crate::utils::{color, math};
-    use rand::Rng;
-
-    let body_distribution_sphere_radius = math::min_sphere_radius_for_surface_distribution(
-        total_body_count, // Use total body count for proper distribution
-        config.physics.body_distribution_sphere_radius_multiplier,
-        config.physics.body_distribution_min_distance,
-    );
-    let position = math::random_unit_vector(rng) * body_distribution_sphere_radius;
-    let transform = Transform::from_translation(position.as_vec3());
-    let radius = rng.random_range(config.physics.min_body_radius..=config.physics.max_body_radius);
-    let mesh = meshes.add(
-        Sphere::new(radius as f32)
-            .mesh()
-            .kind(SphereKind::Ico {
-                subdivisions: if cfg!(target_arch = "wasm32") { 1 } else { 4 },
-            })
-            .build(),
-    );
-
-    let min_temp = config.rendering.min_temperature;
-    let max_temp = config.rendering.max_temperature;
-    let min_radius = config.physics.min_body_radius;
-    let max_radius = config.physics.max_body_radius;
-    let temperature =
-        min_temp + (max_temp - min_temp) * (max_radius - radius) / (max_radius - min_radius);
-    let bloom_intensity = config.rendering.bloom_intensity;
-    let saturation_intensity = config.rendering.saturation_intensity;
-    let material = color::emissive_material_for_temp(
-        materials,
-        temperature,
-        bloom_intensity,
-        saturation_intensity,
-    );
-
-    commands.spawn((
-        transform,
-        Collider::sphere(radius),
-        GravityScale(0.0),
-        RigidBody::Dynamic,
-        Restitution::new(config.physics.collision_restitution),
-        Friction::new(config.physics.collision_friction),
-        MeshMaterial3d(material.clone()),
-        Mesh3d(mesh),
-    ));
 }
 
 pub fn finalize_loading(
