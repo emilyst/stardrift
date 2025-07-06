@@ -1,13 +1,13 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
-pub mod components;
-pub mod config;
-pub mod physics;
-pub mod plugins;
-pub mod resources;
-pub mod states;
-pub mod systems;
-pub mod utils;
+mod components;
+mod config;
+mod physics;
+mod plugins;
+mod resources;
+mod states;
+mod systems;
+mod utils;
 
 use avian3d::prelude::*;
 use bevy::app::TaskPoolThreadAssignmentPolicy;
