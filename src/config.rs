@@ -46,7 +46,7 @@ impl Default for PhysicsConfig {
     fn default() -> Self {
         if cfg!(target_arch = "wasm32") {
             Self {
-                gravitational_constant: 1e1,
+                gravitational_constant: 1e2,
                 body_count: 100,
                 octree_theta: 1.0,
                 octree_leaf_threshold: 4,
@@ -64,7 +64,7 @@ impl Default for PhysicsConfig {
             Self {
                 gravitational_constant: 1e2,
                 body_count: 1000,
-                octree_theta: 2.0,
+                octree_theta: 1.0,
                 octree_leaf_threshold: 4,
                 body_distribution_sphere_radius_multiplier: 100.0,
                 body_distribution_min_distance: 0.001,
