@@ -42,18 +42,34 @@ pub struct PhysicsConfig {
 
 impl Default for PhysicsConfig {
     fn default() -> Self {
-        Self {
-            gravitational_constant: 1e1,
-            body_count: 100,
-            octree_theta: 0.5,
-            octree_leaf_threshold: 4,
-            body_distribution_sphere_radius_multiplier: 200.0,
-            body_distribution_min_distance: 0.001,
-            min_body_radius: 5.0,
-            max_body_radius: 10.0,
-            force_calculation_min_distance: 10.0,
-            force_calculation_max_force: 1e4,
-            initial_seed: None,
+        if cfg!(target_arch = "wasm32") {
+            Self {
+                gravitational_constant: 1e1,
+                body_count: 100,
+                octree_theta: 1.0,
+                octree_leaf_threshold: 4,
+                body_distribution_sphere_radius_multiplier: 200.0,
+                body_distribution_min_distance: 0.001,
+                min_body_radius: 5.0,
+                max_body_radius: 10.0,
+                force_calculation_min_distance: 10.0,
+                force_calculation_max_force: 1e4,
+                initial_seed: None,
+            }
+        } else {
+            Self {
+                gravitational_constant: 1e1,
+                body_count: 1000,
+                octree_theta: 2.0,
+                octree_leaf_threshold: 4,
+                body_distribution_sphere_radius_multiplier: 100.0,
+                body_distribution_min_distance: 0.001,
+                min_body_radius: 5.0,
+                max_body_radius: 10.0,
+                force_calculation_min_distance: 10.0,
+                force_calculation_max_force: 1e4,
+                initial_seed: None,
+            }
         }
     }
 }
