@@ -128,9 +128,10 @@ parameters. Configuration is managed through TOML files and supports XDG config 
 
 **Physics Configuration:**
 
-- **Body count**: Number of bodies in the simulation (default: 100)
+- **Body count**: Number of bodies in the simulation (default: 100 for WebAssembly, 1000 for native)
 - **Gravitational constant**: Strength of gravitational interactions (default: 1e1)
-- **Octree theta**: Barnes-Hut approximation parameter for accuracy/performance balance (default: 0.5)
+- **Octree theta**: Barnes-Hut approximation parameter for accuracy/performance balance (default: 1.0 for WebAssembly,
+  2.0 for native)
 - **Body distribution**: Sphere radius multiplier and minimum distance parameters
 - **Body size**: Minimum and maximum body radius settings
 - **Force calculation**: Minimum distance and maximum force limits
@@ -138,7 +139,7 @@ parameters. Configuration is managed through TOML files and supports XDG config 
 **Rendering Configuration:**
 
 - **Temperature range**: Min/max temperature for stellar color mapping (default: 2000-15000K)
-- **Bloom intensity**: Visual bloom effect strength (default: 100.0)
+- **Bloom intensity**: Visual bloom effect strength (default: 33.333)
 - **Saturation intensity**: Color saturation level (default: 3.0)
 - **Camera settings**: Radius multiplier for camera positioning
 
@@ -216,8 +217,7 @@ agents. The structure follows Rust best practices and separates concerns clearly
 ```
 src/
 ├── main.rs                       # Application entry point and plugin registration
-├── components/                   # Bevy ECS components
-│   └── mod.rs                    # UI and simulation components
+├── lib.rs                        # Library entry point
 ├── config.rs                     # Configuration management system
 ├── states.rs                     # Application state management
 ├── plugins/                      # Bevy plugins for modular functionality
@@ -235,7 +235,6 @@ src/
 │   ├── input.rs                  # Keyboard and interaction handling
 │   ├── ui.rs                     # User interface systems
 │   ├── visualization.rs          # Octree and visual debugging systems
-│   ├── config.rs                 # Configuration system management
 │   ├── loading.rs                # Asset and resource loading systems
 │   └── simulation_actions.rs     # Simulation control and action handling
 ├── utils/                        # Utility modules
