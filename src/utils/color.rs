@@ -131,6 +131,8 @@ pub(crate) fn emissive_material_for_temp(
 
     materials.add(StandardMaterial {
         base_color,
+        metallic: 0.0,
+        reflectance: 0.0,
         emissive: bloom_color.into(),
         ..default()
     })
