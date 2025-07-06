@@ -75,7 +75,7 @@ features = [
 ]
 
 [dependencies.avian3d]
-version = "*"
+version = "0.3"
 default-features = false
 features = ["3d", "enhanced-determinism", "f64", "parallel", "parry-f64"]
 
