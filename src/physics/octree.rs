@@ -389,11 +389,11 @@ impl Octree {
                 children,
                 ..
             }) => {
-                let distance = (body.position - *center_of_mass).length();
-                let size = bounds.size().length();
+                let distance_squared = body.position.distance_squared(*center_of_mass);
+                let size_squared = bounds.min.distance_squared(bounds.max);
 
                 // Barnes-Hut criterion: if s/d < theta, treat as single body
-                if size / distance < self.theta {
+                if size_squared < distance_squared * self.theta * self.theta {
                     self.calculate_force_from_point(body, *center_of_mass, *total_mass, g)
                 } else {
                     let mut force = Vector::ZERO;
