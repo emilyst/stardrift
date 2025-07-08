@@ -19,7 +19,7 @@ pub struct OctreeStats {
 
 #[derive(Debug)]
 pub struct OctreeNodePool {
-    internal_nodes: Vec<Box<[Option<OctreeNode>; 8]>>,
+    internal_nodes: Vec<[Option<Box<OctreeNode>>; 8]>,
     external_bodies: Vec<Vec<OctreeBody>>,
 }
 
@@ -44,10 +44,10 @@ impl OctreeNodePool {
         }
     }
 
-    pub fn get_internal_children(&mut self) -> Box<[Option<OctreeNode>; 8]> {
+    pub fn get_internal_children(&mut self) -> [Option<Box<OctreeNode>>; 8] {
         self.internal_nodes
             .pop()
-            .unwrap_or_else(|| Box::new([None, None, None, None, None, None, None, None]))
+            .unwrap_or([None, None, None, None, None, None, None, None])
     }
 
     pub fn get_external_bodies(&mut self, capacity: usize) -> Vec<OctreeBody> {
@@ -60,10 +60,10 @@ impl OctreeNodePool {
         }
     }
 
-    pub fn return_internal_children(&mut self, mut children: Box<[Option<OctreeNode>; 8]>) {
+    pub fn return_internal_children(&mut self, mut children: [Option<Box<OctreeNode>>; 8]) {
         for child in children.iter_mut() {
             if let Some(node) = child.take() {
-                self.return_node(node);
+                self.return_node(*node);
             }
         }
 
@@ -337,12 +337,12 @@ impl Octree {
 
         for (i, bodies_in_octant) in octant_bodies.into_iter().enumerate() {
             if !bodies_in_octant.is_empty() {
-                children[i] = Some(Self::build_node(
+                children[i] = Some(Box::new(Self::build_node(
                     octants[i],
                     bodies_in_octant,
                     leaf_threshold,
                     pool,
-                ));
+                )));
             } else {
                 pool.return_external_bodies(bodies_in_octant);
             }
@@ -397,7 +397,7 @@ impl Octree {
                 } else {
                     let mut force = Vector::ZERO;
                     children.iter().for_each(|child| {
-                        force += self.calculate_force(body, child.as_ref(), g);
+                        force += self.calculate_force(body, child.as_ref().map(|v| &**v), g);
                     });
                     force
                 }
@@ -459,7 +459,7 @@ pub enum OctreeNode {
         bounds: Aabb3d,
         center_of_mass: Vector,
         total_mass: Scalar,
-        children: Box<[Option<OctreeNode>; 8]>,
+        children: [Option<Box<OctreeNode>>; 8],
     },
     External {
         bounds: Aabb3d,
