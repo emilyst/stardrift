@@ -118,6 +118,35 @@ fn bench_octree_force_calculation(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_octree_force_calculation_extreme_body_counts(c: &mut Criterion) {
+    let mut group = c.benchmark_group("octree_force_calculation");
+
+    let body_counts = [5_000, 10_000, 20_000, 100_000, 500_000, 1_000_000];
+    let theta = 0.5;
+    let min_distance = 10.0;
+    let max_force = 1e4;
+    let g = 1e1;
+
+    for &count in &body_counts {
+        let bodies = generate_test_bodies(count, 42);
+        let mut octree = octree::Octree::new(theta, min_distance, max_force);
+        octree.build(bodies.clone());
+
+        group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
+            b.iter(|| {
+                let mut total_force = Vector::ZERO;
+                for body in &bodies {
+                    let force = octree.calculate_force(black_box(body), None, g);
+                    total_force += force;
+                }
+                black_box(total_force);
+            });
+        });
+    }
+
+    group.finish();
+}
+
 fn bench_octree_force_calculation_theta(c: &mut Criterion) {
     let mut group = c.benchmark_group("octree_force_calculation");
 
@@ -268,6 +297,7 @@ criterion::criterion_group!(
     bench_octree_construction,
     bench_octree_construction_leaf_threshold,
     bench_octree_force_calculation,
+    bench_octree_force_calculation_extreme_body_counts,
     bench_octree_force_calculation_theta,
     bench_complete_physics_cycle,
     bench_complete_physics_cycle_extreme_body_counts,
