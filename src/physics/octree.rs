@@ -3,7 +3,6 @@
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use bevy::prelude::*;
-use std::collections::VecDeque;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
@@ -20,8 +19,8 @@ pub struct OctreeStats {
 
 #[derive(Debug)]
 pub struct OctreeNodePool {
-    internal_nodes: VecDeque<Box<[Option<OctreeNode>; 8]>>,
-    external_bodies: VecDeque<Vec<OctreeBody>>,
+    internal_nodes: Vec<Box<[Option<OctreeNode>; 8]>>,
+    external_bodies: Vec<Vec<OctreeBody>>,
 }
 
 impl Default for OctreeNodePool {
@@ -33,26 +32,26 @@ impl Default for OctreeNodePool {
 impl OctreeNodePool {
     pub fn new() -> Self {
         Self {
-            internal_nodes: VecDeque::new(),
-            external_bodies: VecDeque::new(),
+            internal_nodes: Vec::new(),
+            external_bodies: Vec::new(),
         }
     }
 
     pub fn with_capacity(internal_capacity: usize, external_capacity: usize) -> Self {
         Self {
-            internal_nodes: VecDeque::with_capacity(internal_capacity),
-            external_bodies: VecDeque::with_capacity(external_capacity),
+            internal_nodes: Vec::with_capacity(internal_capacity),
+            external_bodies: Vec::with_capacity(external_capacity),
         }
     }
 
     pub fn get_internal_children(&mut self) -> Box<[Option<OctreeNode>; 8]> {
         self.internal_nodes
-            .pop_front()
+            .pop()
             .unwrap_or_else(|| Box::new([None, None, None, None, None, None, None, None]))
     }
 
     pub fn get_external_bodies(&mut self, capacity: usize) -> Vec<OctreeBody> {
-        if let Some(mut bodies) = self.external_bodies.pop_front() {
+        if let Some(mut bodies) = self.external_bodies.pop() {
             bodies.clear();
             bodies.reserve(capacity);
             bodies
@@ -68,12 +67,12 @@ impl OctreeNodePool {
             }
         }
 
-        self.internal_nodes.push_back(children);
+        self.internal_nodes.push(children);
     }
 
     pub fn return_external_bodies(&mut self, mut bodies: Vec<OctreeBody>) {
         bodies.clear();
-        self.external_bodies.push_back(bodies);
+        self.external_bodies.push(bodies);
     }
 
     pub fn return_node(&mut self, node: OctreeNode) {
