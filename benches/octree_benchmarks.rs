@@ -7,10 +7,10 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use std::hint::black_box;
 
-#[path = "../src/physics/octree.rs"]
-pub mod octree;
+#[path = "../src/physics/mod.rs"]
+pub mod physics;
 
-fn generate_test_bodies(count: usize, seed: u64) -> Vec<octree::OctreeBody> {
+fn generate_test_bodies(count: usize, seed: u64) -> Vec<physics::octree::OctreeBody> {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let mut bodies = Vec::with_capacity(count);
 
@@ -28,7 +28,7 @@ fn generate_test_bodies(count: usize, seed: u64) -> Vec<octree::OctreeBody> {
         let position = Vector::new(x, y, z);
         let mass = rng.random_range(1.0..100.0);
 
-        bodies.push(octree::OctreeBody {
+        bodies.push(physics::octree::OctreeBody {
             entity: Entity::from_raw(i as u32),
             position,
             mass,
@@ -51,7 +51,7 @@ fn bench_octree_construction(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
             b.iter(|| {
-                let mut octree = octree::Octree::new(theta, min_distance, max_force);
+                let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
                 octree.build(black_box(bodies.clone()));
                 black_box(octree);
             });
@@ -77,7 +77,7 @@ fn bench_octree_construction_leaf_threshold(c: &mut Criterion) {
             &threshold,
             |b, &threshold_val| {
                 b.iter(|| {
-                    let mut octree = octree::Octree::new(theta, min_distance, max_force)
+                    let mut octree = physics::octree::Octree::new(theta, min_distance, max_force)
                         .with_leaf_threshold(threshold_val);
                     octree.build(black_box(bodies.clone()));
                     black_box(octree);
@@ -100,7 +100,7 @@ fn bench_octree_force_calculation(c: &mut Criterion) {
 
     for &count in &body_counts {
         let bodies = generate_test_bodies(count, 42);
-        let mut octree = octree::Octree::new(theta, min_distance, max_force);
+        let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
         octree.build(bodies.clone());
 
         group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
@@ -129,7 +129,7 @@ fn bench_octree_force_calculation_extreme_body_counts(c: &mut Criterion) {
 
     for &count in &body_counts {
         let bodies = generate_test_bodies(count, 42);
-        let mut octree = octree::Octree::new(theta, min_distance, max_force);
+        let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
         octree.build(bodies.clone());
 
         group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
@@ -158,7 +158,7 @@ fn bench_octree_force_calculation_theta(c: &mut Criterion) {
     let bodies = generate_test_bodies(body_count, 42);
 
     for &theta in &theta_values {
-        let mut octree = octree::Octree::new(theta, min_distance, max_force);
+        let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
         octree.build(bodies.clone());
 
         group.bench_with_input(
@@ -194,7 +194,7 @@ fn bench_complete_physics_cycle(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
             b.iter(|| {
-                let mut octree = octree::Octree::new(theta, min_distance, max_force);
+                let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
                 octree.build(black_box(bodies.clone()));
 
                 let mut total_force = Vector::ZERO;
@@ -226,7 +226,7 @@ fn bench_complete_physics_cycle_extreme_body_counts(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
             b.iter(|| {
-                let mut octree = octree::Octree::new(theta, min_distance, max_force);
+                let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
                 octree.build(black_box(bodies.clone()));
 
                 let mut total_force = Vector::ZERO;
@@ -257,15 +257,15 @@ fn bench_octree_pool_reuse(c: &mut Criterion) {
         // Benchmark without pool (new octree each time)
         group.bench_with_input(BenchmarkId::new("without_pool", count), &count, |b, _| {
             b.iter(|| {
-                let mut octree1 = octree::Octree::new(theta, min_distance, max_force);
+                let mut octree1 = physics::octree::Octree::new(theta, min_distance, max_force);
                 octree1.build(black_box(bodies.clone()));
                 black_box(&octree1);
 
-                let mut octree2 = octree::Octree::new(theta, min_distance, max_force);
+                let mut octree2 = physics::octree::Octree::new(theta, min_distance, max_force);
                 octree2.build(black_box(bodies.clone()));
                 black_box(&octree2);
 
-                let mut octree3 = octree::Octree::new(theta, min_distance, max_force);
+                let mut octree3 = physics::octree::Octree::new(theta, min_distance, max_force);
                 octree3.build(black_box(bodies.clone()));
                 black_box(&octree3);
             });
@@ -274,15 +274,16 @@ fn bench_octree_pool_reuse(c: &mut Criterion) {
         // Benchmark with pool (reuse same octree instance)
         group.bench_with_input(BenchmarkId::new("with_pool", count), &count, |b, _| {
             b.iter(|| {
-                let mut octree =
-                    octree::Octree::with_pool_capacity(theta, min_distance, max_force, 50, 100);
+                let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
 
                 octree.build(black_box(bodies.clone()));
                 black_box(&octree);
 
+                octree.clear_pool();
                 octree.build(black_box(bodies.clone()));
                 black_box(&octree);
 
+                octree.clear_pool();
                 octree.build(black_box(bodies.clone()));
                 black_box(&octree);
             });
