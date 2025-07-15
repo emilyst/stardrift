@@ -124,8 +124,8 @@ impl crate::physics::octree::Octree for Octree {
         self.clear_node_pool()
     }
 
-    fn get_bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
-        self.get_bounds(max_depth)
+    fn bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
+        self.bounds(max_depth)
     }
 
     fn build(&mut self, bodies: Vec<OctreeBody>) {
@@ -202,7 +202,7 @@ impl Octree {
         self.node_pool.clear();
     }
 
-    pub fn get_bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
+    pub fn bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
         // Estimate capacity based on max_depth (8^depth nodes at each level)
         let estimated_capacity = match max_depth {
             Some(depth) => (0..=depth)
@@ -1078,18 +1078,18 @@ mod tests {
         octree.build(bodies);
 
         // Test get_bounds without depth limit
-        let bounds_unlimited = octree.get_bounds(None);
+        let bounds_unlimited = octree.bounds(None);
         assert!(!bounds_unlimited.is_empty(), "Should return bounds");
 
         // Test get_bounds with depth limit
-        let bounds_depth_0 = octree.get_bounds(Some(0));
+        let bounds_depth_0 = octree.bounds(Some(0));
         assert_eq!(
             bounds_depth_0.len(),
             1,
             "Depth 0 should return only root bounds"
         );
 
-        let bounds_depth_1 = octree.get_bounds(Some(1));
+        let bounds_depth_1 = octree.bounds(Some(1));
         assert!(
             bounds_depth_1.len() >= bounds_depth_0.len(),
             "Higher depth should return at least as many bounds"
@@ -1097,7 +1097,7 @@ mod tests {
 
         // Test with empty octree
         octree.build(vec![]);
-        let empty_bounds = octree.get_bounds(None);
+        let empty_bounds = octree.bounds(None);
         assert!(
             empty_bounds.is_empty(),
             "Empty octree should return no bounds"

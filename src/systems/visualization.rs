@@ -12,7 +12,7 @@ pub fn visualize_octree<T: physics::octree::Octree + Send + Sync + 'static + ?Si
         return;
     }
 
-    let bounds = octree.get_bounds(settings.max_depth);
+    let bounds = octree.bounds(settings.max_depth);
 
     for aabb in bounds {
         draw_bounding_box_wireframe_gizmo(&mut gizmos, &aabb, css::WHITE);

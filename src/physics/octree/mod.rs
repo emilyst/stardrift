@@ -31,7 +31,7 @@ pub trait Octree {
     fn node_pool_stats(&self) -> (usize, usize);
     fn octree_stats(&self) -> OctreeStats;
     fn clear_node_pool(&mut self);
-    fn get_bounds(&self, max_depth: Option<usize>) -> Vec<physics::aabb3d::Aabb3d>;
+    fn bounds(&self, max_depth: Option<usize>) -> Vec<physics::aabb3d::Aabb3d>;
     fn build(&mut self, bodies: Vec<OctreeBody>);
     fn calculate_force_on_body(&self, body: &OctreeBody, g: Scalar) -> Vector;
 }
