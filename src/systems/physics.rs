@@ -38,14 +38,12 @@ pub fn rebuild_octree(
         return;
     }
 
-    octree.build(
-        bodies
-            .iter()
-            .map(|(transform, mass)| physics::octree::OctreeBody {
-                position: Vector::from(transform.translation),
-                mass: mass.value(),
-            }),
-    );
+    octree.build(bodies.iter().map(|(transform, mass)| {
+        physics::recursive_octree::RecursiveOctreeBody {
+            position: Vector::from(transform.translation),
+            mass: mass.value(),
+        }
+    }));
 }
 
 #[allow(clippy::type_complexity)]
@@ -61,7 +59,7 @@ pub fn apply_gravitation_octree(
         .par_iter_mut()
         .for_each(|(transform, mass, mut external_force)| {
             external_force.set_force(octree.calculate_force(
-                &physics::octree::OctreeBody {
+                &physics::recursive_octree::RecursiveOctreeBody {
                     position: Vector::from(transform.translation),
                     mass: mass.value(),
                 },

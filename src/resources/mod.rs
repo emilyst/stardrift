@@ -49,10 +49,10 @@ impl Default for BodyCount {
 pub struct Barycenter(pub Option<Vector>);
 
 #[derive(Resource, Deref, DerefMut, Debug)]
-pub struct GravitationalOctree(pub physics::octree::Octree);
+pub struct GravitationalOctree(pub physics::recursive_octree::RecursiveOctree);
 
 impl GravitationalOctree {
-    pub fn new(octree: physics::octree::Octree) -> Self {
+    pub fn new(octree: physics::recursive_octree::RecursiveOctree) -> Self {
         Self(octree)
     }
 }

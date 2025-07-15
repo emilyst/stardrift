@@ -1,1 +1,1 @@
-pub mod octree;
+pub mod recursive_octree;

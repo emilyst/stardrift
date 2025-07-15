@@ -9,7 +9,7 @@ use std::sync::atomic::Ordering;
 // TODO: pool diagnostics?
 
 #[derive(Debug, Clone)]
-pub struct OctreeStats {
+pub struct RecursiveOctreeStats {
     pub node_count: usize,
     pub body_count: usize,
     pub total_mass: Scalar,
@@ -18,18 +18,18 @@ pub struct OctreeStats {
 }
 
 #[derive(Debug)]
-pub struct OctreeNodePool {
-    internal_nodes: Vec<[Option<Box<OctreeNode>>; 8]>,
-    external_bodies: Vec<Vec<OctreeBody>>,
+pub struct RecursiveOctreeNodePool {
+    internal_nodes: Vec<[Option<Box<RecursiveOctreeNode>>; 8]>,
+    external_bodies: Vec<Vec<RecursiveOctreeBody>>,
 }
 
-impl Default for OctreeNodePool {
+impl Default for RecursiveOctreeNodePool {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl OctreeNodePool {
+impl RecursiveOctreeNodePool {
     pub fn new() -> Self {
         Self {
             internal_nodes: Vec::new(),
@@ -44,13 +44,13 @@ impl OctreeNodePool {
         }
     }
 
-    pub fn get_internal_children(&mut self) -> [Option<Box<OctreeNode>>; 8] {
+    pub fn get_internal_children(&mut self) -> [Option<Box<RecursiveOctreeNode>>; 8] {
         self.internal_nodes
             .pop()
             .unwrap_or([None, None, None, None, None, None, None, None])
     }
 
-    pub fn get_external_bodies(&mut self, capacity: usize) -> Vec<OctreeBody> {
+    pub fn get_external_bodies(&mut self, capacity: usize) -> Vec<RecursiveOctreeBody> {
         if let Some(mut bodies) = self.external_bodies.pop() {
             bodies.clear();
             bodies.reserve(capacity);
@@ -60,7 +60,10 @@ impl OctreeNodePool {
         }
     }
 
-    pub fn return_internal_children(&mut self, mut children: [Option<Box<OctreeNode>>; 8]) {
+    pub fn return_internal_children(
+        &mut self,
+        mut children: [Option<Box<RecursiveOctreeNode>>; 8],
+    ) {
         for child in children.iter_mut() {
             if let Some(node) = child.take() {
                 self.return_node(*node);
@@ -70,17 +73,17 @@ impl OctreeNodePool {
         self.internal_nodes.push(children);
     }
 
-    pub fn return_external_bodies(&mut self, mut bodies: Vec<OctreeBody>) {
+    pub fn return_external_bodies(&mut self, mut bodies: Vec<RecursiveOctreeBody>) {
         bodies.clear();
         self.external_bodies.push(bodies);
     }
 
-    pub fn return_node(&mut self, node: OctreeNode) {
+    pub fn return_node(&mut self, node: RecursiveOctreeNode) {
         match node {
-            OctreeNode::Internal { children, .. } => {
+            RecursiveOctreeNode::Internal { children, .. } => {
                 self.return_internal_children(children);
             }
-            OctreeNode::External { bodies, .. } => {
+            RecursiveOctreeNode::External { bodies, .. } => {
                 self.return_external_bodies(bodies);
             }
         }
@@ -151,18 +154,18 @@ impl Aabb3d {
 }
 
 #[derive(Debug)]
-pub struct Octree {
-    pub root: Option<OctreeNode>,
+pub struct RecursiveOctree {
+    pub root: Option<RecursiveOctreeNode>,
     pub theta: Scalar,                  // Barnes-Hut approximation parameter
     pub min_distance: Scalar,           // Minimum distance for force calculation
     pub max_force: Scalar,              // Maximum force magnitude
     pub leaf_threshold: usize,          // Maximum bodies per leaf node
     min_distance_squared: Scalar,       // Cached value to avoid repeated multiplication
-    octree_node_pool: OctreeNodePool,   // Pool for reusing node allocations
+    node_pool: RecursiveOctreeNodePool, // Pool for reusing node allocations
     force_calculation_count: AtomicU64, // Counter for force calculations performed
 }
 
-impl Octree {
+impl RecursiveOctree {
     pub fn new(theta: Scalar, min_distance: Scalar, max_force: Scalar) -> Self {
         Self {
             root: None,
@@ -171,7 +174,7 @@ impl Octree {
             max_force,
             leaf_threshold: 4,
             min_distance_squared: min_distance * min_distance,
-            octree_node_pool: OctreeNodePool::new(),
+            node_pool: RecursiveOctreeNodePool::new(),
             force_calculation_count: AtomicU64::new(0),
         }
     }
@@ -195,25 +198,25 @@ impl Octree {
             max_force,
             leaf_threshold: 4,
             min_distance_squared: min_distance * min_distance,
-            octree_node_pool: OctreeNodePool::with_capacity(internal_capacity, external_capacity),
+            node_pool: RecursiveOctreeNodePool::with_capacity(internal_capacity, external_capacity),
             force_calculation_count: AtomicU64::new(0),
         }
     }
 
-    pub fn pool_stats(&self) -> (usize, usize) {
-        self.octree_node_pool.stats()
+    pub fn node_pool_stats(&self) -> (usize, usize) {
+        self.node_pool.stats()
     }
 
-    pub fn octree_stats(&self) -> OctreeStats {
+    pub fn octree_stats(&self) -> RecursiveOctreeStats {
         match &self.root {
-            Some(root) => OctreeStats {
+            Some(root) => RecursiveOctreeStats {
                 node_count: root.count_nodes(),
                 body_count: root.count_bodies(),
                 total_mass: root.total_mass(),
                 center_of_mass: root.center_of_mass(),
                 force_calculation_count: self.force_calculation_count.load(Ordering::Relaxed),
             },
-            None => OctreeStats {
+            None => RecursiveOctreeStats {
                 node_count: 0,
                 body_count: 0,
                 total_mass: 0.0,
@@ -223,8 +226,8 @@ impl Octree {
         }
     }
 
-    pub fn clear_pool(&mut self) {
-        self.octree_node_pool.clear();
+    pub fn clear_node_pool(&mut self) {
+        self.node_pool.clear();
     }
 
     pub fn get_bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
@@ -243,9 +246,9 @@ impl Octree {
         bounds
     }
 
-    pub fn build(&mut self, bodies: impl IntoIterator<Item = OctreeBody>) {
+    pub fn build(&mut self, bodies: impl IntoIterator<Item = RecursiveOctreeBody>) {
         if let Some(old_root) = self.root.take() {
-            self.octree_node_pool.return_node(old_root);
+            self.node_pool.return_node(old_root);
         }
 
         let mut bodies_iter = bodies.into_iter();
@@ -284,23 +287,23 @@ impl Octree {
             bounds,
             bodies_vec,
             self.leaf_threshold,
-            &mut self.octree_node_pool,
+            &mut self.node_pool,
         ));
     }
 
     fn build_node(
         bounds: Aabb3d,
-        bodies: Vec<OctreeBody>,
+        bodies: Vec<RecursiveOctreeBody>,
         leaf_threshold: usize,
-        pool: &mut OctreeNodePool,
-    ) -> OctreeNode {
+        pool: &mut RecursiveOctreeNodePool,
+    ) -> RecursiveOctreeNode {
         if bodies.len() <= leaf_threshold {
             let pooled_bodies = pool.get_external_bodies(bodies.len());
             let mut external_bodies = pooled_bodies;
 
             external_bodies.extend(bodies);
 
-            return OctreeNode::External {
+            return RecursiveOctreeNode::External {
                 bounds,
                 bodies: external_bodies,
             };
@@ -317,7 +320,7 @@ impl Octree {
         });
 
         // Create vectors with exact capacity for non-empty octants using pool
-        let mut octant_bodies: [Vec<OctreeBody>; 8] = [
+        let mut octant_bodies: [Vec<RecursiveOctreeBody>; 8] = [
             pool.get_external_bodies(octant_counts[0]),
             pool.get_external_bodies(octant_counts[1]),
             pool.get_external_bodies(octant_counts[2]),
@@ -359,7 +362,7 @@ impl Octree {
             bounds.center()
         };
 
-        OctreeNode::Internal {
+        RecursiveOctreeNode::Internal {
             bounds,
             center_of_mass,
             total_mass,
@@ -376,12 +379,12 @@ impl Octree {
 
     pub fn calculate_force(
         &self,
-        body: &OctreeBody,
-        node: Option<&OctreeNode>,
+        body: &RecursiveOctreeBody,
+        node: Option<&RecursiveOctreeNode>,
         g: Scalar,
     ) -> Vector {
         match node {
-            Some(OctreeNode::Internal {
+            Some(RecursiveOctreeNode::Internal {
                 bounds,
                 center_of_mass,
                 total_mass,
@@ -402,7 +405,7 @@ impl Octree {
                     force
                 }
             }
-            Some(OctreeNode::External { bodies, .. }) => {
+            Some(RecursiveOctreeNode::External { bodies, .. }) => {
                 let mut force = Vector::ZERO;
                 bodies.iter().for_each(|other_body| {
                     if other_body.position != body.position {
@@ -418,7 +421,7 @@ impl Octree {
     #[inline]
     fn calculate_force_from_point(
         &self,
-        body: &OctreeBody,
+        body: &RecursiveOctreeBody,
         point_position: Vector,
         point_mass: Scalar,
         g: Scalar,
@@ -441,36 +444,41 @@ impl Octree {
     }
 
     #[inline]
-    fn calculate_direct_force(&self, body1: &OctreeBody, body2: &OctreeBody, g: Scalar) -> Vector {
+    fn calculate_direct_force(
+        &self,
+        body1: &RecursiveOctreeBody,
+        body2: &RecursiveOctreeBody,
+        g: Scalar,
+    ) -> Vector {
         self.calculate_force_from_point(body1, body2.position, body2.mass, g)
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct OctreeBody {
+pub struct RecursiveOctreeBody {
     pub position: Vector,
     pub mass: Scalar,
 }
 
 #[derive(Debug)]
-pub enum OctreeNode {
+pub enum RecursiveOctreeNode {
     Internal {
         bounds: Aabb3d,
         center_of_mass: Vector,
         total_mass: Scalar,
-        children: [Option<Box<OctreeNode>>; 8],
+        children: [Option<Box<RecursiveOctreeNode>>; 8],
     },
     External {
         bounds: Aabb3d,
-        bodies: Vec<OctreeBody>,
+        bodies: Vec<RecursiveOctreeBody>,
     },
 }
 
-impl OctreeNode {
+impl RecursiveOctreeNode {
     pub fn bounds(&self) -> Aabb3d {
         match self {
-            OctreeNode::Internal { bounds, .. } => *bounds,
-            OctreeNode::External { bounds, .. } => *bounds,
+            RecursiveOctreeNode::Internal { bounds, .. } => *bounds,
+            RecursiveOctreeNode::External { bounds, .. } => *bounds,
         }
     }
 
@@ -488,7 +496,7 @@ impl OctreeNode {
 
         bounds.push(self.bounds());
 
-        if let OctreeNode::Internal { children, .. } = self {
+        if let RecursiveOctreeNode::Internal { children, .. } = self {
             children.iter().flatten().for_each(|child| {
                 child.collect_bounds(bounds, current_depth + 1, max_depth);
             });
@@ -497,8 +505,8 @@ impl OctreeNode {
 
     pub fn count_bodies(&self) -> usize {
         match self {
-            OctreeNode::External { bodies, .. } => bodies.len(),
-            OctreeNode::Internal { children, .. } => children
+            RecursiveOctreeNode::External { bodies, .. } => bodies.len(),
+            RecursiveOctreeNode::Internal { children, .. } => children
                 .iter()
                 .flatten()
                 .map(|child| child.count_bodies())
@@ -508,8 +516,8 @@ impl OctreeNode {
 
     pub fn count_nodes(&self) -> usize {
         match self {
-            OctreeNode::External { .. } => 1,
-            OctreeNode::Internal { children, .. } => {
+            RecursiveOctreeNode::External { .. } => 1,
+            RecursiveOctreeNode::Internal { children, .. } => {
                 1 + children
                     .iter()
                     .flatten()
@@ -520,20 +528,20 @@ impl OctreeNode {
     }
 
     pub fn is_leaf(&self) -> bool {
-        matches!(self, OctreeNode::External { .. })
+        matches!(self, RecursiveOctreeNode::External { .. })
     }
 
     pub fn total_mass(&self) -> Scalar {
         match self {
-            OctreeNode::Internal { total_mass, .. } => *total_mass,
-            OctreeNode::External { bodies, .. } => bodies.iter().map(|b| b.mass).sum(),
+            RecursiveOctreeNode::Internal { total_mass, .. } => *total_mass,
+            RecursiveOctreeNode::External { bodies, .. } => bodies.iter().map(|b| b.mass).sum(),
         }
     }
 
     pub fn center_of_mass(&self) -> Vector {
         match self {
-            OctreeNode::Internal { center_of_mass, .. } => *center_of_mass,
-            OctreeNode::External { bodies, .. } => {
+            RecursiveOctreeNode::Internal { center_of_mass, .. } => *center_of_mass,
+            RecursiveOctreeNode::External { bodies, .. } => {
                 if bodies.is_empty() {
                     return Vector::ZERO;
                 }
@@ -560,14 +568,14 @@ mod tests {
 
     #[test]
     fn test_octree_force_calculation() {
-        let mut octree = Octree::new(0.5, 10.0, 1e4);
+        let mut octree = RecursiveOctree::new(0.5, 10.0, 1e4);
 
-        let body1 = OctreeBody {
+        let body1 = RecursiveOctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         };
 
-        let body2 = OctreeBody {
+        let body2 = RecursiveOctreeBody {
             position: Vector::new(10.0, 0.0, 0.0),
             mass: 1000.0,
         };
@@ -587,21 +595,21 @@ mod tests {
 
     #[test]
     fn test_octree_boundary_handling() {
-        let mut octree = Octree::new(0.5, 10.0, 1e4);
+        let mut octree = RecursiveOctree::new(0.5, 10.0, 1e4);
 
         // Create a body exactly at the center (boundary of all octants)
-        let center_body = OctreeBody {
+        let center_body = RecursiveOctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         };
 
         // Create bodies in different octants
-        let body1 = OctreeBody {
+        let body1 = RecursiveOctreeBody {
             position: Vector::new(-1.0, -1.0, -1.0),
             mass: 1000.0,
         };
 
-        let body2 = OctreeBody {
+        let body2 = RecursiveOctreeBody {
             position: Vector::new(1.0, 1.0, 1.0),
             mass: 1000.0,
         };
@@ -621,19 +629,19 @@ mod tests {
 
     #[test]
     fn test_octree_no_body_duplication() {
-        let mut octree = Octree::new(0.5, 10.0, 1e4);
+        let mut octree = RecursiveOctree::new(0.5, 10.0, 1e4);
 
         // Create bodies, including one exactly on octant boundary
         let bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0), // Exactly at center
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-2.0, -2.0, -2.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(2.0, 2.0, 2.0),
                 mass: 1000.0,
             },
@@ -654,7 +662,7 @@ mod tests {
 
     #[test]
     fn test_node_pool_basic_functionality() {
-        let mut pool = OctreeNodePool::new();
+        let mut pool = RecursiveOctreeNodePool::new();
 
         // Test getting and returning internal children
         let children1 = pool.get_internal_children();
@@ -690,34 +698,35 @@ mod tests {
 
     #[test]
     fn test_octree_pool_integration() {
-        let mut octree = Octree::with_pool_capacity(0.5, 10.0, 1e4, 10, 10).with_leaf_threshold(1); // Force tree creation with small leaf threshold
+        let mut octree =
+            RecursiveOctree::with_pool_capacity(0.5, 10.0, 1e4, 10, 10).with_leaf_threshold(1); // Force tree creation with small leaf threshold
 
         // Initially pool should be empty
-        assert_eq!(octree.pool_stats(), (0, 0));
+        assert_eq!(octree.node_pool_stats(), (0, 0));
 
         // Create enough bodies to force tree structure creation
         let bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
@@ -727,15 +736,15 @@ mod tests {
         octree.build(bodies.clone());
 
         // Pool should still be empty (nodes are in use)
-        assert_eq!(octree.pool_stats(), (0, 0));
+        assert_eq!(octree.node_pool_stats(), (0, 0));
 
         // Build again with fewer bodies - should return old nodes to pool
         let new_bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 1000.0,
             },
@@ -744,7 +753,7 @@ mod tests {
         octree.build(new_bodies);
 
         // Pool should now have some returned nodes
-        let (internal_count, external_count) = octree.pool_stats();
+        let (internal_count, external_count) = octree.node_pool_stats();
         assert!(
             internal_count > 0 || external_count > 0,
             "Pool should have some returned nodes"
@@ -761,15 +770,15 @@ mod tests {
 
     #[test]
     fn test_pool_clear_functionality() {
-        let mut octree = Octree::with_pool_capacity(0.5, 10.0, 1e4, 5, 5);
+        let mut octree = RecursiveOctree::with_pool_capacity(0.5, 10.0, 1e4, 5, 5);
 
         // Build and rebuild to populate the pool
         let bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-1.0, -1.0, -1.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 1000.0,
             },
@@ -779,12 +788,12 @@ mod tests {
         octree.build(vec![]); // Empty build to return nodes to pool
 
         // Pool should have some nodes
-        let (internal_count, external_count) = octree.pool_stats();
+        let (internal_count, external_count) = octree.node_pool_stats();
         assert!(internal_count > 0 || external_count > 0);
 
         // Clear the pool
-        octree.clear_pool();
-        assert_eq!(octree.pool_stats(), (0, 0));
+        octree.clear_node_pool();
+        assert_eq!(octree.node_pool_stats(), (0, 0));
 
         // Should still work after clearing
         octree.build(bodies);
@@ -793,8 +802,8 @@ mod tests {
 
     #[test]
     fn test_pool_with_capacity() {
-        let octree = Octree::with_pool_capacity(0.5, 10.0, 1e4, 20, 30);
-        assert_eq!(octree.pool_stats(), (0, 0)); // Should start empty but have capacity
+        let octree = RecursiveOctree::with_pool_capacity(0.5, 10.0, 1e4, 20, 30);
+        assert_eq!(octree.node_pool_stats(), (0, 0)); // Should start empty but have capacity
 
         // Test that it has the same functionality as regular octree
         assert_eq!(octree.theta, 0.5);
@@ -804,10 +813,10 @@ mod tests {
 
     #[test]
     fn test_node_count_bodies() {
-        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(2);
+        let mut octree = RecursiveOctree::new(0.5, 10.0, 1e4).with_leaf_threshold(2);
 
         // Test with single body (external node)
-        let single_body = vec![OctreeBody {
+        let single_body = vec![RecursiveOctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         }];
@@ -818,19 +827,19 @@ mod tests {
 
         // Test with multiple bodies that create internal nodes
         let multiple_bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
@@ -847,10 +856,10 @@ mod tests {
 
     #[test]
     fn test_node_is_leaf() {
-        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(1);
+        let mut octree = RecursiveOctree::new(0.5, 10.0, 1e4).with_leaf_threshold(1);
 
         // Test external node (leaf)
-        let single_body = vec![OctreeBody {
+        let single_body = vec![RecursiveOctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         }];
@@ -861,11 +870,11 @@ mod tests {
 
         // Test internal node (not leaf)
         let multiple_bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
@@ -881,15 +890,15 @@ mod tests {
 
     #[test]
     fn test_node_total_mass() {
-        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(2);
+        let mut octree = RecursiveOctree::new(0.5, 10.0, 1e4).with_leaf_threshold(2);
 
         // Test external node mass calculation
         let bodies_external = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 500.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(0.1, 0.1, 0.1),
                 mass: 300.0,
             },
@@ -902,15 +911,15 @@ mod tests {
 
         // Test internal node mass calculation
         let bodies_internal = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 2000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1500.0,
             },
@@ -923,11 +932,11 @@ mod tests {
 
         // Test with zero mass bodies
         let zero_mass_bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 0.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 0.0,
             },
@@ -940,15 +949,15 @@ mod tests {
 
     #[test]
     fn test_node_center_of_mass() {
-        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(2);
+        let mut octree = RecursiveOctree::new(0.5, 10.0, 1e4).with_leaf_threshold(2);
 
         // Test external node center of mass calculation
         let bodies_external = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(2.0, 0.0, 0.0),
                 mass: 1000.0,
             },
@@ -968,15 +977,15 @@ mod tests {
 
         // Test internal node center of mass calculation
         let bodies_internal = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-10.0, -10.0, -10.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(10.0, 10.0, 10.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-10.0, 10.0, -10.0),
                 mass: 2000.0,
             },
@@ -999,11 +1008,11 @@ mod tests {
 
         // Test with zero mass bodies
         let zero_mass_bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 0.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 0.0,
             },
@@ -1021,23 +1030,23 @@ mod tests {
 
     #[test]
     fn test_node_collect_bounds() {
-        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(1);
+        let mut octree = RecursiveOctree::new(0.5, 10.0, 1e4).with_leaf_threshold(1);
 
         // Create bodies that will force tree subdivision
         let bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
@@ -1074,7 +1083,7 @@ mod tests {
         }
 
         // Test with single body (external node)
-        let single_body = vec![OctreeBody {
+        let single_body = vec![RecursiveOctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         }];
@@ -1092,15 +1101,15 @@ mod tests {
 
     #[test]
     fn test_octree_get_bounds_integration() {
-        let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(1);
+        let mut octree = RecursiveOctree::new(0.5, 10.0, 1e4).with_leaf_threshold(1);
 
         // Test that octree.get_bounds() uses the moved collect_bounds method correctly
         let bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-3.0, -3.0, -3.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(3.0, 3.0, 3.0),
                 mass: 1000.0,
             },
@@ -1137,7 +1146,7 @@ mod tests {
 
     #[test]
     fn test_octree_stats() {
-        let mut octree = Octree::new(0.5, 1.0, 1e4);
+        let mut octree = RecursiveOctree::new(0.5, 1.0, 1e4);
 
         // Test empty octree stats
         let empty_stats = octree.octree_stats();
@@ -1149,15 +1158,15 @@ mod tests {
 
         // Create test bodies
         let bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 100.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(10.0, 0.0, 0.0),
                 mass: 200.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(0.0, 10.0, 0.0),
                 mass: 300.0,
             },
@@ -1193,10 +1202,10 @@ mod tests {
 
     #[test]
     fn test_count_nodes() {
-        let mut octree = Octree::new(0.5, 1.0, 1e4).with_leaf_threshold(1);
+        let mut octree = RecursiveOctree::new(0.5, 1.0, 1e4).with_leaf_threshold(1);
 
         // Single body should create one external node
-        let single_body = vec![OctreeBody {
+        let single_body = vec![RecursiveOctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 100.0,
         }];
@@ -1204,23 +1213,23 @@ mod tests {
         let stats = octree.octree_stats();
         assert_eq!(stats.node_count, 1, "Single body should create one node");
 
-        octree = Octree::new(0.5, 1.0, 1e4).with_leaf_threshold(1);
+        octree = RecursiveOctree::new(0.5, 1.0, 1e4).with_leaf_threshold(1);
 
         // Multiple bodies spread out should create internal nodes (with leaf_threshold=1)
         let multiple_bodies = vec![
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-10.0, -10.0, -10.0),
                 mass: 100.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(10.0, 10.0, 10.0),
                 mass: 100.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(-10.0, 10.0, -10.0),
                 mass: 100.0,
             },
-            OctreeBody {
+            RecursiveOctreeBody {
                 position: Vector::new(10.0, -10.0, 10.0),
                 mass: 100.0,
             },
