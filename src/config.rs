@@ -70,9 +70,9 @@ impl Default for PhysicsConfig {
         } else {
             Self {
                 gravitational_constant: 1e2,
-                body_count: 1000,
+                body_count: 200,
                 octree_implementation: OctreeImplementation::Recursive,
-                octree_theta: 2.0,
+                octree_theta: 0.5,
                 octree_leaf_threshold: 4,
                 body_distribution_sphere_radius_multiplier: 100.0,
                 body_distribution_min_distance: 0.001,
