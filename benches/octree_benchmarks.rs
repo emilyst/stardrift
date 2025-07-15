@@ -1,5 +1,4 @@
 use avian3d::math::Vector;
-use bevy::prelude::Entity;
 use criterion::BenchmarkId;
 use criterion::Criterion;
 use rand::Rng;
@@ -16,7 +15,7 @@ fn generate_test_bodies(count: usize, seed: u64) -> Vec<physics::octree::OctreeB
 
     let radius = 200.0;
 
-    for i in 0..count {
+    for _ in 0..count {
         let theta = rng.random_range(0.0..2.0 * std::f64::consts::PI);
         let phi = rng.random_range(0.0..std::f64::consts::PI);
         let r = rng.random_range(0.0..radius);
@@ -28,11 +27,7 @@ fn generate_test_bodies(count: usize, seed: u64) -> Vec<physics::octree::OctreeB
         let position = Vector::new(x, y, z);
         let mass = rng.random_range(1.0..100.0);
 
-        bodies.push(physics::octree::OctreeBody {
-            entity: Entity::from_raw(i as u32),
-            position,
-            mass,
-        });
+        bodies.push(physics::octree::OctreeBody { position, mass });
     }
 
     bodies

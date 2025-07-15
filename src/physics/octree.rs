@@ -405,7 +405,7 @@ impl Octree {
             Some(OctreeNode::External { bodies, .. }) => {
                 let mut force = Vector::ZERO;
                 bodies.iter().for_each(|other_body| {
-                    if other_body.entity != body.entity {
+                    if other_body.position != body.position {
                         force += self.calculate_direct_force(body, other_body, g);
                     }
                 });
@@ -448,7 +448,6 @@ impl Octree {
 
 #[derive(Debug, Clone, Copy)]
 pub struct OctreeBody {
-    pub entity: Entity,
     pub position: Vector,
     pub mass: Scalar,
 }
@@ -558,20 +557,17 @@ impl OctreeNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy::prelude::Entity;
 
     #[test]
     fn test_octree_force_calculation() {
         let mut octree = Octree::new(0.5, 10.0, 1e4);
 
         let body1 = OctreeBody {
-            entity: Entity::from_raw(0),
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         };
 
         let body2 = OctreeBody {
-            entity: Entity::from_raw(1),
             position: Vector::new(10.0, 0.0, 0.0),
             mass: 1000.0,
         };
@@ -595,20 +591,17 @@ mod tests {
 
         // Create a body exactly at the center (boundary of all octants)
         let center_body = OctreeBody {
-            entity: Entity::from_raw(0),
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         };
 
         // Create bodies in different octants
         let body1 = OctreeBody {
-            entity: Entity::from_raw(1),
             position: Vector::new(-1.0, -1.0, -1.0),
             mass: 1000.0,
         };
 
         let body2 = OctreeBody {
-            entity: Entity::from_raw(2),
             position: Vector::new(1.0, 1.0, 1.0),
             mass: 1000.0,
         };
@@ -633,17 +626,14 @@ mod tests {
         // Create bodies, including one exactly on octant boundary
         let bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(0.0, 0.0, 0.0), // Exactly at center
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(-2.0, -2.0, -2.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(2),
                 position: Vector::new(2.0, 2.0, 2.0),
                 mass: 1000.0,
             },
@@ -708,32 +698,26 @@ mod tests {
         // Create enough bodies to force tree structure creation
         let bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(2),
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(3),
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(4),
                 position: Vector::new(-5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(5),
                 position: Vector::new(5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
@@ -748,12 +732,10 @@ mod tests {
         // Build again with fewer bodies - should return old nodes to pool
         let new_bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(6),
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(7),
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 1000.0,
             },
@@ -784,12 +766,10 @@ mod tests {
         // Build and rebuild to populate the pool
         let bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(-1.0, -1.0, -1.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 1000.0,
             },
@@ -828,7 +808,6 @@ mod tests {
 
         // Test with single body (external node)
         let single_body = vec![OctreeBody {
-            entity: Entity::from_raw(0),
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         }];
@@ -840,22 +819,18 @@ mod tests {
         // Test with multiple bodies that create internal nodes
         let multiple_bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(2),
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(3),
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
@@ -876,7 +851,6 @@ mod tests {
 
         // Test external node (leaf)
         let single_body = vec![OctreeBody {
-            entity: Entity::from_raw(0),
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         }];
@@ -888,12 +862,10 @@ mod tests {
         // Test internal node (not leaf)
         let multiple_bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
@@ -914,12 +886,10 @@ mod tests {
         // Test external node mass calculation
         let bodies_external = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 500.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(0.1, 0.1, 0.1),
                 mass: 300.0,
             },
@@ -933,17 +903,14 @@ mod tests {
         // Test internal node mass calculation
         let bodies_internal = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 2000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(2),
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1500.0,
             },
@@ -957,12 +924,10 @@ mod tests {
         // Test with zero mass bodies
         let zero_mass_bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 0.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 0.0,
             },
@@ -980,12 +945,10 @@ mod tests {
         // Test external node center of mass calculation
         let bodies_external = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(2.0, 0.0, 0.0),
                 mass: 1000.0,
             },
@@ -1006,17 +969,14 @@ mod tests {
         // Test internal node center of mass calculation
         let bodies_internal = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(-10.0, -10.0, -10.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(10.0, 10.0, 10.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(2),
                 position: Vector::new(-10.0, 10.0, -10.0),
                 mass: 2000.0,
             },
@@ -1040,12 +1000,10 @@ mod tests {
         // Test with zero mass bodies
         let zero_mass_bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 0.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 0.0,
             },
@@ -1068,22 +1026,18 @@ mod tests {
         // Create bodies that will force tree subdivision
         let bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(2),
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(3),
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
@@ -1121,7 +1075,6 @@ mod tests {
 
         // Test with single body (external node)
         let single_body = vec![OctreeBody {
-            entity: Entity::from_raw(0),
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         }];
@@ -1144,12 +1097,10 @@ mod tests {
         // Test that octree.get_bounds() uses the moved collect_bounds method correctly
         let bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(-3.0, -3.0, -3.0),
                 mass: 1000.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(3.0, 3.0, 3.0),
                 mass: 1000.0,
             },
@@ -1199,17 +1150,14 @@ mod tests {
         // Create test bodies
         let bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 100.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(10.0, 0.0, 0.0),
                 mass: 200.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(2),
                 position: Vector::new(0.0, 10.0, 0.0),
                 mass: 300.0,
             },
@@ -1249,7 +1197,6 @@ mod tests {
 
         // Single body should create one external node
         let single_body = vec![OctreeBody {
-            entity: Entity::from_raw(0),
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 100.0,
         }];
@@ -1262,22 +1209,18 @@ mod tests {
         // Multiple bodies spread out should create internal nodes (with leaf_threshold=1)
         let multiple_bodies = vec![
             OctreeBody {
-                entity: Entity::from_raw(0),
                 position: Vector::new(-10.0, -10.0, -10.0),
                 mass: 100.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(1),
                 position: Vector::new(10.0, 10.0, 10.0),
                 mass: 100.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(2),
                 position: Vector::new(-10.0, 10.0, -10.0),
                 mass: 100.0,
             },
             OctreeBody {
-                entity: Entity::from_raw(3),
                 position: Vector::new(10.0, -10.0, 10.0),
                 mass: 100.0,
             },
