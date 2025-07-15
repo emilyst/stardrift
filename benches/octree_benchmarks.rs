@@ -6,6 +6,8 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use std::hint::black_box;
 
+#[path = "../src/config.rs"]
+pub mod config;
 #[path = "../src/physics/mod.rs"]
 pub mod physics;
 
