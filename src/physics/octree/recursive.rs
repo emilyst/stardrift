@@ -103,6 +103,40 @@ pub struct Octree {
     force_calculation_count: AtomicU64, // Counter for force calculations performed
 }
 
+impl crate::physics::octree::Octree for Octree {
+    fn new(theta: Scalar, min_distance: Scalar, max_force: Scalar) -> Self {
+        Self::new(theta, min_distance, max_force)
+    }
+
+    fn with_leaf_threshold(self, leaf_threshold: usize) -> Self {
+        self.with_leaf_threshold(leaf_threshold)
+    }
+
+    fn pool_stats(&self) -> (usize, usize) {
+        self.node_pool_stats()
+    }
+
+    fn octree_stats(&self) -> OctreeStats {
+        self.octree_stats()
+    }
+
+    fn clear_pool(&mut self) {
+        self.clear_node_pool()
+    }
+
+    fn get_bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
+        self.get_bounds(max_depth)
+    }
+
+    fn build(&mut self, bodies: Vec<OctreeBody>) {
+        self.build(bodies)
+    }
+
+    fn calculate_force_on_body(&self, body: &OctreeBody, g: Scalar) -> Vector {
+        self.calculate_force(body, self.root.as_ref(), g)
+    }
+}
+
 impl Octree {
     pub fn new(theta: Scalar, min_distance: Scalar, max_force: Scalar) -> Self {
         Self {

@@ -1,4 +1,5 @@
 use crate::config;
+use crate::physics;
 use crate::resources;
 use crate::states;
 use crate::systems;
@@ -19,7 +20,9 @@ pub struct ToggleBarycenterGizmoVisibilityEvent;
 pub struct TogglePauseSimulationEvent;
 
 #[allow(clippy::too_many_arguments)]
-pub fn handle_restart_simulation_event(
+pub fn handle_restart_simulation_event<
+    T: physics::octree::Octree + Send + Sync + 'static + ?Sized,
+>(
     mut restart_events: EventReader<RestartSimulationEvent>,
     mut commands: Commands,
     simulation_bodies: Query<Entity, With<RigidBody>>,

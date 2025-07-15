@@ -25,10 +25,16 @@ impl Default for SimulationConfig {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum OctreeImplementation {
+    Recursive,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PhysicsConfig {
     pub gravitational_constant: Scalar,
     pub body_count: usize,
+    pub octree_implementation: OctreeImplementation,
     pub octree_theta: Scalar,
     pub octree_leaf_threshold: usize,
     pub body_distribution_sphere_radius_multiplier: Scalar,
@@ -48,6 +54,7 @@ impl Default for PhysicsConfig {
             Self {
                 gravitational_constant: 1e2,
                 body_count: 100,
+                octree_implementation: OctreeImplementation::Recursive,
                 octree_theta: 1.0,
                 octree_leaf_threshold: 4,
                 body_distribution_sphere_radius_multiplier: 200.0,
@@ -64,6 +71,7 @@ impl Default for PhysicsConfig {
             Self {
                 gravitational_constant: 1e2,
                 body_count: 1000,
+                octree_implementation: OctreeImplementation::Recursive,
                 octree_theta: 2.0,
                 octree_leaf_threshold: 4,
                 body_distribution_sphere_radius_multiplier: 100.0,

@@ -29,8 +29,7 @@ pub fn spawn_simulation_bodies(
     commands.spawn_batch(spawn_data);
 }
 
-#[allow(clippy::type_complexity)]
-pub fn rebuild_octree(
+pub fn rebuild_octree<T: physics::octree::Octree + Send + Sync + 'static + ?Sized>(
     bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
     mut octree: ResMut<resources::GravitationalOctree>,
 ) {
@@ -44,12 +43,12 @@ pub fn rebuild_octree(
             .map(|(transform, mass)| physics::octree::OctreeBody {
                 position: Vector::from(transform.translation),
                 mass: mass.value(),
-            }),
+            })
+            .collect(),
     );
 }
 
-#[allow(clippy::type_complexity)]
-pub fn apply_gravitation_octree(
+pub fn apply_gravitation_octree<T: physics::octree::Octree + Send + Sync + 'static + ?Sized>(
     g: Res<resources::GravitationalConstant>,
     octree: Res<resources::GravitationalOctree>,
     mut bodies: Query<
@@ -60,12 +59,11 @@ pub fn apply_gravitation_octree(
     bodies
         .par_iter_mut()
         .for_each(|(transform, mass, mut external_force)| {
-            external_force.set_force(octree.calculate_force(
+            external_force.set_force(octree.calculate_force_on_body(
                 &physics::octree::OctreeBody {
                     position: Vector::from(transform.translation),
                     mass: mass.value(),
                 },
-                octree.root.as_ref(),
                 **g,
             ));
         });
