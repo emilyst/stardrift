@@ -57,7 +57,7 @@ impl Default for PhysicsConfig {
                 body_count: 100,
                 octree_implementation: OctreeImplementation::Recursive,
                 octree_theta: 1.0,
-                octree_leaf_threshold: 4,
+                octree_leaf_threshold: 8,
                 body_distribution_sphere_radius_multiplier: 200.0,
                 body_distribution_min_distance: 0.001,
                 min_body_radius: 5.0,
@@ -66,7 +66,7 @@ impl Default for PhysicsConfig {
                 force_calculation_max_force: 1e4,
                 initial_seed: None,
                 collision_restitution: 0.8,
-                collision_friction: 0.1,
+                collision_friction: 0.5,
             }
         } else {
             Self {
@@ -74,7 +74,7 @@ impl Default for PhysicsConfig {
                 body_count: 200,
                 octree_implementation: OctreeImplementation::Recursive,
                 octree_theta: 0.5,
-                octree_leaf_threshold: 4,
+                octree_leaf_threshold: 8,
                 body_distribution_sphere_radius_multiplier: 100.0,
                 body_distribution_min_distance: 0.001,
                 min_body_radius: 5.0,
@@ -83,7 +83,7 @@ impl Default for PhysicsConfig {
                 force_calculation_max_force: 1e6,
                 initial_seed: None,
                 collision_restitution: 0.8,
-                collision_friction: 0.1,
+                collision_friction: 0.5,
             }
         }
     }
