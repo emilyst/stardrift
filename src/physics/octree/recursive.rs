@@ -112,7 +112,7 @@ impl crate::physics::octree::Octree for Octree {
         self.with_leaf_threshold(leaf_threshold)
     }
 
-    fn pool_stats(&self) -> (usize, usize) {
+    fn node_pool_stats(&self) -> (usize, usize) {
         self.node_pool_stats()
     }
 
@@ -120,7 +120,7 @@ impl crate::physics::octree::Octree for Octree {
         self.octree_stats()
     }
 
-    fn clear_pool(&mut self) {
+    fn clear_node_pool(&mut self) {
         self.clear_node_pool()
     }
 
