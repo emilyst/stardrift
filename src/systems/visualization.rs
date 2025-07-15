@@ -21,7 +21,7 @@ pub fn visualize_octree(
 
 pub fn draw_bounding_box_wireframe_gizmo(
     gizmos: &mut Gizmos,
-    aabb: &physics::octree::Aabb3d,
+    aabb: &physics::aabb3d::Aabb3d,
     color: impl Into<Color>,
 ) {
     let min = aabb.min.as_vec3();

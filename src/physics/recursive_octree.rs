@@ -6,6 +6,8 @@ use bevy::prelude::*;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
+use super::aabb3d::Aabb3d;
+
 // TODO: pool diagnostics?
 
 #[derive(Debug, Clone)]
@@ -96,60 +98,6 @@ impl RecursiveOctreeNodePool {
 
     pub fn stats(&self) -> (usize, usize) {
         (self.internal_nodes.len(), self.external_bodies.len())
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Aabb3d {
-    pub min: Vector,
-    pub max: Vector,
-}
-
-impl Aabb3d {
-    pub fn new(min: Vector, max: Vector) -> Self {
-        Self { min, max }
-    }
-
-    #[inline]
-    pub fn center(&self) -> Vector {
-        (self.min + self.max) * 0.5
-    }
-
-    #[inline]
-    pub fn size(&self) -> Vector {
-        self.max - self.min
-    }
-
-    pub fn subdivide_into_children(&self) -> [Aabb3d; 8] {
-        let center = self.center();
-        [
-            Aabb3d::new(self.min, center),
-            Aabb3d::new(
-                Vector::new(center.x, self.min.y, self.min.z),
-                Vector::new(self.max.x, center.y, center.z),
-            ),
-            Aabb3d::new(
-                Vector::new(self.min.x, center.y, self.min.z),
-                Vector::new(center.x, self.max.y, center.z),
-            ),
-            Aabb3d::new(
-                Vector::new(center.x, center.y, self.min.z),
-                Vector::new(self.max.x, self.max.y, center.z),
-            ),
-            Aabb3d::new(
-                Vector::new(self.min.x, self.min.y, center.z),
-                Vector::new(center.x, center.y, self.max.z),
-            ),
-            Aabb3d::new(
-                Vector::new(center.x, self.min.y, center.z),
-                Vector::new(self.max.x, center.y, self.max.z),
-            ),
-            Aabb3d::new(
-                Vector::new(self.min.x, center.y, center.z),
-                Vector::new(center.x, self.max.y, self.max.z),
-            ),
-            Aabb3d::new(center, self.max),
-        ]
     }
 }
 
@@ -310,7 +258,7 @@ impl RecursiveOctree {
         }
 
         let center = bounds.center();
-        let octants = bounds.subdivide_into_children();
+        let octants = bounds.octants();
 
         // Count bodies per octant first for better allocation
         let mut octant_counts = [0usize; 8];
