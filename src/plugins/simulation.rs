@@ -35,13 +35,12 @@ impl Plugin for SimulationPlugin {
         app.insert_resource(resources::BodyCount(config.physics.body_count));
         app.init_resource::<resources::Barycenter>();
         app.insert_resource(resources::GravitationalOctree::new(
-            physics::octree::create_octree(
-                config.physics.octree_implementation,
+            physics::octree::Octree::new(
                 config.physics.octree_theta,
                 config.physics.force_calculation_min_distance,
                 config.physics.force_calculation_max_force,
-                config.physics.octree_leaf_threshold,
-            ),
+            )
+            .with_leaf_threshold(config.physics.octree_leaf_threshold),
         ));
         app.insert_resource(resources::OctreeVisualizationSettings {
             enabled: false,
@@ -97,14 +96,12 @@ impl Plugin for SimulationPlugin {
         app.add_systems(
             FixedUpdate,
             (
-                systems::physics::rebuild_octree::<dyn physics::octree::Octree + Send + Sync>
+                systems::physics::rebuild_octree
                     .in_set(systems::physics::PhysicsSet::BuildOctree)
                     .run_if(
                         in_state(states::AppState::Running).or(in_state(states::AppState::Paused)),
                     ),
-                systems::physics::apply_gravitation_octree::<
-                    dyn physics::octree::Octree + Send + Sync,
-                >
+                systems::physics::apply_gravitation_octree
                     .in_set(systems::physics::PhysicsSet::ApplyForces)
                     .run_if(in_state(states::AppState::Running)),
                 systems::physics::counteract_barycentric_drift.run_if(
@@ -143,9 +140,7 @@ impl Plugin for SimulationPlugin {
                 systems::input::restart_simulation_on_n,
                 systems::input::toggle_barycenter_gizmo_visibility_on_c,
                 systems::input::toggle_octree_visualization,
-                systems::simulation_actions::handle_restart_simulation_event::<
-                    dyn physics::octree::Octree + Send + Sync,
-                >,
+                systems::simulation_actions::handle_restart_simulation_event,
                 systems::simulation_actions::handle_toggle_octree_visualization_event,
                 systems::simulation_actions::handle_toggle_barycenter_gizmo_visibility_event,
                 systems::simulation_actions::handle_toggle_pause_simulation_event,
@@ -169,7 +164,7 @@ impl Plugin for SimulationPlugin {
         );
         app.add_systems(
             Update,
-            systems::visualization::visualize_octree::<dyn physics::octree::Octree + Send + Sync>
+            systems::visualization::visualize_octree
                 .in_set(SimulationSet::Visualization)
                 .run_if(in_state(states::AppState::Running).or(in_state(states::AppState::Paused))),
         );

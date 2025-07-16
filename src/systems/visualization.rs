@@ -3,7 +3,7 @@ use crate::resources;
 use bevy::color::palettes::css;
 use bevy::prelude::*;
 
-pub fn visualize_octree<T: physics::octree::Octree + Send + Sync + 'static + ?Sized>(
+pub fn visualize_octree(
     mut gizmos: Gizmos,
     octree: Res<resources::GravitationalOctree>,
     settings: Res<resources::OctreeVisualizationSettings>,

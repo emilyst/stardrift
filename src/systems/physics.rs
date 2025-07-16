@@ -30,7 +30,7 @@ pub fn spawn_simulation_bodies(
     commands.spawn_batch(spawn_data);
 }
 
-pub fn rebuild_octree<T: physics::octree::Octree + Send + Sync + 'static + ?Sized>(
+pub fn rebuild_octree(
     bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
     mut octree: ResMut<resources::GravitationalOctree>,
 ) {
@@ -44,12 +44,11 @@ pub fn rebuild_octree<T: physics::octree::Octree + Send + Sync + 'static + ?Size
             .map(|(transform, mass)| physics::octree::OctreeBody {
                 position: Vector::from(transform.translation),
                 mass: mass.value(),
-            })
-            .collect(),
+            }),
     );
 }
 
-pub fn apply_gravitation_octree<T: physics::octree::Octree + Send + Sync + 'static + ?Sized>(
+pub fn apply_gravitation_octree(
     g: Res<resources::GravitationalConstant>,
     octree: Res<resources::GravitationalOctree>,
     mut bodies: Query<
