@@ -10,8 +10,6 @@ use crate::physics::aabb3d::Aabb3d;
 use crate::physics::octree::OctreeBody;
 use crate::physics::octree::OctreeStats;
 
-// TODO: pool diagnostics?
-
 #[derive(Debug)]
 pub struct OctreeNodePool {
     internal_nodes: Vec<[Option<Box<OctreeNode>>; 8]>,
