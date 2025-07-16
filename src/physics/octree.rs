@@ -324,6 +324,7 @@ impl Octree {
             | (((position.z > center.z) as usize) << 2)
     }
 
+    #[inline]
     pub fn calculate_force(
         &self,
         body: &OctreeBody,
@@ -356,7 +357,12 @@ impl Octree {
                 let mut force = Vector::ZERO;
                 bodies.iter().for_each(|other_body| {
                     if other_body.position != body.position {
-                        force += self.calculate_direct_force(body, other_body, g);
+                        force += self.calculate_force_from_point(
+                            body,
+                            other_body.position,
+                            other_body.mass,
+                            g,
+                        );
                     }
                 });
                 force
@@ -388,15 +394,6 @@ impl Octree {
         let force_magnitude = force_magnitude.min(self.max_force);
 
         direction_normalized * force_magnitude
-    }
-
-    #[inline]
-    fn calculate_direct_force(&self, body1: &OctreeBody, body2: &OctreeBody, g: Scalar) -> Vector {
-        self.calculate_force_from_point(body1, body2.position, body2.mass, g)
-    }
-
-    pub fn calculate_force_on_body(&self, body: &OctreeBody, g: Scalar) -> Vector {
-        self.calculate_force(body, self.root.as_ref(), g)
     }
 }
 

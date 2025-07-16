@@ -59,11 +59,12 @@ pub fn apply_gravitation_octree(
     bodies
         .par_iter_mut()
         .for_each(|(transform, mass, mut external_force)| {
-            external_force.set_force(octree.calculate_force_on_body(
+            external_force.set_force(octree.calculate_force(
                 &physics::octree::OctreeBody {
                     position: Vector::from(transform.translation),
                     mass: mass.value(),
                 },
+                octree.root.as_ref(),
                 **g,
             ));
         });
