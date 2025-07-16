@@ -6,14 +6,12 @@ use bevy::prelude::*;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
-use crate::physics::aabb3d::Aabb3d;
-use crate::physics::octree::OctreeBody;
-use crate::physics::octree::OctreeStats;
+use crate::physics;
 
 #[derive(Debug)]
 pub struct OctreeNodePool {
     internal_nodes: Vec<[Option<Box<OctreeNode>>; 8]>,
-    external_bodies: Vec<Vec<OctreeBody>>,
+    external_bodies: Vec<Vec<physics::octree::OctreeBody>>,
 }
 
 impl Default for OctreeNodePool {
@@ -43,7 +41,7 @@ impl OctreeNodePool {
             .unwrap_or([None, None, None, None, None, None, None, None])
     }
 
-    pub fn get_external_bodies(&mut self, capacity: usize) -> Vec<OctreeBody> {
+    pub fn get_external_bodies(&mut self, capacity: usize) -> Vec<physics::octree::OctreeBody> {
         if let Some(mut bodies) = self.external_bodies.pop() {
             bodies.clear();
             bodies.reserve(capacity);
@@ -63,7 +61,7 @@ impl OctreeNodePool {
         self.internal_nodes.push(children);
     }
 
-    pub fn return_external_bodies(&mut self, mut bodies: Vec<OctreeBody>) {
+    pub fn return_external_bodies(&mut self, mut bodies: Vec<physics::octree::OctreeBody>) {
         bodies.clear();
         self.external_bodies.push(bodies);
     }
@@ -101,7 +99,7 @@ pub struct Octree {
     force_calculation_count: AtomicU64, // Counter for force calculations performed
 }
 
-impl crate::physics::octree::Octree for Octree {
+impl physics::octree::Octree for Octree {
     fn new(theta: Scalar, min_distance: Scalar, max_force: Scalar) -> Self {
         Self::new(theta, min_distance, max_force)
     }
@@ -114,7 +112,7 @@ impl crate::physics::octree::Octree for Octree {
         self.node_pool_stats()
     }
 
-    fn octree_stats(&self) -> OctreeStats {
+    fn octree_stats(&self) -> physics::octree::OctreeStats {
         self.octree_stats()
     }
 
@@ -122,15 +120,15 @@ impl crate::physics::octree::Octree for Octree {
         self.clear_node_pool()
     }
 
-    fn bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
+    fn bounds(&self, max_depth: Option<usize>) -> Vec<physics::aabb3d::Aabb3d> {
         self.bounds(max_depth)
     }
 
-    fn build(&mut self, bodies: Vec<OctreeBody>) {
+    fn build(&mut self, bodies: Vec<physics::octree::OctreeBody>) {
         self.build(bodies)
     }
 
-    fn calculate_force_on_body(&self, body: &OctreeBody, g: Scalar) -> Vector {
+    fn calculate_force_on_body(&self, body: &physics::octree::OctreeBody, g: Scalar) -> Vector {
         self.calculate_force(body, self.root.as_ref(), g)
     }
 }
@@ -177,16 +175,16 @@ impl Octree {
         self.node_pool.stats()
     }
 
-    pub fn octree_stats(&self) -> OctreeStats {
+    pub fn octree_stats(&self) -> physics::octree::OctreeStats {
         match &self.root {
-            Some(root) => OctreeStats {
+            Some(root) => physics::octree::OctreeStats {
                 node_count: root.count_nodes(),
                 body_count: root.count_bodies(),
                 total_mass: root.total_mass(),
                 center_of_mass: root.center_of_mass(),
                 force_calculation_count: self.force_calculation_count.load(Ordering::Relaxed),
             },
-            None => OctreeStats {
+            None => physics::octree::OctreeStats {
                 node_count: 0,
                 body_count: 0,
                 total_mass: 0.0,
@@ -200,7 +198,7 @@ impl Octree {
         self.node_pool.clear();
     }
 
-    pub fn bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
+    pub fn bounds(&self, max_depth: Option<usize>) -> Vec<physics::aabb3d::Aabb3d> {
         // Estimate capacity based on max_depth (8^depth nodes at each level)
         let estimated_capacity = match max_depth {
             Some(depth) => (0..=depth)
@@ -216,7 +214,7 @@ impl Octree {
         bounds
     }
 
-    pub fn build(&mut self, bodies: impl IntoIterator<Item = OctreeBody>) {
+    pub fn build(&mut self, bodies: impl IntoIterator<Item = physics::octree::OctreeBody>) {
         if let Some(old_root) = self.root.take() {
             self.node_pool.return_node(old_root);
         }
@@ -252,7 +250,7 @@ impl Octree {
         min -= padding;
         max += padding;
 
-        let bounds = Aabb3d::new(min, max);
+        let bounds = physics::aabb3d::Aabb3d::new(min, max);
         self.root = Some(Self::build_node(
             bounds,
             bodies_vec,
@@ -262,8 +260,8 @@ impl Octree {
     }
 
     fn build_node(
-        bounds: Aabb3d,
-        bodies: Vec<OctreeBody>,
+        bounds: physics::aabb3d::Aabb3d,
+        bodies: Vec<physics::octree::OctreeBody>,
         leaf_threshold: usize,
         pool: &mut OctreeNodePool,
     ) -> OctreeNode {
@@ -290,7 +288,7 @@ impl Octree {
         });
 
         // Create vectors with exact capacity for non-empty octants using pool
-        let mut octant_bodies: [Vec<OctreeBody>; 8] = [
+        let mut octant_bodies: [Vec<physics::octree::OctreeBody>; 8] = [
             pool.get_external_bodies(octant_counts[0]),
             pool.get_external_bodies(octant_counts[1]),
             pool.get_external_bodies(octant_counts[2]),
@@ -349,7 +347,7 @@ impl Octree {
 
     pub fn calculate_force(
         &self,
-        body: &OctreeBody,
+        body: &physics::octree::OctreeBody,
         node: Option<&OctreeNode>,
         g: Scalar,
     ) -> Vector {
@@ -391,7 +389,7 @@ impl Octree {
     #[inline]
     fn calculate_force_from_point(
         &self,
-        body: &OctreeBody,
+        body: &physics::octree::OctreeBody,
         point_position: Vector,
         point_mass: Scalar,
         g: Scalar,
@@ -414,7 +412,12 @@ impl Octree {
     }
 
     #[inline]
-    fn calculate_direct_force(&self, body1: &OctreeBody, body2: &OctreeBody, g: Scalar) -> Vector {
+    fn calculate_direct_force(
+        &self,
+        body1: &physics::octree::OctreeBody,
+        body2: &physics::octree::OctreeBody,
+        g: Scalar,
+    ) -> Vector {
         self.calculate_force_from_point(body1, body2.position, body2.mass, g)
     }
 }
@@ -422,19 +425,19 @@ impl Octree {
 #[derive(Debug)]
 pub enum OctreeNode {
     Internal {
-        bounds: Aabb3d,
+        bounds: physics::aabb3d::Aabb3d,
         center_of_mass: Vector,
         total_mass: Scalar,
         children: [Option<Box<OctreeNode>>; 8],
     },
     External {
-        bounds: Aabb3d,
-        bodies: Vec<OctreeBody>,
+        bounds: physics::aabb3d::Aabb3d,
+        bodies: Vec<physics::octree::OctreeBody>,
     },
 }
 
 impl OctreeNode {
-    pub fn bounds(&self) -> Aabb3d {
+    pub fn bounds(&self) -> physics::aabb3d::Aabb3d {
         match self {
             OctreeNode::Internal { bounds, .. } => *bounds,
             OctreeNode::External { bounds, .. } => *bounds,
@@ -443,7 +446,7 @@ impl OctreeNode {
 
     pub fn collect_bounds(
         &self,
-        bounds: &mut Vec<Aabb3d>,
+        bounds: &mut Vec<physics::aabb3d::Aabb3d>,
         current_depth: usize,
         max_depth: Option<usize>,
     ) {
@@ -529,12 +532,12 @@ mod tests {
     fn test_octree_force_calculation() {
         let mut octree = Octree::new(0.5, 10.0, 1e4);
 
-        let body1 = OctreeBody {
+        let body1 = physics::octree::OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         };
 
-        let body2 = OctreeBody {
+        let body2 = physics::octree::OctreeBody {
             position: Vector::new(10.0, 0.0, 0.0),
             mass: 1000.0,
         };
@@ -557,18 +560,18 @@ mod tests {
         let mut octree = Octree::new(0.5, 10.0, 1e4);
 
         // Create a body exactly at the center (boundary of all octants)
-        let center_body = OctreeBody {
+        let center_body = physics::octree::OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         };
 
         // Create bodies in different octants
-        let body1 = OctreeBody {
+        let body1 = physics::octree::OctreeBody {
             position: Vector::new(-1.0, -1.0, -1.0),
             mass: 1000.0,
         };
 
-        let body2 = OctreeBody {
+        let body2 = physics::octree::OctreeBody {
             position: Vector::new(1.0, 1.0, 1.0),
             mass: 1000.0,
         };
@@ -592,15 +595,15 @@ mod tests {
 
         // Create bodies, including one exactly on octant boundary
         let bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0), // Exactly at center
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-2.0, -2.0, -2.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(2.0, 2.0, 2.0),
                 mass: 1000.0,
             },
@@ -664,27 +667,27 @@ mod tests {
 
         // Create enough bodies to force tree structure creation
         let bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
@@ -698,11 +701,11 @@ mod tests {
 
         // Build again with fewer bodies - should return old nodes to pool
         let new_bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 1000.0,
             },
@@ -732,11 +735,11 @@ mod tests {
 
         // Build and rebuild to populate the pool
         let bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-1.0, -1.0, -1.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 1000.0,
             },
@@ -774,7 +777,7 @@ mod tests {
         let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(2);
 
         // Test with single body (external node)
-        let single_body = vec![OctreeBody {
+        let single_body = vec![physics::octree::OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         }];
@@ -785,19 +788,19 @@ mod tests {
 
         // Test with multiple bodies that create internal nodes
         let multiple_bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
@@ -817,7 +820,7 @@ mod tests {
         let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(1);
 
         // Test external node (leaf)
-        let single_body = vec![OctreeBody {
+        let single_body = vec![physics::octree::OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         }];
@@ -828,11 +831,11 @@ mod tests {
 
         // Test internal node (not leaf)
         let multiple_bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
@@ -852,11 +855,11 @@ mod tests {
 
         // Test external node mass calculation
         let bodies_external = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 500.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(0.1, 0.1, 0.1),
                 mass: 300.0,
             },
@@ -869,15 +872,15 @@ mod tests {
 
         // Test internal node mass calculation
         let bodies_internal = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 2000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1500.0,
             },
@@ -890,11 +893,11 @@ mod tests {
 
         // Test with zero mass bodies
         let zero_mass_bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 0.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 0.0,
             },
@@ -911,11 +914,11 @@ mod tests {
 
         // Test external node center of mass calculation
         let bodies_external = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(2.0, 0.0, 0.0),
                 mass: 1000.0,
             },
@@ -935,15 +938,15 @@ mod tests {
 
         // Test internal node center of mass calculation
         let bodies_internal = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-10.0, -10.0, -10.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(10.0, 10.0, 10.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-10.0, 10.0, -10.0),
                 mass: 2000.0,
             },
@@ -966,11 +969,11 @@ mod tests {
 
         // Test with zero mass bodies
         let zero_mass_bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 0.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 0.0,
             },
@@ -992,19 +995,19 @@ mod tests {
 
         // Create bodies that will force tree subdivision
         let bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
             },
@@ -1041,7 +1044,7 @@ mod tests {
         }
 
         // Test with single body (external node)
-        let single_body = vec![OctreeBody {
+        let single_body = vec![physics::octree::OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
         }];
@@ -1063,11 +1066,11 @@ mod tests {
 
         // Test that octree.get_bounds() uses the moved collect_bounds method correctly
         let bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-3.0, -3.0, -3.0),
                 mass: 1000.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(3.0, 3.0, 3.0),
                 mass: 1000.0,
             },
@@ -1116,15 +1119,15 @@ mod tests {
 
         // Create test bodies
         let bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 100.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(10.0, 0.0, 0.0),
                 mass: 200.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(0.0, 10.0, 0.0),
                 mass: 300.0,
             },
@@ -1163,7 +1166,7 @@ mod tests {
         let mut octree = Octree::new(0.5, 1.0, 1e4).with_leaf_threshold(1);
 
         // Single body should create one external node
-        let single_body = vec![OctreeBody {
+        let single_body = vec![physics::octree::OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 100.0,
         }];
@@ -1175,19 +1178,19 @@ mod tests {
 
         // Multiple bodies spread out should create internal nodes (with leaf_threshold=1)
         let multiple_bodies = vec![
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-10.0, -10.0, -10.0),
                 mass: 100.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(10.0, 10.0, 10.0),
                 mass: 100.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(-10.0, 10.0, -10.0),
                 mass: 100.0,
             },
-            OctreeBody {
+            physics::octree::OctreeBody {
                 position: Vector::new(10.0, -10.0, 10.0),
                 mass: 100.0,
             },

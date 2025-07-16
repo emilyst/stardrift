@@ -1,10 +1,11 @@
-use crate::config;
-use crate::physics;
-use crate::resources;
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use avian3d::prelude::*;
 use bevy::prelude::*;
+
+use crate::config;
+use crate::physics;
+use crate::resources;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PhysicsSet {
