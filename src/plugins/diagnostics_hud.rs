@@ -1,4 +1,4 @@
-use crate::resources;
+use crate::resources::BodyCount;
 use bevy::asset::AssetPath;
 use bevy::asset::io::AssetSourceId;
 use bevy::diagnostic::DiagnosticsStore;
@@ -52,7 +52,7 @@ impl DiagnosticsHudPlugin {
         mut commands: Commands,
         asset_server: Res<AssetServer>,
         settings: Res<DiagnosticsHudSettings>,
-        body_count: Res<resources::BodyCount>,
+        body_count: Res<BodyCount>,
     ) {
         let embedded_asset_source = &AssetSourceId::from("embedded");
 

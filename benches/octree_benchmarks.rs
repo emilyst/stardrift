@@ -1,25 +1,29 @@
 use avian3d::math::Vector;
 use criterion::BenchmarkId;
 use criterion::Criterion;
+use physics::octree::Octree;
+use physics::octree::OctreeBody;
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use std::f64::consts;
 use std::hint::black_box;
+use std::time::Duration;
 
 #[path = "../src/config.rs"]
 pub mod config;
 #[path = "../src/physics/mod.rs"]
 pub mod physics;
 
-fn generate_test_bodies(count: usize, seed: u64) -> Vec<physics::octree::OctreeBody> {
+fn generate_test_bodies(count: usize, seed: u64) -> Vec<OctreeBody> {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let mut bodies = Vec::with_capacity(count);
 
     let radius = 200.0;
 
     for _ in 0..count {
-        let theta = rng.random_range(0.0..2.0 * std::f64::consts::PI);
-        let phi = rng.random_range(0.0..std::f64::consts::PI);
+        let theta = rng.random_range(0.0..2.0 * consts::PI);
+        let phi = rng.random_range(0.0..consts::PI);
         let r = rng.random_range(0.0..radius);
 
         let x = r * phi.sin() * theta.cos();
@@ -29,7 +33,7 @@ fn generate_test_bodies(count: usize, seed: u64) -> Vec<physics::octree::OctreeB
         let position = Vector::new(x, y, z);
         let mass = rng.random_range(1.0..100.0);
 
-        bodies.push(physics::octree::OctreeBody { position, mass });
+        bodies.push(OctreeBody { position, mass });
     }
 
     bodies
@@ -48,7 +52,7 @@ fn bench_octree_construction(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
             b.iter(|| {
-                let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
+                let mut octree = Octree::new(theta, min_distance, max_force);
                 octree.build(black_box(bodies.clone()));
                 black_box(octree);
             });
@@ -74,7 +78,7 @@ fn bench_octree_construction_leaf_threshold(c: &mut Criterion) {
             &threshold,
             |b, &threshold_val| {
                 b.iter(|| {
-                    let mut octree = physics::octree::Octree::new(theta, min_distance, max_force)
+                    let mut octree = Octree::new(theta, min_distance, max_force)
                         .with_leaf_threshold(threshold_val);
                     octree.build(black_box(bodies.clone()));
                     black_box(octree);
@@ -97,7 +101,7 @@ fn bench_octree_force_calculation(c: &mut Criterion) {
 
     for &count in &body_counts {
         let bodies = generate_test_bodies(count, 42);
-        let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
+        let mut octree = Octree::new(theta, min_distance, max_force);
         octree.build(bodies.clone());
 
         group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
@@ -125,7 +129,7 @@ fn bench_octree_force_calculation_theta(c: &mut Criterion) {
     let bodies = generate_test_bodies(body_count, 42);
 
     for &theta in &theta_values {
-        let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
+        let mut octree = Octree::new(theta, min_distance, max_force);
         octree.build(bodies.clone());
 
         group.bench_with_input(
@@ -162,7 +166,7 @@ fn bench_complete_physics_cycle(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
             b.iter(|| {
-                let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
+                let mut octree = Octree::new(theta, min_distance, max_force);
                 octree.build(black_box(bodies.clone()));
 
                 let mut total_force = Vector::ZERO;
@@ -181,7 +185,7 @@ fn bench_complete_physics_cycle(c: &mut Criterion) {
 
 fn bench_complete_physics_cycle_extreme_body_counts(c: &mut Criterion) {
     let mut group = c.benchmark_group("complete_physics_cycle");
-    group.measurement_time(std::time::Duration::from_secs(20));
+    group.measurement_time(Duration::from_secs(20));
 
     let body_counts = [5_000, 10_000, 20_000, 100_000, 500_000, 1_000_000];
     let theta = 0.5;
@@ -194,7 +198,7 @@ fn bench_complete_physics_cycle_extreme_body_counts(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
             b.iter(|| {
-                let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
+                let mut octree = Octree::new(theta, min_distance, max_force);
                 octree.build(black_box(bodies.clone()));
 
                 let mut total_force = Vector::ZERO;
@@ -225,15 +229,15 @@ fn bench_octree_pool_reuse(c: &mut Criterion) {
         // Benchmark without pool (new octree each time)
         group.bench_with_input(BenchmarkId::new("without_pool", count), &count, |b, _| {
             b.iter(|| {
-                let mut octree1 = physics::octree::Octree::new(theta, min_distance, max_force);
+                let mut octree1 = Octree::new(theta, min_distance, max_force);
                 octree1.build(black_box(bodies.clone()));
                 black_box(&octree1);
 
-                let mut octree2 = physics::octree::Octree::new(theta, min_distance, max_force);
+                let mut octree2 = Octree::new(theta, min_distance, max_force);
                 octree2.build(black_box(bodies.clone()));
                 black_box(&octree2);
 
-                let mut octree3 = physics::octree::Octree::new(theta, min_distance, max_force);
+                let mut octree3 = Octree::new(theta, min_distance, max_force);
                 octree3.build(black_box(bodies.clone()));
                 black_box(&octree3);
             });
@@ -242,7 +246,7 @@ fn bench_octree_pool_reuse(c: &mut Criterion) {
         // Benchmark with pool (reuse same octree instance)
         group.bench_with_input(BenchmarkId::new("with_pool", count), &count, |b, _| {
             b.iter(|| {
-                let mut octree = physics::octree::Octree::new(theta, min_distance, max_force);
+                let mut octree = Octree::new(theta, min_distance, max_force);
 
                 octree.build(black_box(bodies.clone()));
                 black_box(&octree);

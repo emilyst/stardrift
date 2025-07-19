@@ -1,5 +1,8 @@
-use crate::resources;
-use crate::systems;
+use crate::resources::OctreeVisualizationSettings;
+use crate::systems::simulation_actions::RestartSimulationEvent;
+use crate::systems::simulation_actions::ToggleBarycenterGizmoVisibilityEvent;
+use crate::systems::simulation_actions::ToggleOctreeVisualizationEvent;
+use crate::systems::simulation_actions::TogglePauseSimulationEvent;
 use bevy::prelude::*;
 
 pub fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit>) {
@@ -10,31 +13,31 @@ pub fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<App
 
 pub fn restart_simulation_on_n(
     keys: Res<ButtonInput<KeyCode>>,
-    mut restart_events: EventWriter<systems::simulation_actions::RestartSimulationEvent>,
+    mut restart_events: EventWriter<RestartSimulationEvent>,
 ) {
     if keys.just_pressed(KeyCode::KeyN) {
-        restart_events.write(systems::simulation_actions::RestartSimulationEvent);
+        restart_events.write(RestartSimulationEvent);
     }
 }
 
 pub fn pause_physics_on_space(
     keys: Res<ButtonInput<KeyCode>>,
-    mut pause_events: EventWriter<systems::simulation_actions::TogglePauseSimulationEvent>,
+    mut pause_events: EventWriter<TogglePauseSimulationEvent>,
 ) {
     if keys.just_pressed(KeyCode::Space) {
-        pause_events.write(systems::simulation_actions::TogglePauseSimulationEvent);
+        pause_events.write(TogglePauseSimulationEvent);
     }
 }
 
 pub fn toggle_octree_visualization(
     keys: Res<ButtonInput<KeyCode>>,
-    mut settings: ResMut<resources::OctreeVisualizationSettings>,
-    mut octree_events: EventWriter<systems::simulation_actions::ToggleOctreeVisualizationEvent>,
+    mut settings: ResMut<OctreeVisualizationSettings>,
+    mut octree_events: EventWriter<ToggleOctreeVisualizationEvent>,
 ) {
     for &keycode in keys.get_just_pressed() {
         match keycode {
             KeyCode::KeyO => {
-                octree_events.write(systems::simulation_actions::ToggleOctreeVisualizationEvent);
+                octree_events.write(ToggleOctreeVisualizationEvent);
             }
             KeyCode::Digit0 => settings.max_depth = None,
             KeyCode::Digit1 => settings.max_depth = Some(1),
@@ -53,14 +56,11 @@ pub fn toggle_octree_visualization(
 
 pub fn toggle_barycenter_gizmo_visibility_on_c(
     keys: Res<ButtonInput<KeyCode>>,
-    mut barycenter_events: EventWriter<
-        systems::simulation_actions::ToggleBarycenterGizmoVisibilityEvent,
-    >,
+    mut barycenter_events: EventWriter<ToggleBarycenterGizmoVisibilityEvent>,
 ) {
     for &keycode in keys.get_just_pressed() {
         if keycode == KeyCode::KeyC {
-            barycenter_events
-                .write(systems::simulation_actions::ToggleBarycenterGizmoVisibilityEvent);
+            barycenter_events.write(ToggleBarycenterGizmoVisibilityEvent);
         }
     }
 }

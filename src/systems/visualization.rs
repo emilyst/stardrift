@@ -1,12 +1,13 @@
-use crate::physics;
-use crate::resources;
+use crate::physics::aabb3d::Aabb3d;
+use crate::resources::GravitationalOctree;
+use crate::resources::OctreeVisualizationSettings;
 use bevy::color::palettes::css;
 use bevy::prelude::*;
 
 pub fn visualize_octree(
     mut gizmos: Gizmos,
-    octree: Res<resources::GravitationalOctree>,
-    settings: Res<resources::OctreeVisualizationSettings>,
+    octree: Res<GravitationalOctree>,
+    settings: Res<OctreeVisualizationSettings>,
 ) {
     if !settings.enabled {
         return;
@@ -21,7 +22,7 @@ pub fn visualize_octree(
 
 pub fn draw_bounding_box_wireframe_gizmo(
     gizmos: &mut Gizmos,
-    aabb: &physics::aabb3d::Aabb3d,
+    aabb: &Aabb3d,
     color: impl Into<Color>,
 ) {
     let min = aabb.min.as_vec3();

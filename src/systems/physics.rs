@@ -1,11 +1,14 @@
+use crate::components::BodyBundle;
+use crate::config::SimulationConfig;
+use crate::physics::octree::OctreeBody;
+use crate::resources::Barycenter;
+use crate::resources::GravitationalConstant;
+use crate::resources::GravitationalOctree;
+use crate::resources::SharedRng;
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use avian3d::prelude::*;
 use bevy::prelude::*;
-
-use crate::config;
-use crate::physics;
-use crate::resources;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PhysicsSet {
@@ -17,13 +20,13 @@ pub fn spawn_simulation_bodies(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
-    rng: &mut ResMut<resources::SharedRng>,
+    rng: &mut ResMut<SharedRng>,
     body_count: usize,
-    config: &config::SimulationConfig,
+    config: &SimulationConfig,
 ) {
     use crate::components::body::factory;
 
-    let spawn_data: Vec<crate::components::BodyBundle> = (0..body_count)
+    let spawn_data: Vec<BodyBundle> = (0..body_count)
         .map(|_| factory::create_random_body(meshes, materials, rng, config, body_count))
         .collect();
 
@@ -32,25 +35,21 @@ pub fn spawn_simulation_bodies(
 
 pub fn rebuild_octree(
     bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
-    mut octree: ResMut<resources::GravitationalOctree>,
+    mut octree: ResMut<GravitationalOctree>,
 ) {
     if bodies.is_empty() {
         return;
     }
 
-    octree.build(
-        bodies
-            .iter()
-            .map(|(transform, mass)| physics::octree::OctreeBody {
-                position: Vector::from(transform.translation),
-                mass: mass.value(),
-            }),
-    );
+    octree.build(bodies.iter().map(|(transform, mass)| OctreeBody {
+        position: Vector::from(transform.translation),
+        mass: mass.value(),
+    }));
 }
 
 pub fn apply_gravitation_octree(
-    g: Res<resources::GravitationalConstant>,
-    octree: Res<resources::GravitationalOctree>,
+    g: Res<GravitationalConstant>,
+    octree: Res<GravitationalOctree>,
     mut bodies: Query<
         (&Transform, &ComputedMass, &mut ExternalForce),
         (With<RigidBody>, Changed<Transform>),
@@ -60,7 +59,7 @@ pub fn apply_gravitation_octree(
         .par_iter_mut()
         .for_each(|(transform, mass, mut external_force)| {
             external_force.set_force(octree.calculate_force(
-                &physics::octree::OctreeBody {
+                &OctreeBody {
                     position: Vector::from(transform.translation),
                     mass: mass.value(),
                 },
@@ -72,7 +71,7 @@ pub fn apply_gravitation_octree(
 
 pub fn counteract_barycentric_drift(
     mut bodies: Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-    mut barycenter: ResMut<resources::Barycenter>,
+    mut barycenter: ResMut<Barycenter>,
 ) {
     let (weighted_positions, total_mass): (Vector, Scalar) = bodies
         .iter()
@@ -114,7 +113,7 @@ mod tests {
 
     fn create_test_world() -> World {
         let mut world = World::new();
-        world.insert_resource(resources::Barycenter::default());
+        world.insert_resource(Barycenter::default());
         world
     }
 
@@ -137,7 +136,7 @@ mod tests {
         let mut world = create_test_world();
         let mut system_state: SystemState<(
             Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<resources::Barycenter>,
+            ResMut<Barycenter>,
         )> = SystemState::new(&mut world);
 
         // Create a single body at position (1, 2, 3) with mass 5.0
@@ -155,7 +154,7 @@ mod tests {
         counteract_barycentric_drift(bodies, barycenter);
 
         // Check that barycenter was set to the body's position
-        let barycenter = world.resource::<resources::Barycenter>();
+        let barycenter = world.resource::<Barycenter>();
         assert!(barycenter.is_some());
         let barycenter_pos = barycenter.unwrap();
         assert!((barycenter_pos.x - 1.0).abs() < Scalar::EPSILON);
@@ -168,7 +167,7 @@ mod tests {
         let mut world = create_test_world();
         let mut system_state: SystemState<(
             Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<resources::Barycenter>,
+            ResMut<Barycenter>,
         )> = SystemState::new(&mut world);
 
         // Create two bodies: mass 2.0 at (0,0,0) and mass 4.0 at (3,0,0)
@@ -188,7 +187,7 @@ mod tests {
         counteract_barycentric_drift(bodies, barycenter);
 
         // Verify initial barycenter is set correctly
-        let barycenter = world.resource::<resources::Barycenter>();
+        let barycenter = world.resource::<Barycenter>();
         assert!(barycenter.is_some());
         let initial_barycenter = barycenter.unwrap();
         assert!((initial_barycenter.x - 2.0).abs() < Scalar::EPSILON);
@@ -201,7 +200,7 @@ mod tests {
         let mut world = create_test_world();
         let mut system_state: SystemState<(
             Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<resources::Barycenter>,
+            ResMut<Barycenter>,
         )> = SystemState::new(&mut world);
 
         // Create a body and set initial barycenter
@@ -212,7 +211,7 @@ mod tests {
         world.flush();
 
         // Set an initial barycenter manually
-        world.resource_mut::<resources::Barycenter>().0 = Some(Vector::new(0.0, 0.0, 0.0));
+        world.resource_mut::<Barycenter>().0 = Some(Vector::new(0.0, 0.0, 0.0));
 
         // Move the body to create drift
         {
@@ -251,7 +250,7 @@ mod tests {
         let mut world = create_test_world();
         let mut system_state: SystemState<(
             Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<resources::Barycenter>,
+            ResMut<Barycenter>,
         )> = SystemState::new(&mut world);
 
         // Create a body with zero mass
@@ -261,14 +260,14 @@ mod tests {
         }
         world.flush();
 
-        let original_barycenter = **world.resource::<resources::Barycenter>();
+        let original_barycenter = **world.resource::<Barycenter>();
 
         // Run the system
         let (bodies, barycenter) = system_state.get_mut(&mut world);
         counteract_barycentric_drift(bodies, barycenter);
 
         // Barycenter should remain unchanged due to zero mass early return
-        let final_barycenter = **world.resource::<resources::Barycenter>();
+        let final_barycenter = **world.resource::<Barycenter>();
         assert_eq!(original_barycenter, final_barycenter);
     }
 
@@ -277,17 +276,17 @@ mod tests {
         let mut world = create_test_world();
         let mut system_state: SystemState<(
             Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<resources::Barycenter>,
+            ResMut<Barycenter>,
         )> = SystemState::new(&mut world);
 
-        let original_barycenter = **world.resource::<resources::Barycenter>();
+        let original_barycenter = **world.resource::<Barycenter>();
 
         // Run the system with no bodies
         let (bodies, barycenter) = system_state.get_mut(&mut world);
         counteract_barycentric_drift(bodies, barycenter);
 
         // Barycenter should remain unchanged
-        let final_barycenter = **world.resource::<resources::Barycenter>();
+        let final_barycenter = **world.resource::<Barycenter>();
         assert_eq!(original_barycenter, final_barycenter);
     }
 
@@ -296,7 +295,7 @@ mod tests {
         let mut world = create_test_world();
         let mut system_state: SystemState<(
             Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<resources::Barycenter>,
+            ResMut<Barycenter>,
         )> = SystemState::new(&mut world);
 
         // Create a body
@@ -307,7 +306,7 @@ mod tests {
         world.flush();
 
         // Set initial barycenter
-        world.resource_mut::<resources::Barycenter>().0 = Some(Vector::new(0.0, 0.0, 0.0));
+        world.resource_mut::<Barycenter>().0 = Some(Vector::new(0.0, 0.0, 0.0));
 
         // Move body by a very small amount (less than epsilon threshold)
         let tiny_offset = Scalar::EPSILON.sqrt() * 0.5; // Much smaller than epsilon
@@ -341,7 +340,7 @@ mod tests {
         let mut world = create_test_world();
         let mut system_state: SystemState<(
             Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<resources::Barycenter>,
+            ResMut<Barycenter>,
         )> = SystemState::new(&mut world);
 
         // Create a body at a position that would create non-finite barycenter when divided by zero
@@ -357,7 +356,7 @@ mod tests {
         }
         world.flush();
 
-        let _original_barycenter = **world.resource::<resources::Barycenter>();
+        let _original_barycenter = **world.resource::<Barycenter>();
 
         // Run the system
         let (bodies, barycenter) = system_state.get_mut(&mut world);
@@ -365,7 +364,7 @@ mod tests {
 
         // The system should handle non-finite values gracefully
         // In this case, it should either set a finite barycenter or leave it unchanged
-        let final_barycenter = **world.resource::<resources::Barycenter>();
+        let final_barycenter = **world.resource::<Barycenter>();
         if let Some(barycenter_val) = final_barycenter {
             assert!(barycenter_val.is_finite(), "Barycenter should be finite");
         }
@@ -376,7 +375,7 @@ mod tests {
         let mut world = create_test_world();
         let mut system_state: SystemState<(
             Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<resources::Barycenter>,
+            ResMut<Barycenter>,
         )> = SystemState::new(&mut world);
 
         // Create multiple bodies with different masses and positions
@@ -392,7 +391,7 @@ mod tests {
         let (bodies, barycenter) = system_state.get_mut(&mut world);
         counteract_barycentric_drift(bodies, barycenter);
 
-        let initial_barycenter = world.resource::<resources::Barycenter>().unwrap();
+        let initial_barycenter = world.resource::<Barycenter>().unwrap();
 
         // Move all bodies by the same offset to create uniform drift
         let drift_offset = Vec3::new(0.5, -0.3, 0.2);
@@ -409,7 +408,7 @@ mod tests {
 
         // After correction, the barycenter resource should still be the original barycenter
         // because the system corrects drift by moving bodies back
-        let final_barycenter = world.resource::<resources::Barycenter>().unwrap();
+        let final_barycenter = world.resource::<Barycenter>().unwrap();
 
         // The barycenter resource should remain the original barycenter
         let barycenter_diff = (final_barycenter - initial_barycenter).length();

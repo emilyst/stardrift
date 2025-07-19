@@ -1,6 +1,8 @@
-use crate::config;
-use crate::resources;
-use crate::utils;
+use crate::config::SimulationConfig;
+use crate::resources::Barycenter;
+use crate::resources::BarycenterGizmoVisibility;
+use crate::resources::BodyCount;
+use crate::utils::math::min_sphere_radius_for_surface_distribution;
 use avian3d::math::Scalar;
 use bevy::color::palettes::css;
 use bevy::core_pipeline::bloom::Bloom;
@@ -13,11 +15,11 @@ use bevy_panorbit_camera::TrackpadBehavior;
 
 pub fn spawn_camera(
     mut commands: Commands,
-    body_count: Res<resources::BodyCount>,
-    config: Res<config::SimulationConfig>,
+    body_count: Res<BodyCount>,
+    config: Res<SimulationConfig>,
 ) {
     // TODO: calculate distance at which min sphere radius subtends camera frustum
-    let body_distribution_sphere_radius = utils::math::min_sphere_radius_for_surface_distribution(
+    let body_distribution_sphere_radius = min_sphere_radius_for_surface_distribution(
         **body_count,
         config.physics.body_distribution_sphere_radius_multiplier,
         config.physics.body_distribution_min_distance,
@@ -53,9 +55,9 @@ pub fn spawn_camera(
 
 pub fn draw_barycenter_gizmo(
     mut gizmos: Gizmos,
-    body_count: Res<resources::BodyCount>,
-    barycenter_gizmo_visibility: Res<resources::BarycenterGizmoVisibility>,
-    barycenter: Res<resources::Barycenter>,
+    body_count: Res<BodyCount>,
+    barycenter_gizmo_visibility: Res<BarycenterGizmoVisibility>,
+    barycenter: Res<Barycenter>,
 ) {
     if barycenter_gizmo_visibility.enabled {
         if let Some(barycenter) = **barycenter {

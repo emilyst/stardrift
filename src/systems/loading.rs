@@ -3,6 +3,15 @@ use crate::resources;
 use crate::states;
 use crate::systems;
 use bevy::prelude::*;
+use config::SimulationConfig;
+use resources::BodyCount;
+use resources::BodySpawningProgress;
+use resources::LoadingProgress;
+use resources::LoadingTimer;
+use resources::SharedRng;
+use states::AppState;
+use states::LoadingState;
+use systems::ui::setup_ui;
 
 #[derive(Component)]
 pub struct LoadingScreen;
@@ -10,10 +19,7 @@ pub struct LoadingScreen;
 #[derive(Component)]
 pub struct LoadingProgressBar;
 
-pub fn setup_loading_screen(
-    mut commands: Commands,
-    mut loading_progress: ResMut<resources::LoadingProgress>,
-) {
+pub fn setup_loading_screen(mut commands: Commands, mut loading_progress: ResMut<LoadingProgress>) {
     loading_progress.progress = 0.0;
     loading_progress.current_message = "Initializing...".to_string();
     info!("Loading: {}", loading_progress.current_message);
@@ -72,27 +78,24 @@ pub fn setup_loading_screen(
 
 pub fn start_loading_process(
     mut commands: Commands,
-    mut loading_progress: ResMut<resources::LoadingProgress>,
+    mut loading_progress: ResMut<LoadingProgress>,
 ) {
     loading_progress.progress = 0.05;
     loading_progress.current_message = "Starting loading process...".to_string();
     info!("Loading: {}", loading_progress.current_message);
-    commands.insert_resource(resources::LoadingTimer(Timer::from_seconds(
-        0.5,
-        TimerMode::Once,
-    )));
+    commands.insert_resource(LoadingTimer(Timer::from_seconds(0.5, TimerMode::Once)));
 }
 
 pub fn advance_loading_step(
-    mut loading_progress: ResMut<resources::LoadingProgress>,
-    mut timer: ResMut<resources::LoadingTimer>,
-    mut next_state: ResMut<NextState<states::LoadingState>>,
+    mut loading_progress: ResMut<LoadingProgress>,
+    mut timer: ResMut<LoadingTimer>,
+    mut next_state: ResMut<NextState<LoadingState>>,
     time: Res<Time>,
 ) {
     timer.tick(time.delta());
 
     if timer.finished() {
-        next_state.set(states::LoadingState::SpawningBodies);
+        next_state.set(LoadingState::SpawningBodies);
         loading_progress.progress = 0.1;
         loading_progress.current_message = "Spawning celestial bodies...".to_string();
         info!("Loading: {}", loading_progress.current_message);
@@ -107,15 +110,15 @@ pub fn spawn_bodies_async(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<resources::SharedRng>,
-    body_count: Res<resources::BodyCount>,
-    config: Res<config::SimulationConfig>,
-    mut loading_progress: ResMut<resources::LoadingProgress>,
-    mut next_state: ResMut<NextState<states::LoadingState>>,
-    mut spawning_progress: Local<Option<resources::BodySpawningProgress>>,
+    mut rng: ResMut<SharedRng>,
+    body_count: Res<BodyCount>,
+    config: Res<SimulationConfig>,
+    mut loading_progress: ResMut<LoadingProgress>,
+    mut next_state: ResMut<NextState<LoadingState>>,
+    mut spawning_progress: Local<Option<BodySpawningProgress>>,
 ) {
     if spawning_progress.is_none() {
-        *spawning_progress = Some(resources::BodySpawningProgress {
+        *spawning_progress = Some(BodySpawningProgress {
             bodies_spawned: 0,
             total_bodies: **body_count,
             batch_size: ((**body_count).max(50) / 20).max(1),
@@ -151,7 +154,7 @@ pub fn spawn_bodies_async(
         );
 
         if progress.bodies_spawned >= progress.total_bodies {
-            next_state.set(states::LoadingState::BuildingOctree);
+            next_state.set(LoadingState::BuildingOctree);
             loading_progress.progress = 0.9;
             loading_progress.current_message = "Building octree...".to_string();
             info!("Loading: {}", loading_progress.current_message);
@@ -161,8 +164,8 @@ pub fn spawn_bodies_async(
 }
 
 pub fn finalize_loading(
-    mut loading_progress: ResMut<resources::LoadingProgress>,
-    mut next_state: ResMut<NextState<states::LoadingState>>,
+    mut loading_progress: ResMut<LoadingProgress>,
+    mut next_state: ResMut<NextState<LoadingState>>,
     time: Res<Time>,
     mut finalize_timer: Local<Option<Timer>>,
 ) {
@@ -177,7 +180,7 @@ pub fn finalize_loading(
         timer.tick(time.delta());
 
         if timer.finished() {
-            next_state.set(states::LoadingState::SettingUpUI);
+            next_state.set(LoadingState::SettingUpUI);
             loading_progress.progress = 0.95;
             loading_progress.current_message = "Setting up UI...".to_string();
             info!("Loading: {}", loading_progress.current_message);
@@ -193,20 +196,20 @@ pub fn finalize_loading(
 pub fn setup_ui_after_loading(
     commands: Commands,
     asset_server: Res<AssetServer>,
-    mut loading_progress: ResMut<resources::LoadingProgress>,
-    mut next_app_state: ResMut<NextState<states::AppState>>,
+    mut loading_progress: ResMut<LoadingProgress>,
+    mut next_app_state: ResMut<NextState<AppState>>,
 ) {
-    systems::ui::setup_ui(commands, asset_server);
+    setup_ui(commands, asset_server);
 
     loading_progress.progress = 1.0;
     loading_progress.current_message = "Loading complete!".to_string();
     info!("Loading: {}", loading_progress.current_message);
 
-    next_app_state.set(states::AppState::Running);
+    next_app_state.set(AppState::Running);
 }
 
 pub fn update_loading_progress(
-    loading_progress: Res<resources::LoadingProgress>,
+    loading_progress: Res<LoadingProgress>,
     mut progress_bar_query: Query<&mut Node, With<LoadingProgressBar>>,
 ) {
     if let Ok(mut progress_bar) = progress_bar_query.single_mut() {

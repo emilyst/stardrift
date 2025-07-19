@@ -1,4 +1,4 @@
-#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
+#![cfg_attr(target_arch = "windows", windows_subsystem = "windows")]
 #![allow(dead_code)]
 
 mod components;
@@ -10,6 +10,12 @@ mod states;
 mod systems;
 mod utils;
 
+use crate::plugins::diagnostics_hud::DiagnosticsHudPlugin;
+use crate::plugins::embedded_assets::EmbeddedAssetsPlugin;
+use crate::plugins::simulation::SimulationPlugin;
+use crate::plugins::simulation_diagnostics::SimulationDiagnosticsPlugin;
+use crate::states::AppState;
+use crate::states::LoadingState;
 use avian3d::prelude::*;
 use bevy::app::TaskPoolThreadAssignmentPolicy;
 #[cfg(feature = "diagnostics")]
@@ -52,9 +58,9 @@ fn main() {
                     ..default()
                 },
             }),
-        plugins::embedded_assets::EmbeddedAssetsPlugin,
+        EmbeddedAssetsPlugin,
         #[cfg(feature = "diagnostics")]
-        plugins::diagnostics_hud::DiagnosticsHudPlugin,
+        DiagnosticsHudPlugin,
         #[cfg(feature = "diagnostics")]
         EntityCountDiagnosticsPlugin,
         #[cfg(feature = "diagnostics")]
@@ -62,15 +68,15 @@ fn main() {
         PanOrbitCameraPlugin,
         PhysicsPlugins::default(),
         #[cfg(feature = "diagnostics")]
-        plugins::simulation_diagnostics::SimulationDiagnosticsPlugin::default(),
+        SimulationDiagnosticsPlugin::default(),
         #[cfg(feature = "diagnostics")]
         SystemInformationDiagnosticsPlugin,
-        plugins::simulation::SimulationPlugin,
+        SimulationPlugin,
     ));
 
     // Initialize app states after DefaultPlugins (which includes StatesPlugin)
-    app.init_state::<states::AppState>();
-    app.add_sub_state::<states::LoadingState>();
+    app.init_state::<AppState>();
+    app.add_sub_state::<LoadingState>();
 
     app.run();
 }

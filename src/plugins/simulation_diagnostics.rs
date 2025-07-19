@@ -1,4 +1,4 @@
-use crate::states;
+use crate::states::AppState;
 use bevy::diagnostic::DEFAULT_MAX_HISTORY_LENGTH;
 use bevy::diagnostic::Diagnostic;
 use bevy::diagnostic::DiagnosticPath;
@@ -55,7 +55,7 @@ impl Plugin for SimulationDiagnosticsPlugin {
 
         app.add_systems(
             FixedPostUpdate,
-            Self::update_timer_ticks.run_if(in_state(states::AppState::Running)),
+            Self::update_timer_ticks.run_if(in_state(AppState::Running)),
         );
     }
 }

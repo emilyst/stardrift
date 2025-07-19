@@ -1,10 +1,9 @@
+use crate::physics::aabb3d::Aabb3d;
 use avian3d::math::Scalar;
 use avian3d::math::Vector;
 use bevy::prelude::*;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
-
-use crate::physics;
 
 #[derive(Debug, Clone, Copy)]
 pub struct OctreeBody {
@@ -177,7 +176,7 @@ impl Octree {
         self.node_pool.clear();
     }
 
-    pub fn bounds(&self, max_depth: Option<usize>) -> Vec<physics::aabb3d::Aabb3d> {
+    pub fn bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
         // Estimate capacity based on max_depth (8^depth nodes at each level)
         let estimated_capacity = match max_depth {
             Some(depth) => (0..=depth)
@@ -229,7 +228,7 @@ impl Octree {
         min -= padding;
         max += padding;
 
-        let bounds = physics::aabb3d::Aabb3d::new(min, max);
+        let bounds = Aabb3d::new(min, max);
         self.root = Some(Self::build_node(
             bounds,
             bodies_vec,
@@ -239,7 +238,7 @@ impl Octree {
     }
 
     fn build_node(
-        bounds: physics::aabb3d::Aabb3d,
+        bounds: Aabb3d,
         bodies: Vec<OctreeBody>,
         leaf_threshold: usize,
         pool: &mut OctreeNodePool,
@@ -400,19 +399,19 @@ impl Octree {
 #[derive(Debug)]
 pub enum OctreeNode {
     Internal {
-        bounds: physics::aabb3d::Aabb3d,
+        bounds: Aabb3d,
         center_of_mass: Vector,
         total_mass: Scalar,
         children: [Option<Box<OctreeNode>>; 8],
     },
     External {
-        bounds: physics::aabb3d::Aabb3d,
+        bounds: Aabb3d,
         bodies: Vec<OctreeBody>,
     },
 }
 
 impl OctreeNode {
-    pub fn bounds(&self) -> physics::aabb3d::Aabb3d {
+    pub fn bounds(&self) -> Aabb3d {
         match self {
             OctreeNode::Internal { bounds, .. } => *bounds,
             OctreeNode::External { bounds, .. } => *bounds,
@@ -421,7 +420,7 @@ impl OctreeNode {
 
     pub fn collect_bounds(
         &self,
-        bounds: &mut Vec<physics::aabb3d::Aabb3d>,
+        bounds: &mut Vec<Aabb3d>,
         current_depth: usize,
         max_depth: Option<usize>,
     ) {

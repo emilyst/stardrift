@@ -1,6 +1,8 @@
-use crate::config;
-use crate::resources;
-use crate::utils;
+use crate::config::SimulationConfig;
+use crate::resources::SharedRng;
+use crate::utils::color::emissive_material_for_temp;
+use crate::utils::math::min_sphere_radius_for_surface_distribution;
+use crate::utils::math::random_unit_vector;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy::render::mesh::SphereKind;
@@ -35,7 +37,7 @@ impl BodyBundle {
         radius: f64,
         material: Handle<StandardMaterial>,
         mesh: Handle<Mesh>,
-        config: &config::SimulationConfig,
+        config: &SimulationConfig,
     ) -> Self {
         Self {
             transform: Transform::from_translation(position),
@@ -60,31 +62,31 @@ pub mod factory {
 
     /// Generates a random position for a celestial body within the distribution sphere.
     pub fn random_position(
-        rng: &mut resources::SharedRng,
+        rng: &mut SharedRng,
         total_body_count: usize,
-        config: &config::SimulationConfig,
+        config: &SimulationConfig,
     ) -> Vec3 {
-        let body_distribution_sphere_radius =
-            utils::math::min_sphere_radius_for_surface_distribution(
-                total_body_count,
-                config.physics.body_distribution_sphere_radius_multiplier,
-                config.physics.body_distribution_min_distance,
-            );
-        let position = utils::math::random_unit_vector(rng) * body_distribution_sphere_radius;
+        let body_distribution_sphere_radius = min_sphere_radius_for_surface_distribution(
+            total_body_count,
+            config.physics.body_distribution_sphere_radius_multiplier,
+            config.physics.body_distribution_min_distance,
+        );
+        let position = random_unit_vector(rng) * body_distribution_sphere_radius;
         position.as_vec3()
     }
 
     /// Generates a random radius for a celestial body within configured bounds.
-    pub fn random_radius(rng: &mut resources::SharedRng, config: &config::SimulationConfig) -> f64 {
+    pub fn random_radius(rng: &mut SharedRng, config: &SimulationConfig) -> f64 {
         rng.random_range(config.physics.min_body_radius..=config.physics.max_body_radius)
     }
 
     /// Calculates temperature based on radius using inverse relationship.
-    pub fn calculate_temperature(radius: f64, config: &config::SimulationConfig) -> f64 {
+    pub fn calculate_temperature(radius: f64, config: &SimulationConfig) -> f64 {
         let min_temp = config.rendering.min_temperature;
         let max_temp = config.rendering.max_temperature;
         let min_radius = config.physics.min_body_radius;
         let max_radius = config.physics.max_body_radius;
+
         min_temp + (max_temp - min_temp) * (max_radius - radius) / (max_radius - min_radius)
     }
 
@@ -107,15 +109,15 @@ pub mod factory {
     pub fn create_random_body(
         meshes: &mut ResMut<Assets<Mesh>>,
         materials: &mut ResMut<Assets<StandardMaterial>>,
-        rng: &mut ResMut<resources::SharedRng>,
-        config: &config::SimulationConfig,
+        rng: &mut ResMut<SharedRng>,
+        config: &SimulationConfig,
         total_body_count: usize,
     ) -> BodyBundle {
         let position = random_position(rng, total_body_count, config);
         let radius = random_radius(rng, config);
         let temperature = calculate_temperature(radius, config);
 
-        let material = utils::color::emissive_material_for_temp(
+        let material = emissive_material_for_temp(
             materials,
             temperature,
             config.rendering.bloom_intensity,
