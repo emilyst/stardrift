@@ -1,12 +1,8 @@
-use avian3d::math::Scalar;
-use bevy::prelude::*;
-use config::Config;
-use config::ConfigError;
-use config::File;
+use crate::prelude::*;
+use config::{Config, ConfigError, File};
 #[cfg(not(target_arch = "wasm32"))]
 use directories::ProjectDirs;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[derive(Resource, Serialize, Deserialize, Clone, Debug)]

@@ -1,9 +1,4 @@
-use crate::resources::OctreeVisualizationSettings;
-use crate::systems::simulation_actions::RestartSimulationEvent;
-use crate::systems::simulation_actions::ToggleBarycenterGizmoVisibilityEvent;
-use crate::systems::simulation_actions::ToggleOctreeVisualizationEvent;
-use crate::systems::simulation_actions::TogglePauseSimulationEvent;
-use bevy::prelude::*;
+use crate::prelude::*;
 
 pub fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit>) {
     if keys.just_pressed(KeyCode::Escape) {

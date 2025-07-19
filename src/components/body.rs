@@ -1,12 +1,7 @@
-use crate::config::SimulationConfig;
-use crate::resources::SharedRng;
+use crate::prelude::*;
 use crate::utils::color::emissive_material_for_temp;
-use crate::utils::math::min_sphere_radius_for_surface_distribution;
-use crate::utils::math::random_unit_vector;
-use avian3d::prelude::*;
-use bevy::prelude::*;
+use crate::utils::math::{min_sphere_radius_for_surface_distribution, random_unit_vector};
 use bevy::render::mesh::SphereKind;
-use rand::Rng;
 
 /// Bundle containing all components needed for a celestial body.
 ///

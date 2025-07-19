@@ -1,8 +1,6 @@
 use crate::physics::aabb3d::Aabb3d;
-use crate::resources::GravitationalOctree;
-use crate::resources::OctreeVisualizationSettings;
+use crate::prelude::*;
 use bevy::color::palettes::css;
-use bevy::prelude::*;
 
 pub fn visualize_octree(
     mut gizmos: Gizmos,

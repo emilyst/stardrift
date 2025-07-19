@@ -1,14 +1,5 @@
-use crate::config::SimulationConfig;
-use crate::resources::Barycenter;
-use crate::resources::BarycenterGizmoVisibility;
-use crate::resources::BodyCount;
-use crate::resources::GravitationalOctree;
-use crate::resources::OctreeVisualizationSettings;
-use crate::resources::SharedRng;
-use crate::states::AppState;
+use crate::prelude::*;
 use crate::systems::physics::spawn_simulation_bodies;
-use avian3d::prelude::*;
-use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCamera;
 
 #[derive(Event)]

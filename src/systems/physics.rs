@@ -1,14 +1,4 @@
-use crate::components::BodyBundle;
-use crate::config::SimulationConfig;
-use crate::physics::octree::OctreeBody;
-use crate::resources::Barycenter;
-use crate::resources::GravitationalConstant;
-use crate::resources::GravitationalOctree;
-use crate::resources::SharedRng;
-use avian3d::math::Scalar;
-use avian3d::math::Vector;
-use avian3d::prelude::*;
-use bevy::prelude::*;
+use crate::prelude::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PhysicsSet {

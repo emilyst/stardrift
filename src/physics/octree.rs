@@ -1,9 +1,7 @@
 use crate::physics::aabb3d::Aabb3d;
-use avian3d::math::Scalar;
-use avian3d::math::Vector;
+use avian3d::math::{Scalar, Vector};
 use bevy::prelude::*;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Debug, Clone, Copy)]
 pub struct OctreeBody {

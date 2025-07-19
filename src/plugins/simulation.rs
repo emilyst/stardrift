@@ -1,55 +1,29 @@
-use crate::config::SimulationConfig;
-use crate::physics::octree::Octree;
-use crate::resources::Barycenter;
-use crate::resources::BarycenterGizmoVisibility;
-use crate::resources::BodyCount;
-use crate::resources::GravitationalConstant;
-use crate::resources::GravitationalOctree;
+use crate::prelude::*;
 use crate::resources::LoadingProgress;
-use crate::resources::OctreeVisualizationSettings;
-use crate::resources::SharedRng;
-use crate::states::AppState;
-use crate::states::LoadingState;
-use crate::systems::camera::draw_barycenter_gizmo;
-use crate::systems::camera::spawn_camera;
-use crate::systems::input::pause_physics_on_space;
-use crate::systems::input::quit_on_escape;
-use crate::systems::input::restart_simulation_on_n;
-use crate::systems::input::toggle_barycenter_gizmo_visibility_on_c;
-use crate::systems::input::toggle_octree_visualization;
-use crate::systems::loading::advance_loading_step;
-use crate::systems::loading::complete_loading;
-use crate::systems::loading::finalize_loading;
-use crate::systems::loading::setup_loading_screen;
-use crate::systems::loading::setup_ui_after_loading;
-use crate::systems::loading::spawn_bodies_async;
-use crate::systems::loading::start_loading_process;
-use crate::systems::loading::update_loading_progress;
-use crate::systems::physics::PhysicsSet;
-use crate::systems::physics::apply_gravitation_octree;
-use crate::systems::physics::counteract_barycentric_drift;
-use crate::systems::physics::rebuild_octree;
-use crate::systems::simulation_actions::RestartSimulationEvent;
-use crate::systems::simulation_actions::ToggleBarycenterGizmoVisibilityEvent;
-use crate::systems::simulation_actions::ToggleOctreeVisualizationEvent;
-use crate::systems::simulation_actions::TogglePauseSimulationEvent;
-use crate::systems::simulation_actions::handle_restart_simulation_event;
-use crate::systems::simulation_actions::handle_toggle_barycenter_gizmo_visibility_event;
-use crate::systems::simulation_actions::handle_toggle_octree_visualization_event;
-use crate::systems::simulation_actions::handle_toggle_pause_simulation_event;
-use crate::systems::ui::handle_barycenter_gizmo_button;
-use crate::systems::ui::handle_octree_button;
-use crate::systems::ui::handle_pause_button;
-use crate::systems::ui::handle_restart_button;
-use crate::systems::ui::update_barycenter_gizmo_button_text;
-use crate::systems::ui::update_octree_button_text;
-use crate::systems::ui::update_pause_button_text;
-use crate::systems::visualization::visualize_octree;
+use crate::systems::{
+    camera::{draw_barycenter_gizmo, spawn_camera},
+    input::{
+        pause_physics_on_space, quit_on_escape, restart_simulation_on_n,
+        toggle_barycenter_gizmo_visibility_on_c, toggle_octree_visualization,
+    },
+    loading::{
+        advance_loading_step, complete_loading, finalize_loading, setup_loading_screen,
+        setup_ui_after_loading, spawn_bodies_async, start_loading_process, update_loading_progress,
+    },
+    physics::{PhysicsSet, apply_gravitation_octree, counteract_barycentric_drift, rebuild_octree},
+    simulation_actions::{
+        handle_restart_simulation_event, handle_toggle_barycenter_gizmo_visibility_event,
+        handle_toggle_octree_visualization_event, handle_toggle_pause_simulation_event,
+    },
+    ui::{
+        handle_barycenter_gizmo_button, handle_octree_button, handle_pause_button,
+        handle_restart_button, update_barycenter_gizmo_button_text, update_octree_button_text,
+        update_pause_button_text,
+    },
+    visualization::visualize_octree,
+};
 #[cfg(feature = "diagnostics")]
-use bevy::ecs::schedule::LogLevel;
-#[cfg(feature = "diagnostics")]
-use bevy::ecs::schedule::ScheduleBuildSettings;
-use bevy::prelude::*;
+use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SimulationSet {

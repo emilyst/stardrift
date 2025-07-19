@@ -1,32 +1,27 @@
-#![cfg_attr(target_arch = "windows", windows_subsystem = "windows")]
+#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 #![allow(dead_code)]
 
 mod components;
 mod config;
 mod physics;
 mod plugins;
+mod prelude;
 mod resources;
 mod states;
 mod systems;
 mod utils;
 
-use crate::plugins::diagnostics_hud::DiagnosticsHudPlugin;
-use crate::plugins::embedded_assets::EmbeddedAssetsPlugin;
-use crate::plugins::simulation::SimulationPlugin;
-use crate::plugins::simulation_diagnostics::SimulationDiagnosticsPlugin;
-use crate::states::AppState;
-use crate::states::LoadingState;
-use avian3d::prelude::*;
-use bevy::app::TaskPoolThreadAssignmentPolicy;
 #[cfg(feature = "diagnostics")]
-use bevy::diagnostic::EntityCountDiagnosticsPlugin;
+use crate::plugins::{
+    diagnostics_hud::DiagnosticsHudPlugin, simulation_diagnostics::SimulationDiagnosticsPlugin,
+};
+use crate::plugins::{embedded_assets::EmbeddedAssetsPlugin, simulation::SimulationPlugin};
+use crate::prelude::*;
 #[cfg(feature = "diagnostics")]
-use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-#[cfg(feature = "diagnostics")]
-use bevy::diagnostic::SystemInformationDiagnosticsPlugin;
-use bevy::prelude::*;
-use bevy::tasks::available_parallelism;
-use bevy::window::WindowMode;
+use bevy::diagnostic::{
+    EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin, SystemInformationDiagnosticsPlugin,
+};
+use bevy::{app::TaskPoolThreadAssignmentPolicy, tasks::available_parallelism, window::WindowMode};
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
 
 fn main() {

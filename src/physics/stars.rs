@@ -1,13 +1,7 @@
-use crate::resources::BodyCount;
-use crate::resources::SharedRng;
+use crate::prelude::*;
 use crate::utils::color::emissive_material_for_temp;
-use crate::utils::math::min_sphere_radius_for_surface_distribution;
-use crate::utils::math::random_unit_vector;
-use avian3d::math::Scalar;
-use avian3d::prelude::*;
-use bevy::prelude::*;
+use crate::utils::math::{min_sphere_radius_for_surface_distribution, random_unit_vector};
 use libm::pow;
-use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 
 #[derive(Resource, Default)]

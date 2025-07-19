@@ -1,13 +1,5 @@
-use crate::resources::BarycenterGizmoVisibility;
-use crate::resources::OctreeVisualizationSettings;
-use crate::states::AppState;
-use crate::systems::simulation_actions::RestartSimulationEvent;
-use crate::systems::simulation_actions::ToggleBarycenterGizmoVisibilityEvent;
-use crate::systems::simulation_actions::ToggleOctreeVisualizationEvent;
-use crate::systems::simulation_actions::TogglePauseSimulationEvent;
-use bevy::asset::AssetPath;
-use bevy::asset::io::AssetSourceId;
-use bevy::prelude::*;
+use crate::prelude::*;
+use bevy::asset::{AssetPath, io::AssetSourceId};
 
 const BUTTON_BORDER_RADIUS_PX: f32 = 5.0;
 const BUTTON_FONT_SIZE_PX: f32 = 12.0;
