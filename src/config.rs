@@ -114,9 +114,9 @@ pub struct TrailConfig {
 impl Default for TrailConfig {
     fn default() -> Self {
         Self {
-            trail_length_seconds: 10.0,           // 10 second trails
-            update_interval_seconds: 1.0 / 30.0,  // 30 FPS updates (current)
-            max_points_per_trail: 1000,           // Reasonable limit
+            trail_length_seconds: 30.0,           // 30 second trails
+            update_interval_seconds: 1.0 / 10.0,  // 10 FPS updates (current)
+            max_points_per_trail: 10000,          // Reasonable limit
             base_width: 1.0,                      // Matches current behavior
             width_relative_to_body: false,        // Start with absolute sizing
             body_size_multiplier: 2.0,            // 2x body radius when enabled
@@ -461,8 +461,8 @@ bloom_intensity = 888.0
     fn test_trail_config_defaults() {
         let trail_config = TrailConfig::default();
 
-        assert_eq!(trail_config.trail_length_seconds, 10.0);
-        assert_eq!(trail_config.update_interval_seconds, 1.0 / 30.0);
+        assert_eq!(trail_config.trail_length_seconds, 60.0);
+        assert_eq!(trail_config.update_interval_seconds, 1.0 / 12.0);
         assert_eq!(trail_config.max_points_per_trail, 1000);
         assert_eq!(trail_config.base_width, 1.0);
         assert!(!trail_config.width_relative_to_body);
