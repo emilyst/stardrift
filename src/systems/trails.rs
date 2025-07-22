@@ -4,19 +4,27 @@ use bevy::render::mesh::{MeshAabb, PrimitiveTopology};
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::view::NoFrustumCulling;
 
-const TRAIL_UPDATE_INTERVAL: f32 = 1.0 / 30.0; // 30 FPS trail updates
-
 #[derive(Component)]
 pub struct TrailRenderer {
     pub body_entity: Entity,
 }
 
-pub fn update_trails(mut trail_query: Query<(&mut Trail, &Transform)>, time: Res<Time>) {
+pub fn update_trails(
+    mut trail_query: Query<(&mut Trail, &Transform)>,
+    time: Res<Time>,
+    config: Res<SimulationConfig>,
+) {
     let current_time = time.elapsed_secs();
 
     for (mut trail, transform) in trail_query.iter_mut() {
-        if trail.should_update(current_time, TRAIL_UPDATE_INTERVAL) {
+        if trail.should_update(current_time, config.trails.update_interval_seconds as f32) {
             trail.add_point(transform.translation, current_time);
+
+            trail.cleanup_old_points(
+                current_time,
+                config.trails.trail_length_seconds as f32,
+                config.trails.max_points_per_trail,
+            );
         }
     }
 }

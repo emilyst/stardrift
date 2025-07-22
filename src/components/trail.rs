@@ -1,7 +1,5 @@
 use crate::prelude::*;
 
-const TRAIL_MAX_VERTICES: usize = 10000;
-
 #[derive(Clone, Debug)]
 pub struct TrailPoint {
     pub position: Vec3,
@@ -18,24 +16,32 @@ pub struct Trail {
 impl Trail {
     pub fn new(color: Color) -> Self {
         Self {
-            points: Vec::with_capacity(TRAIL_MAX_VERTICES),
+            points: Vec::new(),
             color,
             last_update: 0.0,
         }
     }
 
     pub fn add_point(&mut self, position: Vec3, current_time: f32) {
-        self.points.insert(0, TrailPoint { position, age: 0.0 });
-
-        for (_i, point) in self.points.iter_mut().enumerate().skip(1) {
-            point.age = current_time - (current_time - point.age);
-        }
-
-        if self.points.len() > TRAIL_MAX_VERTICES {
-            self.points.truncate(TRAIL_MAX_VERTICES);
-        }
+        self.points.insert(
+            0,
+            TrailPoint {
+                position,
+                age: current_time,
+            },
+        );
 
         self.last_update = current_time;
+    }
+
+    pub fn cleanup_old_points(&mut self, current_time: f32, max_age: f32, max_points: usize) {
+        self.points
+            .retain(|point| current_time - point.age <= max_age);
+
+        // Also enforce max_points limit for performance
+        if self.points.len() > max_points {
+            self.points.truncate(max_points);
+        }
     }
 
     pub fn should_update(&self, current_time: f32, update_interval: f32) -> bool {
@@ -130,15 +136,39 @@ mod tests {
     }
 
     #[test]
-    fn test_trail_max_vertices() {
+    fn test_trail_cleanup_old_points() {
         let mut trail = Trail::new(Color::WHITE);
 
-        // Add more than max vertices
-        for i in 0..(TRAIL_MAX_VERTICES + 10) {
+        // Add points at different times
+        trail.add_point(Vec3::new(0.0, 0.0, 0.0), 1.0);
+        trail.add_point(Vec3::new(1.0, 0.0, 0.0), 2.0);
+        trail.add_point(Vec3::new(2.0, 0.0, 0.0), 3.0);
+        trail.add_point(Vec3::new(3.0, 0.0, 0.0), 10.0);
+
+        assert_eq!(trail.points.len(), 4);
+
+        // Clean up points older than 5 seconds from time 10.0
+        trail.cleanup_old_points(10.0, 5.0, 1000);
+
+        // Points at times 1.0, 2.0, 3.0 should be removed (older than 5 seconds from 10.0)
+        // Only point at time 10.0 should remain
+        assert_eq!(trail.points.len(), 1);
+        assert_eq!(trail.points[0].age, 10.0);
+    }
+
+    #[test]
+    fn test_trail_max_points_limit() {
+        let mut trail = Trail::new(Color::WHITE);
+
+        // Add more points than our limit
+        for i in 0..10 {
             trail.add_point(Vec3::new(i as f32, 0.0, 0.0), i as f32);
         }
 
-        assert_eq!(trail.points.len(), TRAIL_MAX_VERTICES);
+        // Apply max_points limit of 5
+        trail.cleanup_old_points(100.0, 100.0, 5);
+
+        assert_eq!(trail.points.len(), 5);
     }
 
     #[test]
