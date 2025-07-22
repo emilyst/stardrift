@@ -11,6 +11,8 @@ mod states;
 mod systems;
 mod utils;
 
+#[cfg(feature = "trails")]
+use crate::plugins::trails::TrailsPlugin;
 #[cfg(feature = "diagnostics")]
 use crate::plugins::{
     diagnostics_hud::DiagnosticsHudPlugin, simulation_diagnostics::SimulationDiagnosticsPlugin,
@@ -67,6 +69,8 @@ fn main() {
         #[cfg(feature = "diagnostics")]
         SystemInformationDiagnosticsPlugin,
         SimulationPlugin,
+        #[cfg(feature = "trails")]
+        TrailsPlugin,
     ));
 
     // Initialize app states after DefaultPlugins (which includes StatesPlugin)
