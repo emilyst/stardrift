@@ -10,14 +10,16 @@ pub struct SimulationConfig {
     pub version: u32,
     pub physics: PhysicsConfig,
     pub rendering: RenderingConfig,
+    pub trails: TrailConfig,
 }
 
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
-            version: 3,
+            version: 4,
             physics: PhysicsConfig::default(),
             rendering: RenderingConfig::default(),
+            trails: TrailConfig::default(),
         }
     }
 }
@@ -78,6 +80,73 @@ impl Default for RenderingConfig {
             camera_radius_multiplier: 2.0,
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct TrailConfig {
+    // Length & Timing
+    pub trail_length_seconds: Scalar,
+    pub update_interval_seconds: Scalar,
+    pub max_points_per_trail: usize,
+
+    // Visual Appearance
+    pub base_width: Scalar,
+    pub width_relative_to_body: bool,
+    pub body_size_multiplier: Scalar,
+
+    // Fading & Transparency
+    pub enable_fading: bool,
+    pub fade_curve: FadeCurve,
+    pub min_alpha: Scalar,
+    pub max_alpha: Scalar,
+
+    // Width Tapering
+    pub enable_tapering: bool,
+    pub taper_curve: TaperCurve,
+    pub min_width_ratio: Scalar,
+
+    // Performance & Quality
+    pub adaptive_quality: bool,
+    pub max_distance_for_full_quality: Scalar,
+    pub min_quality_ratio: Scalar,
+}
+
+impl Default for TrailConfig {
+    fn default() -> Self {
+        Self {
+            trail_length_seconds: 10.0,           // 10 second trails
+            update_interval_seconds: 1.0 / 30.0,  // 30 FPS updates (current)
+            max_points_per_trail: 1000,           // Reasonable limit
+            base_width: 1.0,                      // Matches current behavior
+            width_relative_to_body: false,        // Start with absolute sizing
+            body_size_multiplier: 2.0,            // 2x body radius when enabled
+            enable_fading: true,                  // Enable visual enhancement
+            fade_curve: FadeCurve::Linear,        // Simple and predictable
+            min_alpha: 0.0,                       // Fully transparent at tail
+            max_alpha: 1.0,                       // Fully opaque at head
+            enable_tapering: false,               // Opt-in feature
+            taper_curve: TaperCurve::Linear,      // Simple tapering
+            min_width_ratio: 0.1,                 // Tail is 10% of base width
+            adaptive_quality: true,               // Important for performance
+            max_distance_for_full_quality: 100.0, // Full detail within 100 units
+            min_quality_ratio: 0.2,               // Minimum 20% detail for distant trails
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum FadeCurve {
+    Linear,
+    Exponential,
+    SmoothStep,
+    EaseInOut,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum TaperCurve {
+    Linear,
+    Exponential,
+    SmoothStep,
 }
 
 impl SimulationConfig {
@@ -248,7 +317,7 @@ mod tests {
         use std::fs;
 
         let mut config = SimulationConfig {
-            version: 3,
+            version: 4,
             ..Default::default()
         };
         config.physics.gravitational_constant = 42.0;
@@ -260,7 +329,7 @@ mod tests {
 
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
-        assert_eq!(loaded_config.version, 3);
+        assert_eq!(loaded_config.version, 4);
         assert_eq!(loaded_config.physics.gravitational_constant, 42.0);
         assert_eq!(loaded_config.physics.body_count, 123);
         assert_eq!(loaded_config.rendering.bloom_intensity, 999.0);
@@ -311,7 +380,7 @@ bloom_intensity = 888.0
         use std::fs;
 
         // Create a complete config file with version field
-        let config_content = r#"version = 3
+        let config_content = r#"version = 4
 
 [physics]
 gravitational_constant = 99.0
@@ -339,7 +408,7 @@ camera_radius_multiplier = 3.0
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
         // Should load the actual values since version is present
-        assert_eq!(loaded_config.version, 3);
+        assert_eq!(loaded_config.version, 4);
         assert_eq!(loaded_config.physics.gravitational_constant, 99.0);
         assert_eq!(loaded_config.physics.body_count, 999);
         assert_eq!(loaded_config.physics.octree_theta, 0.7);
@@ -384,6 +453,56 @@ bloom_intensity = 888.0
             loaded_config.rendering.bloom_intensity,
             default_config.rendering.bloom_intensity
         );
+
+        let _ = fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_trail_config_defaults() {
+        let trail_config = TrailConfig::default();
+
+        assert_eq!(trail_config.trail_length_seconds, 10.0);
+        assert_eq!(trail_config.update_interval_seconds, 1.0 / 30.0);
+        assert_eq!(trail_config.max_points_per_trail, 1000);
+        assert_eq!(trail_config.base_width, 1.0);
+        assert!(!trail_config.width_relative_to_body);
+        assert_eq!(trail_config.body_size_multiplier, 2.0);
+        assert!(trail_config.enable_fading);
+        assert!(matches!(trail_config.fade_curve, FadeCurve::Linear));
+        assert_eq!(trail_config.min_alpha, 0.0);
+        assert_eq!(trail_config.max_alpha, 1.0);
+        assert!(!trail_config.enable_tapering);
+        assert!(matches!(trail_config.taper_curve, TaperCurve::Linear));
+        assert_eq!(trail_config.min_width_ratio, 0.1);
+        assert!(trail_config.adaptive_quality);
+        assert_eq!(trail_config.max_distance_for_full_quality, 100.0);
+        assert_eq!(trail_config.min_quality_ratio, 0.2);
+    }
+
+    #[test]
+    fn test_trail_config_serialization() {
+        use std::fs;
+
+        let mut config = SimulationConfig::default();
+        config.trails.trail_length_seconds = 15.0;
+        config.trails.base_width = 2.5;
+        config.trails.enable_tapering = true;
+        config.trails.fade_curve = FadeCurve::Exponential;
+
+        let temp_path = "test_trail_config.toml";
+        config
+            .save(temp_path)
+            .expect("Failed to save trail config test");
+
+        let loaded_config = SimulationConfig::load_or_default(temp_path);
+
+        assert_eq!(loaded_config.trails.trail_length_seconds, 15.0);
+        assert_eq!(loaded_config.trails.base_width, 2.5);
+        assert!(loaded_config.trails.enable_tapering);
+        assert!(matches!(
+            loaded_config.trails.fade_curve,
+            FadeCurve::Exponential
+        ));
 
         let _ = fs::remove_file(temp_path);
     }
