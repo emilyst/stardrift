@@ -35,8 +35,8 @@ pub fn spawn_camera(
         Camera3d::default(),
         ClusterConfig::None,
         Tonemapping::AcesFitted,
-        Bloom::NATURAL,
-        Msaa::Off,
+        Bloom::default(),
+        Msaa::Sample4,
         PanOrbitCamera {
             allow_upside_down: true,
             focus: Vec3::ZERO,
