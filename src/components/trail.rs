@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use std::collections::VecDeque;
 
 #[derive(Clone, Debug)]
 pub struct TrailPoint {
@@ -8,7 +9,7 @@ pub struct TrailPoint {
 
 #[derive(Component, Debug)]
 pub struct Trail {
-    pub points: Vec<TrailPoint>,
+    pub points: VecDeque<TrailPoint>,
     pub color: Color,
     pub last_update: f32,
 }
@@ -16,20 +17,17 @@ pub struct Trail {
 impl Trail {
     pub fn new(color: Color) -> Self {
         Self {
-            points: Vec::new(),
+            points: VecDeque::new(),
             color,
             last_update: 0.0,
         }
     }
 
     pub fn add_point(&mut self, position: Vec3, current_time: f32) {
-        self.points.insert(
-            0,
-            TrailPoint {
-                position,
-                age: current_time,
-            },
-        );
+        self.points.push_front(TrailPoint {
+            position,
+            age: current_time,
+        });
 
         self.last_update = current_time;
     }
@@ -42,6 +40,8 @@ impl Trail {
         if self.points.len() > max_points {
             self.points.truncate(max_points);
         }
+
+        self.last_update = current_time;
     }
 
     pub fn should_update(&self, current_time: f32, update_interval: f32) -> bool {

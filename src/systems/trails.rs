@@ -107,7 +107,7 @@ pub fn render_trails(
                         // Create new mesh and add it to the entity
                         let trail_mesh = create_trail_mesh_with_data(
                             &mut trail_meshes,
-                            trail,
+                            &trail,
                             camera_pos,
                             current_time,
                             &config.trails,
@@ -153,21 +153,27 @@ fn update_trail_mesh(
         return;
     }
 
-    let positions: Vec<[f32; 3]> = strip_vertices.iter().map(|v| [v.x, v.y, v.z]).collect();
-    let normals: Vec<[f32; 3]> = positions.iter().map(|_| [0.0, 1.0, 0.0]).collect();
+    let vertex_count = strip_vertices.len();
 
-    // Generate vertex colors with alpha based on trail point age
-    let mut colors: Vec<[f32; 4]> = Vec::new();
-    for (i, _vertex) in strip_vertices.iter().enumerate() {
+    // Pre-allocate vectors with exact capacity to avoid reallocations
+    let mut positions = Vec::with_capacity(vertex_count);
+    let mut normals = Vec::with_capacity(vertex_count);
+    let mut colors = Vec::with_capacity(vertex_count);
+
+    // Get base color once for efficiency
+    let base_color = trail.color.to_srgba();
+
+    for (i, vertex) in strip_vertices.iter().enumerate() {
+        positions.push([vertex.x, vertex.y, vertex.z]);
+        normals.push([0.0, 1.0, 0.0]);
+
         // Each trail point generates 2 vertices (left and right side of strip)
+        // Note: VecDeque has newest points at index 0, so point_index matches directly
         let point_index = i / 2; // Convert vertex index to point index
 
         if point_index < trail.points.len() {
             let point = &trail.points[point_index];
             let alpha = trail.calculate_point_alpha(point, current_time, trail_config);
-
-            // Use trail's base color with calculated alpha
-            let base_color = trail.color.to_srgba();
             colors.push([base_color.red, base_color.green, base_color.blue, alpha]);
         } else {
             // Fallback for edge cases
