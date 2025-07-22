@@ -49,6 +49,7 @@ pub fn initialize_trails(
         let trail_material = materials.add(StandardMaterial {
             base_color: color,
             unlit: true,
+            alpha_mode: AlphaMode::Blend,
             ..default()
         });
 
@@ -75,12 +76,16 @@ pub fn render_trails(
     trail_query: Query<&Trail>,
     mut renderer_query: Query<(Entity, &TrailRenderer, Option<&Mesh3d>)>,
     camera_query: Query<&Transform, With<Camera>>,
+    time: Res<Time>,
+    config: Res<SimulationConfig>,
 ) {
     // Get camera position for camera-facing trails
     let camera_pos = camera_query
         .single()
         .ok()
         .map(|transform| transform.translation);
+
+    let current_time = time.elapsed_secs();
 
     for (renderer_entity, renderer, mesh_handle) in renderer_query.iter_mut() {
         if let Ok(trail) = trail_query.get(renderer.body_entity) {
@@ -89,13 +94,24 @@ pub fn render_trails(
                     Some(mesh_handle) => {
                         // Update existing mesh
                         if let Some(mesh) = trail_meshes.get_mut(&mesh_handle.0) {
-                            update_trail_mesh(mesh, trail, camera_pos);
+                            update_trail_mesh(
+                                mesh,
+                                trail,
+                                camera_pos,
+                                current_time,
+                                &config.trails,
+                            );
                         }
                     }
                     None => {
                         // Create new mesh and add it to the entity
-                        let trail_mesh =
-                            create_trail_mesh_with_data(&mut trail_meshes, trail, camera_pos);
+                        let trail_mesh = create_trail_mesh_with_data(
+                            &mut trail_meshes,
+                            trail,
+                            camera_pos,
+                            current_time,
+                            &config.trails,
+                        );
                         commands.entity(renderer_entity).insert(Mesh3d(trail_mesh));
                     }
                 }
@@ -108,22 +124,31 @@ fn create_trail_mesh_with_data(
     meshes: &mut Assets<Mesh>,
     trail: &Trail,
     camera_pos: Option<Vec3>,
+    current_time: f32,
+    trail_config: &crate::config::TrailConfig,
 ) -> Handle<Mesh> {
     let mut mesh = Mesh::new(
         PrimitiveTopology::TriangleStrip,
         RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
     );
-    update_trail_mesh(&mut mesh, trail, camera_pos);
+    update_trail_mesh(&mut mesh, trail, camera_pos, current_time, trail_config);
     meshes.add(mesh)
 }
 
-fn update_trail_mesh(mesh: &mut Mesh, trail: &Trail, camera_pos: Option<Vec3>) {
+fn update_trail_mesh(
+    mesh: &mut Mesh,
+    trail: &Trail,
+    camera_pos: Option<Vec3>,
+    current_time: f32,
+    trail_config: &crate::config::TrailConfig,
+) {
     let strip_vertices = trail.get_triangle_strip_vertices(camera_pos);
 
     if strip_vertices.is_empty() {
         // Clear the mesh if no trail points
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, Vec::<[f32; 3]>::new());
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, Vec::<[f32; 3]>::new());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, Vec::<[f32; 4]>::new());
         mesh.remove_indices();
         return;
     }
@@ -131,10 +156,30 @@ fn update_trail_mesh(mesh: &mut Mesh, trail: &Trail, camera_pos: Option<Vec3>) {
     let positions: Vec<[f32; 3]> = strip_vertices.iter().map(|v| [v.x, v.y, v.z]).collect();
     let normals: Vec<[f32; 3]> = positions.iter().map(|_| [0.0, 1.0, 0.0]).collect();
 
+    // Generate vertex colors with alpha based on trail point age
+    let mut colors: Vec<[f32; 4]> = Vec::new();
+    for (i, _vertex) in strip_vertices.iter().enumerate() {
+        // Each trail point generates 2 vertices (left and right side of strip)
+        let point_index = i / 2; // Convert vertex index to point index
+
+        if point_index < trail.points.len() {
+            let point = &trail.points[point_index];
+            let alpha = trail.calculate_point_alpha(point, current_time, trail_config);
+
+            // Use trail's base color with calculated alpha
+            let base_color = trail.color.to_srgba();
+            colors.push([base_color.red, base_color.green, base_color.blue, alpha]);
+        } else {
+            // Fallback for edge cases
+            colors.push([1.0, 1.0, 1.0, 1.0]);
+        }
+    }
+
     // For triangle strips, no manual indices needed - Bevy will automatically
     // connect consecutive vertices: (0,1,2), (1,2,3), (2,3,4), etc.
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
 
     // IMPORTANT: Compute bounds to prevent incorrect frustum culling
     // Without proper bounds, trails may be culled too aggressively
@@ -169,8 +214,9 @@ mod tests {
         trail.add_point(Vec3::new(0.0, 0.0, 0.0), 0.0);
         trail.add_point(Vec3::new(1.0, 0.0, 0.0), 1.0);
 
+        let trail_config = crate::config::TrailConfig::default();
         let mut meshes = app.world_mut().resource_mut::<Assets<Mesh>>();
-        let handle = create_trail_mesh_with_data(&mut *meshes, &trail, None);
+        let handle = create_trail_mesh_with_data(&mut *meshes, &trail, None, 1.0, &trail_config);
 
         // Should have a valid handle
         assert!(meshes.get(&handle).is_some());
@@ -183,9 +229,10 @@ mod tests {
             RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
         );
         let trail = Trail::new(Color::WHITE);
+        let trail_config = crate::config::TrailConfig::default();
 
         // Empty trail should clear the mesh
-        update_trail_mesh(&mut mesh, &trail, None);
+        update_trail_mesh(&mut mesh, &trail, None, 0.0, &trail_config);
 
         // Should have empty position attributes
         if let Some(positions) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
@@ -202,6 +249,7 @@ mod tests {
             RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
         );
         let mut trail = Trail::new(Color::WHITE);
+        let trail_config = crate::config::TrailConfig::default();
 
         // Add some trail points
         trail.add_point(Vec3::new(0.0, 0.0, 0.0), 0.0);
@@ -209,13 +257,27 @@ mod tests {
         trail.add_point(Vec3::new(2.0, 0.0, 0.0), 2.0);
 
         // Update mesh with trail data
-        update_trail_mesh(&mut mesh, &trail, None);
+        update_trail_mesh(&mut mesh, &trail, None, 2.0, &trail_config);
 
         // Should have position data
         if let Some(positions) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
             if let bevy::render::mesh::VertexAttributeValues::Float32x3(pos_vec) = positions {
                 assert!(pos_vec.len() > 0);
                 assert_eq!(pos_vec.len() % 2, 0); // Should be pairs (triangle strip)
+            }
+        }
+
+        // Should have color data with alpha
+        if let Some(colors) = mesh.attribute(Mesh::ATTRIBUTE_COLOR) {
+            if let bevy::render::mesh::VertexAttributeValues::Float32x4(color_vec) = colors {
+                assert!(color_vec.len() > 0);
+                // Colors should match position count
+                if let Some(positions) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
+                    if let bevy::render::mesh::VertexAttributeValues::Float32x3(pos_vec) = positions
+                    {
+                        assert_eq!(color_vec.len(), pos_vec.len());
+                    }
+                }
             }
         }
     }

@@ -48,6 +48,46 @@ impl Trail {
         current_time - self.last_update >= update_interval
     }
 
+    pub fn calculate_point_alpha(
+        &self,
+        point: &TrailPoint,
+        current_time: f32,
+        fade_config: &crate::config::TrailConfig,
+    ) -> f32 {
+        if !fade_config.enable_fading {
+            return fade_config.max_alpha as f32;
+        }
+
+        let age = current_time - point.age;
+        let max_age = fade_config.trail_length_seconds as f32;
+
+        if age <= 0.0 || max_age <= 0.0 {
+            return fade_config.max_alpha as f32;
+        }
+
+        let fade_ratio = (age / max_age).clamp(0.0, 1.0);
+
+        let curved_fade = match fade_config.fade_curve {
+            crate::config::FadeCurve::Linear => fade_ratio,
+            crate::config::FadeCurve::Exponential => fade_ratio * fade_ratio,
+            crate::config::FadeCurve::SmoothStep => {
+                // Smooth step function: 3t² - 2t³
+                let t = fade_ratio;
+                3.0 * t * t - 2.0 * t * t * t
+            }
+            crate::config::FadeCurve::EaseInOut => {
+                // Ease in-out using cosine interpolation
+                let t = fade_ratio;
+                0.5 * (1.0 - (t * std::f32::consts::PI).cos())
+            }
+        };
+
+        let min_alpha = fade_config.min_alpha as f32;
+        let max_alpha = fade_config.max_alpha as f32;
+
+        max_alpha - curved_fade * (max_alpha - min_alpha)
+    }
+
     /// Each trail vertex becomes two vertices forming a strip one unit wide
     pub fn get_triangle_strip_vertices(&self, camera_pos: Option<Vec3>) -> Vec<Vec3> {
         if self.points.len() < 2 {
@@ -169,6 +209,53 @@ mod tests {
         trail.cleanup_old_points(100.0, 100.0, 5);
 
         assert_eq!(trail.points.len(), 5);
+    }
+
+    #[test]
+    fn test_alpha_calculation() {
+        let trail = Trail::new(Color::WHITE);
+        let mut config = crate::config::TrailConfig::default();
+        config.trail_length_seconds = 10.0;
+        config.min_alpha = 0.0;
+        config.max_alpha = 1.0;
+        config.enable_fading = true;
+
+        // Create a test point
+        let point = TrailPoint {
+            position: Vec3::ZERO,
+            age: 5.0,
+        };
+
+        // Test at different times
+        let alpha_new = trail.calculate_point_alpha(&point, 5.0, &config); // Same age as point
+        let alpha_mid = trail.calculate_point_alpha(&point, 10.0, &config); // 5 seconds old
+        let alpha_old = trail.calculate_point_alpha(&point, 15.0, &config); // 10 seconds old (max age)
+
+        // New point should be max alpha
+        assert!((alpha_new - 1.0).abs() < 0.001);
+
+        // Middle-aged point should be partially faded
+        assert!(alpha_mid > 0.0 && alpha_mid < 1.0);
+
+        // Old point should be min alpha
+        assert!(alpha_old.abs() < 0.001);
+    }
+
+    #[test]
+    fn test_alpha_calculation_disabled() {
+        let trail = Trail::new(Color::WHITE);
+        let mut config = crate::config::TrailConfig::default();
+        config.enable_fading = false;
+        config.max_alpha = 0.8;
+
+        let point = TrailPoint {
+            position: Vec3::ZERO,
+            age: 0.0,
+        };
+
+        // When fading is disabled, should always return max_alpha
+        let alpha = trail.calculate_point_alpha(&point, 10.0, &config);
+        assert!((alpha - 0.8).abs() < 0.001);
     }
 
     #[test]
