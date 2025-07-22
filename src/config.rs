@@ -15,7 +15,7 @@ pub struct SimulationConfig {
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
-            version: 2,
+            version: 3,
             physics: PhysicsConfig::default(),
             rendering: RenderingConfig::default(),
         }
@@ -248,7 +248,7 @@ mod tests {
         use std::fs;
 
         let mut config = SimulationConfig {
-            version: 2,
+            version: 3,
             ..Default::default()
         };
         config.physics.gravitational_constant = 42.0;
@@ -260,7 +260,7 @@ mod tests {
 
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
-        assert_eq!(loaded_config.version, 2);
+        assert_eq!(loaded_config.version, 3);
         assert_eq!(loaded_config.physics.gravitational_constant, 42.0);
         assert_eq!(loaded_config.physics.body_count, 123);
         assert_eq!(loaded_config.rendering.bloom_intensity, 999.0);
@@ -311,7 +311,7 @@ bloom_intensity = 888.0
         use std::fs;
 
         // Create a complete config file with version field
-        let config_content = r#"version = 2
+        let config_content = r#"version = 3
 
 [physics]
 gravitational_constant = 99.0
@@ -339,7 +339,7 @@ camera_radius_multiplier = 3.0
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
         // Should load the actual values since version is present
-        assert_eq!(loaded_config.version, 2);
+        assert_eq!(loaded_config.version, 3);
         assert_eq!(loaded_config.physics.gravitational_constant, 99.0);
         assert_eq!(loaded_config.physics.body_count, 999);
         assert_eq!(loaded_config.physics.octree_theta, 0.7);
