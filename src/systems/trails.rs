@@ -49,7 +49,7 @@ pub fn initialize_trails(
         let trail_material = materials.add(StandardMaterial {
             base_color: color,
             unlit: true,
-            alpha_mode: AlphaMode::Blend,
+            alpha_mode: AlphaMode::Add,
             ..default()
         });
 
