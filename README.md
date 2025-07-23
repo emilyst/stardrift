@@ -21,6 +21,12 @@ interactive camera controls.
 - **Interactive camera**: Pan, orbit, and zoom controls
 - **Touch support**: Touch controls for mobile and tablet devices
 - **Visual effects**: Bloom effects and tone mapping for enhanced visual quality
+- **Dynamic trails**: High-performance fading trails for celestial bodies (optional feature)
+    - Time-based trail length management
+    - Multiple fade curves (Linear, Exponential, SmoothStep, EaseInOut)
+    - Configurable width with tapering options
+    - Bloom effects and additive blending
+    - Automatically pauses when simulation is paused
 - **Barycenter visualization**: Cross-hair indicator showing the system's center of mass with toggle controls
 - **Octree visualization**: Real-time wireframe rendering of the spatial partitioning structure
 - **Interactive visualization controls**: Toggle octree display, barycenter gizmos, and adjust visualization depth
@@ -31,7 +37,7 @@ interactive camera controls.
 - **Real-time diagnostics HUD**: On-screen display showing:
     - Frame rate (FPS)
     - Frame count
-    - Barycenter coordinates (X, Y, Z)
+    - Body count
 - **Pause/Resume functionality**: Space bar to pause and resume the simulation
 - **Interactive UI buttons**:
     - **Octree toggle button**: Show/hide octree visualization
@@ -61,32 +67,41 @@ cd stardrift
 
 ```bash
 # Development build (faster compilation)
-cargo run --features dev
+cargo run --all-features
 
 # Release build (optimized performance)
-cargo run --release
+cargo run --release --all-features
+
+# Build with specific features
+cargo run --features dev        # Development features only
+cargo run --features trails      # Enable trail visualization
 ```
 
 ### WebAssembly Build
 
-The project includes a convenient build script for WASM deployment:
+For WebAssembly builds, use the wasm-server-runner tool:
 
 ```bash
-# Make the script executable (Unix/Linux/macOS)
-chmod +x build_wasm.sh
+# Install wasm-server-runner if not present
+cargo install wasm-server-runner
 
-# Run the build script
-./build_wasm.sh
+# Run the WASM build with the server
+cargo run --target wasm32-unknown-unknown --all-features
 ```
 
-The script will:
+Alternatively, you can manually build and serve:
 
-1. Install the `wasm32-unknown-unknown` target
-2. Install `wasm-bindgen-cli` if not present
-3. Build the project with WASM optimizations
-4. Generate web bindings
-5. Compress the WASM file with gzip
-6. Copy the HTML file to the output directory
+```bash
+# Add WASM target
+rustup target add wasm32-unknown-unknown
+
+# Build for WASM
+cargo build --target wasm32-unknown-unknown --release --all-features
+
+# Install and use wasm-bindgen
+cargo install wasm-bindgen-cli
+wasm-bindgen --out-dir out --target web target/wasm32-unknown-unknown/release/stardrift.wasm
+```
 
 After building, serve the `out/` directory with any HTTP server:
 
@@ -128,32 +143,44 @@ parameters. Configuration is managed through TOML files and supports XDG config 
 
 **Physics Configuration:**
 
-- **Body count**: Number of bodies in the simulation (default: 100 for WebAssembly, 1000 for native)
-- **Gravitational constant**: Strength of gravitational interactions (default: 1e1)
-- **Octree theta**: Barnes-Hut approximation parameter for accuracy/performance balance (default: 1.0 for WebAssembly,
-  2.0 for native)
-- **Body distribution**: Sphere radius multiplier and minimum distance parameters
-- **Body size**: Minimum and maximum body radius settings
-- **Force calculation**: Minimum distance and maximum force limits
+- **Body count**: Number of bodies in the simulation (default: 100)
+- **Gravitational constant**: Strength of gravitational interactions (default: 1e2)
+- **Octree theta**: Barnes-Hut approximation parameter for accuracy/performance balance (default: 0.5)
+- **Octree leaf threshold**: Maximum bodies per octree leaf node before subdivision (default: 8)
+- **Body distribution**: Sphere radius multiplier (default: 100.0) and minimum distance parameters (default: 0.001)
+- **Body size**: Minimum and maximum body radius settings (default: 1.0-2.0)
+- **Force calculation**: Minimum distance (default: 2.0) and maximum force limits (default: 1e5)
+- **Collision settings**: Restitution coefficient (default: 0.8) and friction coefficient (default: 0.5)
+- **Random seed**: Optional seed for deterministic body generation (default: None - random each time)
+- **Initial velocity**: Bodies spawn with configurable initial velocities
+    - Multiple velocity modes: Random (default), Orbital, Tangential, Radial
+    - Configurable speed range (default: 5.0-20.0)
+    - Tangential bias for mixed orbital/random motion (default: 0.7)
 
 **Rendering Configuration:**
 
 - **Temperature range**: Min/max temperature for stellar color mapping (default: 2000-15000K)
-- **Bloom intensity**: Visual bloom effect strength (default: 33.333)
+- **Bloom intensity**: Visual bloom effect strength (default: 100.0)
 - **Saturation intensity**: Color saturation level (default: 3.0)
-- **Camera settings**: Radius multiplier for camera positioning
+- **Camera settings**: Radius multiplier for camera positioning (default: 2.0)
 
-**UI Configuration:**
+**Trail Configuration (when trails feature is enabled):**
 
-- **Button styling**: Padding, gaps, margins, and border radius
-- **Font settings**: Font size and other text properties
+- **Trail length**: Time-based trail duration in seconds (default: 10.0)
+- **Update frequency**: Trail point creation rate (default: 10 FPS)
+- **Visual appearance**: Base width, relative sizing to body, bloom factor
+- **Fading effects**: Enable/disable fading, fade curves, alpha transparency range
+- **Width tapering**: Enable/disable tapering, taper curves, minimum width ratio
+- **Blending mode**: Additive or standard blending for trail rendering
+
 
 #### Configuration File Location
 
-The configuration is automatically loaded from the XDG config directory:
+The configuration is automatically loaded from the platform-specific config directory:
 
-- **Linux/macOS**: `~/.config/stardrift/config.toml`
-- **Windows**: `%APPDATA%/stardrift/config.toml`
+- **Linux**: `~/.config/Stardrift/config.toml`
+- **macOS**: `~/Library/Application Support/Stardrift/config.toml`
+- **Windows**: `%APPDATA%\Stardrift\config.toml`
 
 If no configuration file exists, the application uses sensible defaults and can generate a configuration file for
 customization.
@@ -162,7 +189,7 @@ customization.
 
 ### Architecture
 
-- **Engine**: Bevy 0.16.* (Entity Component System game engine)
+- **Engine**: Bevy 0.16.1 (Entity Component System game engine)
 - **Physics**: Avian3D with f64 precision and parallel processing
 - **Spatial Optimization**: Barnes-Hut octree algorithm with configurable theta parameter for accuracy/performance
   balance
@@ -217,15 +244,20 @@ agents. The structure follows Rust best practices and separates concerns clearly
 ```
 src/
 ├── main.rs                       # Application entry point and plugin registration
-├── lib.rs                        # Library entry point
+├── prelude.rs                    # Common imports and type aliases
 ├── config.rs                     # Configuration management system
 ├── states.rs                     # Application state management
+├── components/                   # Bevy ECS components (data containers)
+│   ├── mod.rs
+│   ├── body.rs                   # Celestial body component
+│   └── trail.rs                  # Trail component for visual effects
 ├── plugins/                      # Bevy plugins for modular functionality
 │   ├── mod.rs
 │   ├── simulation.rs             # Main simulation plugin orchestrating all systems
 │   ├── simulation_diagnostics.rs # Simulation metrics and diagnostics plugin
 │   ├── diagnostics_hud.rs        # Real-time HUD display plugin
-│   └── embedded_assets.rs        # Embedded asset management plugin
+│   ├── embedded_assets.rs        # Embedded asset management plugin
+│   └── trails.rs                 # Trail rendering plugin (when trails feature enabled)
 ├── resources/                    # Bevy ECS resources (global state)
 │   └── mod.rs                    # Shared resources like RNG, constants, and octree
 ├── systems/                      # Bevy ECS systems (game logic)
@@ -236,7 +268,8 @@ src/
 │   ├── ui.rs                     # User interface systems
 │   ├── visualization.rs          # Octree and visual debugging systems
 │   ├── loading.rs                # Asset and resource loading systems
-│   └── simulation_actions.rs     # Simulation control and action handling
+│   ├── simulation_actions.rs     # Simulation control and action handling
+│   └── trails.rs                 # Trail update and management systems
 ├── utils/                        # Utility modules
 │   ├── mod.rs
 │   ├── math.rs                   # Mathematical functions and algorithms
@@ -290,6 +323,20 @@ Development features include:
 - File watching
 - Enhanced debugging information
 - Dynamic linking for faster compilation
+
+### Available Features
+
+- **`dev`**: Development features for faster iteration
+- **`diagnostics`**: Extended performance diagnostics
+- **`benchmarks`**: Performance benchmarking capabilities
+- **`trails`**: Dynamic trail visualization for celestial bodies
+
+Combine features as needed:
+
+```bash
+cargo run --features "dev trails"  # Development with trails
+cargo run --all-features            # All features enabled
+```
 
 ## Troubleshooting
 
