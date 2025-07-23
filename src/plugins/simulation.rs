@@ -41,6 +41,16 @@ impl Plugin for SimulationPlugin {
     fn build(&self, app: &mut App) {
         let config = SimulationConfig::load_from_user_config();
 
+        match toml::to_string_pretty(&config) {
+            Ok(toml_string) => {
+                info!("=== Current Configuration (TOML) ===\n{}", toml_string);
+                info!("=== End Configuration ===");
+            }
+            Err(e) => {
+                error!("Failed to serialize configuration to TOML: {}", e);
+            }
+        }
+
         app.insert_resource(config.clone());
         app.insert_resource(SharedRng::from_optional_seed(config.physics.initial_seed));
         app.insert_resource(GravitationalConstant(config.physics.gravitational_constant));
