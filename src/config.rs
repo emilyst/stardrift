@@ -155,10 +155,10 @@ impl Default for TrailConfig {
             width_relative_to_body: false,       // Start with absolute sizing
             body_size_multiplier: 2.0,           // 2x body radius when enabled
             enable_fading: true,                 // Enable visual enhancement
-            fade_curve: FadeCurve::Linear,       // Simple and predictable
+            fade_curve: FadeCurve::Exponential,  // Aggressively fade out
             min_alpha: 0.0,                      // Fully transparent at tail
             max_alpha: 1.0,                      // Fully opaque at head
-            enable_tapering: false,              // Opt-in feature
+            enable_tapering: true,               // Taper by default
             taper_curve: TaperCurve::Linear,     // Simple tapering
             min_width_ratio: 0.1,                // Tail is 10% of base width
             bloom_factor: 100.0,                 // Strong bloom effect similar to bodies
