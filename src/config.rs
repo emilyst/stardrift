@@ -10,6 +10,7 @@ pub struct SimulationConfig {
     pub version: u32,
     pub physics: PhysicsConfig,
     pub rendering: RenderingConfig,
+    #[cfg(feature = "trails")]
     pub trails: TrailConfig,
 }
 
@@ -19,6 +20,7 @@ impl Default for SimulationConfig {
             version: 5,
             physics: PhysicsConfig::default(),
             rendering: RenderingConfig::default(),
+            #[cfg(feature = "trails")]
             trails: TrailConfig::default(),
         }
     }
@@ -113,6 +115,7 @@ impl Default for RenderingConfig {
     }
 }
 
+#[cfg(feature = "trails")]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TrailConfig {
     // Length & Timing
@@ -137,6 +140,7 @@ pub struct TrailConfig {
     pub min_width_ratio: Scalar,
 }
 
+#[cfg(feature = "trails")]
 impl Default for TrailConfig {
     fn default() -> Self {
         Self {
@@ -157,6 +161,7 @@ impl Default for TrailConfig {
     }
 }
 
+#[cfg(feature = "trails")]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum FadeCurve {
     Linear,
@@ -165,6 +170,7 @@ pub enum FadeCurve {
     EaseInOut,
 }
 
+#[cfg(feature = "trails")]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum TaperCurve {
     Linear,
@@ -497,6 +503,7 @@ bloom_intensity = 888.0
     }
 
     #[test]
+    #[cfg(feature = "trails")]
     fn test_trail_config_defaults() {
         let trail_config = TrailConfig::default();
 
@@ -516,6 +523,7 @@ bloom_intensity = 888.0
     }
 
     #[test]
+    #[cfg(feature = "trails")]
     fn test_trail_config_serialization() {
         use std::fs;
 

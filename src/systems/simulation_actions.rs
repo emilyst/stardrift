@@ -19,7 +19,10 @@ pub fn handle_restart_simulation_event(
     mut restart_events: EventReader<RestartSimulationEvent>,
     mut commands: Commands,
     simulation_bodies: Query<Entity, With<RigidBody>>,
-    trail_renderers: Query<Entity, With<crate::systems::trails::TrailRenderer>>,
+    #[cfg(feature = "trails")] trail_renderers: Query<
+        Entity,
+        With<crate::systems::trails::TrailRenderer>,
+    >,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut rng: ResMut<SharedRng>,
@@ -36,6 +39,7 @@ pub fn handle_restart_simulation_event(
         });
 
         // Despawn all trail renderers
+        #[cfg(feature = "trails")]
         trail_renderers.iter().for_each(|entity| {
             commands.entity(entity).despawn();
         });
