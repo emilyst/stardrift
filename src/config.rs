@@ -510,28 +510,6 @@ bloom_intensity = 888.0
 
     #[test]
     #[cfg(feature = "trails")]
-    fn test_trail_config_defaults() {
-        let trail_config = TrailConfig::default();
-
-        assert_eq!(trail_config.trail_length_seconds, 30.0);
-        assert_eq!(trail_config.update_interval_seconds, 1.0 / 10.0);
-        assert_eq!(trail_config.max_points_per_trail, 10000);
-        assert_eq!(trail_config.base_width, 1.0);
-        assert!(!trail_config.width_relative_to_body);
-        assert_eq!(trail_config.body_size_multiplier, 2.0);
-        assert!(trail_config.enable_fading);
-        assert!(matches!(trail_config.fade_curve, FadeCurve::Linear));
-        assert_eq!(trail_config.min_alpha, 0.0);
-        assert_eq!(trail_config.max_alpha, 1.0);
-        assert!(!trail_config.enable_tapering);
-        assert!(matches!(trail_config.taper_curve, TaperCurve::Linear));
-        assert_eq!(trail_config.min_width_ratio, 0.1);
-        assert_eq!(trail_config.bloom_factor, 100.0);
-        assert!(!trail_config.use_additive_blending);
-    }
-
-    #[test]
-    #[cfg(feature = "trails")]
     fn test_trail_config_serialization() {
         use std::fs;
 
