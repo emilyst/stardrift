@@ -1,5 +1,6 @@
 use crate::components::Trail;
 use crate::prelude::*;
+use crate::states::AppState;
 use bevy::render::mesh::{MeshAabb, PrimitiveTopology};
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::view::NoFrustumCulling;
@@ -13,10 +14,21 @@ pub fn update_trails(
     mut trail_query: Query<(&mut Trail, &Transform)>,
     time: Res<Time>,
     config: Res<SimulationConfig>,
+    app_state: Res<State<AppState>>,
 ) {
     let current_time = time.elapsed_secs();
+    let is_paused = matches!(app_state.get(), AppState::Paused);
 
     for (mut trail, transform) in trail_query.iter_mut() {
+        if is_paused {
+            trail.pause(current_time);
+            continue;
+        }
+
+        if trail.is_paused() {
+            trail.unpause(current_time);
+        }
+
         if trail.should_update(current_time, config.trails.update_interval_seconds as f32) {
             trail.add_point(transform.translation, current_time);
 
@@ -35,7 +47,12 @@ pub fn initialize_trails(
     query: Query<(Entity, &MeshMaterial3d<StandardMaterial>), (With<RigidBody>, Without<Trail>)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     _meshes: ResMut<Assets<Mesh>>,
+    app_state: Res<State<AppState>>,
+    time: Res<Time>,
 ) {
+    let is_paused = matches!(app_state.get(), AppState::Paused);
+    let current_time = time.elapsed_secs();
+
     for (entity, mesh_material) in query.iter() {
         // Extract color from the body's material
         let color = if let Some(material) = materials.get(&mesh_material.0) {
@@ -44,7 +61,13 @@ pub fn initialize_trails(
             Color::WHITE
         };
 
-        commands.entity(entity).insert(Trail::new(color));
+        let mut trail = Trail::new(color);
+
+        if is_paused {
+            trail.pause(current_time);
+        }
+
+        commands.entity(entity).insert(trail);
 
         let trail_material = materials.add(StandardMaterial {
             base_color: color,
@@ -182,7 +205,7 @@ fn update_trail_mesh(
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; 4]);
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, vec![[0.0, 0.0, 0.0, 0.0]; 4]);
         mesh.remove_indices();
-        
+
         // Still compute bounds to prevent culling issues
         if mesh.compute_aabb().is_none() {
             warn!("Failed to compute AABB for empty trail mesh");
@@ -275,13 +298,30 @@ mod tests {
         let trail = Trail::new(Color::WHITE);
         let trail_config = crate::config::TrailConfig::default();
 
-        // Empty trail should clear the mesh
+        // Empty trail should create a minimal degenerate triangle strip to avoid empty buffer issues
         update_trail_mesh(&mut mesh, &trail, None, 0.0, &trail_config, Some(1.0));
 
-        // Should have empty position attributes
+        // Should have 4 vertices for the degenerate triangle strip
         if let Some(positions) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
             if let bevy::render::mesh::VertexAttributeValues::Float32x3(pos_vec) = positions {
-                assert_eq!(pos_vec.len(), 0);
+                assert_eq!(pos_vec.len(), 4);
+                // All vertices should be at origin
+                for pos in pos_vec {
+                    assert_eq!(pos[0], 0.0);
+                    assert_eq!(pos[1], 0.0);
+                    assert_eq!(pos[2], 0.0);
+                }
+            }
+        }
+
+        // Should have colors with zero alpha (invisible)
+        if let Some(colors) = mesh.attribute(Mesh::ATTRIBUTE_COLOR) {
+            if let bevy::render::mesh::VertexAttributeValues::Float32x4(color_vec) = colors {
+                assert_eq!(color_vec.len(), 4);
+                // All colors should have zero alpha
+                for color in color_vec {
+                    assert_eq!(color[3], 0.0);
+                }
             }
         }
     }

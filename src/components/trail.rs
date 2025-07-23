@@ -12,6 +12,8 @@ pub struct Trail {
     pub points: VecDeque<TrailPoint>,
     pub color: Color,
     pub last_update: f32,
+    pub pause_time: Option<f32>,
+    pub total_pause_duration: f32,
 }
 
 impl Trail {
@@ -20,6 +22,8 @@ impl Trail {
             points: VecDeque::new(),
             color,
             last_update: 0.0,
+            pause_time: None,
+            total_pause_duration: 0.0,
         }
     }
 
@@ -33,8 +37,10 @@ impl Trail {
     }
 
     pub fn cleanup_old_points(&mut self, current_time: f32, max_age: f32, max_points: usize) {
+        let effective_time = self.effective_time(current_time);
+
         self.points
-            .retain(|point| current_time - point.age <= max_age);
+            .retain(|point| effective_time - point.age <= max_age);
 
         // Also enforce max_points limit for performance
         if self.points.len() > max_points {
@@ -48,6 +54,31 @@ impl Trail {
         current_time - self.last_update >= update_interval
     }
 
+    pub fn pause(&mut self, current_time: f32) {
+        if self.pause_time.is_none() {
+            self.pause_time = Some(current_time);
+        }
+    }
+
+    pub fn unpause(&mut self, current_time: f32) {
+        if let Some(pause_start) = self.pause_time {
+            self.total_pause_duration += current_time - pause_start;
+            self.pause_time = None;
+        }
+    }
+
+    pub fn is_paused(&self) -> bool {
+        self.pause_time.is_some()
+    }
+
+    pub fn effective_time(&self, current_time: f32) -> f32 {
+        if let Some(pause_start) = self.pause_time {
+            pause_start - self.total_pause_duration
+        } else {
+            current_time - self.total_pause_duration
+        }
+    }
+
     pub fn calculate_point_alpha(
         &self,
         point: &TrailPoint,
@@ -58,7 +89,8 @@ impl Trail {
             return fade_config.max_alpha as f32;
         }
 
-        let age = current_time - point.age;
+        let effective_time = self.effective_time(current_time);
+        let age = effective_time - point.age;
         let max_age = fade_config.trail_length_seconds as f32;
 
         if age <= 0.0 || max_age <= 0.0 {
@@ -202,6 +234,8 @@ mod tests {
         assert_eq!(trail.points.len(), 0);
         assert_eq!(trail.color, color);
         assert_eq!(trail.last_update, 0.0);
+        assert_eq!(trail.pause_time, None);
+        assert_eq!(trail.total_pause_duration, 0.0);
     }
 
     #[test]
@@ -311,6 +345,54 @@ mod tests {
         assert!(!trail.should_update(5.5, 1.0)); // Too soon
         assert!(trail.should_update(6.0, 1.0)); // Time to update
         assert!(trail.should_update(7.0, 1.0)); // Definitely time to update
+    }
+
+    #[test]
+    fn test_pause_unpause() {
+        let mut trail = Trail::new(Color::WHITE);
+
+        assert!(!trail.is_paused());
+        assert_eq!(trail.pause_time, None);
+        assert_eq!(trail.total_pause_duration, 0.0);
+
+        // Pause at time 10.0
+        trail.pause(10.0);
+        assert!(trail.is_paused());
+        assert_eq!(trail.pause_time, Some(10.0));
+
+        // Unpause at time 15.0 (5 seconds paused)
+        trail.unpause(15.0);
+        assert!(!trail.is_paused());
+        assert_eq!(trail.pause_time, None);
+        assert_eq!(trail.total_pause_duration, 5.0);
+
+        // Pause again at time 20.0
+        trail.pause(20.0);
+        assert!(trail.is_paused());
+
+        // Unpause at time 23.0 (3 more seconds paused)
+        trail.unpause(23.0);
+        assert_eq!(trail.total_pause_duration, 8.0); // 5 + 3
+    }
+
+    #[test]
+    fn test_effective_time() {
+        let mut trail = Trail::new(Color::WHITE);
+
+        // No pause, effective time equals current time
+        assert_eq!(trail.effective_time(10.0), 10.0);
+
+        // Pause at time 10.0
+        trail.pause(10.0);
+        // While paused, effective time should stay at 10.0
+        assert_eq!(trail.effective_time(15.0), 10.0);
+        assert_eq!(trail.effective_time(20.0), 10.0);
+
+        // Unpause at time 20.0 (10 seconds paused)
+        trail.unpause(20.0);
+        // Now effective time should be current time minus pause duration
+        assert_eq!(trail.effective_time(25.0), 15.0); // 25 - 10 = 15
+        assert_eq!(trail.effective_time(30.0), 20.0); // 30 - 10 = 20
     }
 
     #[test]
