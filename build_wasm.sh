@@ -6,7 +6,8 @@ rustup target add wasm32-unknown-unknown
 
 cargo build \
   --profile wasm \
-  --target wasm32-unknown-unknown
+  --target wasm32-unknown-unknown \
+  --features trails
 
 if ! command -v wasm-bindgen > /dev/null; then
     echo "Installing wasm-bindgen-cli..."
