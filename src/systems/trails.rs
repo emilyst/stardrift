@@ -73,7 +73,7 @@ pub fn initialize_trails(
 pub fn render_trails(
     mut commands: Commands,
     mut trail_meshes: ResMut<Assets<Mesh>>,
-    trail_query: Query<&Trail>,
+    trail_query: Query<(&Trail, Option<&Collider>)>,
     mut renderer_query: Query<(Entity, &TrailRenderer, Option<&Mesh3d>)>,
     camera_query: Query<&Transform, With<Camera>>,
     time: Res<Time>,
@@ -88,8 +88,19 @@ pub fn render_trails(
     let current_time = time.elapsed_secs();
 
     for (renderer_entity, renderer, mesh_handle) in renderer_query.iter_mut() {
-        if let Ok(trail) = trail_query.get(renderer.body_entity) {
+        if let Ok((trail, collider)) = trail_query.get(renderer.body_entity) {
             if !trail.points.is_empty() {
+                // Extract body radius from collider if available
+                let body_radius = collider
+                    .and_then(|c| {
+                        // Get the underlying shape from the collider
+                        let shape = c.shape();
+
+                        // Try to downcast to a Ball shape and get its radius
+                        shape.as_ball().map(|ball| ball.radius as f32)
+                    })
+                    .or(Some(1.0)); // Default radius if we can't extract it
+
                 match mesh_handle {
                     Some(mesh_handle) => {
                         // Update existing mesh
@@ -100,6 +111,7 @@ pub fn render_trails(
                                 camera_pos,
                                 current_time,
                                 &config.trails,
+                                body_radius,
                             );
                         }
                     }
@@ -107,10 +119,11 @@ pub fn render_trails(
                         // Create new mesh and add it to the entity
                         let trail_mesh = create_trail_mesh_with_data(
                             &mut trail_meshes,
-                            &trail,
+                            trail,
                             camera_pos,
                             current_time,
                             &config.trails,
+                            body_radius,
                         );
                         commands.entity(renderer_entity).insert(Mesh3d(trail_mesh));
                     }
@@ -126,12 +139,20 @@ fn create_trail_mesh_with_data(
     camera_pos: Option<Vec3>,
     current_time: f32,
     trail_config: &crate::config::TrailConfig,
+    body_radius: Option<f32>,
 ) -> Handle<Mesh> {
     let mut mesh = Mesh::new(
         PrimitiveTopology::TriangleStrip,
         RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
     );
-    update_trail_mesh(&mut mesh, trail, camera_pos, current_time, trail_config);
+    update_trail_mesh(
+        &mut mesh,
+        trail,
+        camera_pos,
+        current_time,
+        trail_config,
+        body_radius,
+    );
     meshes.add(mesh)
 }
 
@@ -141,8 +162,18 @@ fn update_trail_mesh(
     camera_pos: Option<Vec3>,
     current_time: f32,
     trail_config: &crate::config::TrailConfig,
+    body_radius: Option<f32>,
 ) {
-    let strip_vertices = trail.get_triangle_strip_vertices(camera_pos);
+    let strip_vertices = trail.get_triangle_strip_vertices(
+        camera_pos,
+        trail_config.base_width as f32,
+        trail_config.width_relative_to_body,
+        body_radius,
+        trail_config.body_size_multiplier as f32,
+        trail_config.enable_tapering,
+        &trail_config.taper_curve,
+        trail_config.min_width_ratio as f32,
+    );
 
     if strip_vertices.is_empty() {
         // Clear the mesh if no trail points
@@ -222,7 +253,8 @@ mod tests {
 
         let trail_config = crate::config::TrailConfig::default();
         let mut meshes = app.world_mut().resource_mut::<Assets<Mesh>>();
-        let handle = create_trail_mesh_with_data(&mut *meshes, &trail, None, 1.0, &trail_config);
+        let handle =
+            create_trail_mesh_with_data(&mut meshes, &trail, None, 1.0, &trail_config, Some(1.0));
 
         // Should have a valid handle
         assert!(meshes.get(&handle).is_some());
@@ -238,7 +270,7 @@ mod tests {
         let trail_config = crate::config::TrailConfig::default();
 
         // Empty trail should clear the mesh
-        update_trail_mesh(&mut mesh, &trail, None, 0.0, &trail_config);
+        update_trail_mesh(&mut mesh, &trail, None, 0.0, &trail_config, Some(1.0));
 
         // Should have empty position attributes
         if let Some(positions) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
@@ -263,7 +295,7 @@ mod tests {
         trail.add_point(Vec3::new(2.0, 0.0, 0.0), 2.0);
 
         // Update mesh with trail data
-        update_trail_mesh(&mut mesh, &trail, None, 2.0, &trail_config);
+        update_trail_mesh(&mut mesh, &trail, None, 2.0, &trail_config, Some(1.0));
 
         // Should have position data
         if let Some(positions) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {

@@ -88,8 +88,18 @@ impl Trail {
         max_alpha - curved_fade * (max_alpha - min_alpha)
     }
 
-    /// Each trail vertex becomes two vertices forming a strip one unit wide
-    pub fn get_triangle_strip_vertices(&self, camera_pos: Option<Vec3>) -> Vec<Vec3> {
+    /// Each trail vertex becomes two vertices forming a strip with configurable width
+    pub fn get_triangle_strip_vertices(
+        &self,
+        camera_pos: Option<Vec3>,
+        base_width: f32,
+        width_relative_to_body: bool,
+        body_radius: Option<f32>,
+        body_size_multiplier: f32,
+        enable_tapering: bool,
+        taper_curve: &crate::config::TaperCurve,
+        min_width_ratio: f32,
+    ) -> Vec<Vec3> {
         if self.points.len() < 2 {
             return Vec::new();
         }
@@ -133,7 +143,42 @@ impl Trail {
                 perpendicular = Vec3::X;
             }
 
-            let half_width = 0.5; // Trail is 1 unit wide
+            // Calculate trail width based on configuration
+            let base_trail_width = if width_relative_to_body {
+                body_radius.unwrap_or(1.0) * body_size_multiplier
+            } else {
+                base_width
+            };
+
+            // Apply tapering if enabled
+            let width = if enable_tapering {
+                // Calculate position along trail (0.0 at head, 1.0 at tail)
+                let position_ratio = i as f32 / (self.points.len() - 1) as f32;
+
+                // Apply taper curve
+                let taper_factor = match taper_curve {
+                    crate::config::TaperCurve::Linear => {
+                        1.0 - position_ratio * (1.0 - min_width_ratio)
+                    }
+                    crate::config::TaperCurve::Exponential => {
+                        // Exponential tapering (more aggressive at the end)
+                        let t = 1.0 - position_ratio;
+                        min_width_ratio + (1.0 - min_width_ratio) * (t * t)
+                    }
+                    crate::config::TaperCurve::SmoothStep => {
+                        // Smooth step tapering
+                        let t = 1.0 - position_ratio;
+                        let smooth = 3.0 * t * t - 2.0 * t * t * t;
+                        min_width_ratio + (1.0 - min_width_ratio) * smooth
+                    }
+                };
+
+                base_trail_width * taper_factor
+            } else {
+                base_trail_width
+            };
+
+            let half_width = width / 2.0;
             let left = current_pos - perpendicular * half_width;
             let right = current_pos + perpendicular * half_width;
 
@@ -273,19 +318,188 @@ mod tests {
         let mut trail = Trail::new(Color::WHITE);
 
         // Empty trail should return no vertices
-        assert_eq!(trail.get_triangle_strip_vertices(None).len(), 0);
+        assert_eq!(
+            trail
+                .get_triangle_strip_vertices(
+                    None,
+                    1.0,
+                    false,
+                    None,
+                    1.0,
+                    false,
+                    &crate::config::TaperCurve::Linear,
+                    0.1
+                )
+                .len(),
+            0
+        );
 
         // Single point should return no vertices (need at least 2 for direction)
         trail.add_point(Vec3::ZERO, 0.0);
-        assert_eq!(trail.get_triangle_strip_vertices(None).len(), 0);
+        assert_eq!(
+            trail
+                .get_triangle_strip_vertices(
+                    None,
+                    1.0,
+                    false,
+                    None,
+                    1.0,
+                    false,
+                    &crate::config::TaperCurve::Linear,
+                    0.1
+                )
+                .len(),
+            0
+        );
 
         // Two points should return 4 vertices (2 per point)
         trail.add_point(Vec3::new(1.0, 0.0, 0.0), 1.0);
-        let vertices = trail.get_triangle_strip_vertices(None);
+        let vertices = trail.get_triangle_strip_vertices(
+            None,
+            1.0,
+            false,
+            None,
+            1.0,
+            false,
+            &crate::config::TaperCurve::Linear,
+            0.1,
+        );
         assert_eq!(vertices.len(), 4);
 
         // Vertices should form a strip
         assert_ne!(vertices[0], vertices[1]); // Left and right should be different
         assert_ne!(vertices[2], vertices[3]); // Left and right should be different
+    }
+
+    #[test]
+    fn test_configurable_width() {
+        let mut trail = Trail::new(Color::WHITE);
+        trail.add_point(Vec3::new(0.0, 0.0, 0.0), 0.0);
+        trail.add_point(Vec3::new(1.0, 0.0, 0.0), 1.0);
+
+        // Test absolute width
+        let vertices_narrow = trail.get_triangle_strip_vertices(
+            None,
+            0.5,
+            false,
+            None,
+            1.0,
+            false,
+            &crate::config::TaperCurve::Linear,
+            0.1,
+        );
+        let vertices_wide = trail.get_triangle_strip_vertices(
+            None,
+            2.0,
+            false,
+            None,
+            1.0,
+            false,
+            &crate::config::TaperCurve::Linear,
+            0.1,
+        );
+
+        // Calculate widths by measuring distance between left and right vertices
+        let width_narrow = (vertices_narrow[0] - vertices_narrow[1]).length();
+        let width_wide = (vertices_wide[0] - vertices_wide[1]).length();
+
+        assert!((width_narrow - 0.5).abs() < 0.01);
+        assert!((width_wide - 2.0).abs() < 0.01);
+
+        // Test relative width to body
+        let vertices_relative = trail.get_triangle_strip_vertices(
+            None,
+            1.0,
+            true,
+            Some(3.0),
+            2.0,
+            false,
+            &crate::config::TaperCurve::Linear,
+            0.1,
+        );
+        let width_relative = (vertices_relative[0] - vertices_relative[1]).length();
+
+        // Should be body_radius (3.0) * multiplier (2.0) = 6.0
+        assert!((width_relative - 6.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_width_tapering() {
+        let mut trail = Trail::new(Color::WHITE);
+
+        // Create a trail with multiple points to test tapering
+        for i in 0..5 {
+            trail.add_point(Vec3::new(i as f32, 0.0, 0.0), i as f32);
+        }
+
+        // Test linear tapering
+        let vertices_linear = trail.get_triangle_strip_vertices(
+            None,
+            2.0,
+            false,
+            None,
+            1.0,
+            true,
+            &crate::config::TaperCurve::Linear,
+            0.2,
+        );
+
+        // Check that width decreases linearly from head to tail
+        let width_head = (vertices_linear[0] - vertices_linear[1]).length();
+        let width_tail = (vertices_linear[8] - vertices_linear[9]).length();
+
+        assert!((width_head - 2.0).abs() < 0.01, "Head width should be 2.0");
+        assert!(
+            (width_tail - 0.4).abs() < 0.01,
+            "Tail width should be 2.0 * 0.2 = 0.4"
+        );
+
+        // Test exponential tapering
+        let vertices_exp = trail.get_triangle_strip_vertices(
+            None,
+            2.0,
+            false,
+            None,
+            1.0,
+            true,
+            &crate::config::TaperCurve::Exponential,
+            0.2,
+        );
+
+        let width_exp_head = (vertices_exp[0] - vertices_exp[1]).length();
+        let width_exp_tail = (vertices_exp[8] - vertices_exp[9]).length();
+
+        assert!(
+            (width_exp_head - 2.0).abs() < 0.01,
+            "Exponential head width should be 2.0"
+        );
+        assert!(
+            (width_exp_tail - 0.4).abs() < 0.01,
+            "Exponential tail width should be 0.4"
+        );
+
+        // Test disabled tapering
+        let vertices_no_taper = trail.get_triangle_strip_vertices(
+            None,
+            2.0,
+            false,
+            None,
+            1.0,
+            false,
+            &crate::config::TaperCurve::Linear,
+            0.2,
+        );
+
+        let width_no_taper_head = (vertices_no_taper[0] - vertices_no_taper[1]).length();
+        let width_no_taper_tail = (vertices_no_taper[8] - vertices_no_taper[9]).length();
+
+        assert!(
+            (width_no_taper_head - 2.0).abs() < 0.01,
+            "No taper head width should be 2.0"
+        );
+        assert!(
+            (width_no_taper_tail - 2.0).abs() < 0.01,
+            "No taper tail width should also be 2.0"
+        );
     }
 }
