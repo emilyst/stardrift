@@ -16,7 +16,7 @@ pub struct SimulationConfig {
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
-            version: 4,
+            version: 5,
             physics: PhysicsConfig::default(),
             rendering: RenderingConfig::default(),
             trails: TrailConfig::default(),
@@ -39,6 +39,36 @@ pub struct PhysicsConfig {
     pub initial_seed: Option<u64>,
     pub collision_restitution: Scalar,
     pub collision_friction: Scalar,
+    pub initial_velocity: InitialVelocityConfig,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct InitialVelocityConfig {
+    pub enabled: bool,
+    pub min_speed: Scalar,
+    pub max_speed: Scalar,
+    pub velocity_mode: VelocityMode,
+    pub tangential_bias: Scalar,
+}
+
+impl Default for InitialVelocityConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            min_speed: 5.0,
+            max_speed: 20.0,
+            velocity_mode: VelocityMode::Random,
+            tangential_bias: 0.7,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum VelocityMode {
+    Random,
+    Orbital,
+    Tangential,
+    Radial,
 }
 
 impl Default for PhysicsConfig {
@@ -57,6 +87,7 @@ impl Default for PhysicsConfig {
             initial_seed: None,
             collision_restitution: 0.8,
             collision_friction: 0.5,
+            initial_velocity: InitialVelocityConfig::default(),
         }
     }
 }
@@ -317,7 +348,7 @@ mod tests {
         use std::fs;
 
         let mut config = SimulationConfig {
-            version: 4,
+            version: 5,
             ..Default::default()
         };
         config.physics.gravitational_constant = 42.0;
@@ -329,7 +360,7 @@ mod tests {
 
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
-        assert_eq!(loaded_config.version, 4);
+        assert_eq!(loaded_config.version, 5);
         assert_eq!(loaded_config.physics.gravitational_constant, 42.0);
         assert_eq!(loaded_config.physics.body_count, 123);
         assert_eq!(loaded_config.rendering.bloom_intensity, 999.0);
@@ -379,7 +410,7 @@ bloom_intensity = 888.0
     fn test_config_with_version_loaded() {
         use std::fs;
 
-        // Create a complete config file with version field
+        // Create a config file with outdated version (4 < 5)
         let config_content = r#"version = 4
 
 [physics]
@@ -407,13 +438,29 @@ camera_radius_multiplier = 3.0
 
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
-        // Should load the actual values since version is present
-        assert_eq!(loaded_config.version, 4);
-        assert_eq!(loaded_config.physics.gravitational_constant, 99.0);
-        assert_eq!(loaded_config.physics.body_count, 999);
-        assert_eq!(loaded_config.physics.octree_theta, 0.7);
-        assert_eq!(loaded_config.physics.octree_leaf_threshold, 8);
-        assert_eq!(loaded_config.rendering.bloom_intensity, 888.0);
+        // Should use defaults since version 4 is less than current version 5
+        let default_config = SimulationConfig::default();
+        assert_eq!(loaded_config.version, default_config.version);
+        assert_eq!(
+            loaded_config.physics.gravitational_constant,
+            default_config.physics.gravitational_constant
+        );
+        assert_eq!(
+            loaded_config.physics.body_count,
+            default_config.physics.body_count
+        );
+        assert_eq!(
+            loaded_config.physics.octree_theta,
+            default_config.physics.octree_theta
+        );
+        assert_eq!(
+            loaded_config.physics.octree_leaf_threshold,
+            default_config.physics.octree_leaf_threshold
+        );
+        assert_eq!(
+            loaded_config.rendering.bloom_intensity,
+            default_config.rendering.bloom_intensity
+        );
 
         let _ = fs::remove_file(temp_path);
     }
@@ -461,9 +508,9 @@ bloom_intensity = 888.0
     fn test_trail_config_defaults() {
         let trail_config = TrailConfig::default();
 
-        assert_eq!(trail_config.trail_length_seconds, 60.0);
-        assert_eq!(trail_config.update_interval_seconds, 1.0 / 12.0);
-        assert_eq!(trail_config.max_points_per_trail, 1000);
+        assert_eq!(trail_config.trail_length_seconds, 30.0);
+        assert_eq!(trail_config.update_interval_seconds, 1.0 / 10.0);
+        assert_eq!(trail_config.max_points_per_trail, 10000);
         assert_eq!(trail_config.base_width, 1.0);
         assert!(!trail_config.width_relative_to_body);
         assert_eq!(trail_config.body_size_multiplier, 2.0);

@@ -2,6 +2,7 @@ use crate::prelude::*;
 use crate::utils::color::emissive_material_for_temp;
 use crate::utils::math::{min_sphere_radius_for_surface_distribution, random_unit_vector};
 use bevy::render::mesh::SphereKind;
+use rand::prelude::*;
 
 /// Bundle containing all components needed for a celestial body.
 ///
@@ -15,6 +16,7 @@ pub struct BodyBundle {
     pub gravity_scale: GravityScale,
     pub rigid_body: RigidBody,
     pub external_force: ExternalForce,
+    pub linear_velocity: LinearVelocity,
     pub restitution: Restitution,
     pub friction: Friction,
     pub mesh_material: MeshMaterial3d<StandardMaterial>,
@@ -30,6 +32,7 @@ impl BodyBundle {
     pub fn new(
         position: Vec3,
         radius: f64,
+        velocity: Vec3,
         material: Handle<StandardMaterial>,
         mesh: Handle<Mesh>,
         config: &SimulationConfig,
@@ -40,6 +43,7 @@ impl BodyBundle {
             gravity_scale: GravityScale(0.0),
             rigid_body: RigidBody::Dynamic,
             external_force: ExternalForce::ZERO,
+            linear_velocity: LinearVelocity(velocity.as_dvec3()),
             restitution: Restitution::new(config.physics.collision_restitution),
             friction: Friction::new(config.physics.collision_friction),
             mesh_material: MeshMaterial3d(material),
@@ -85,6 +89,61 @@ pub mod factory {
         min_temp + (max_temp - min_temp) * (max_radius - radius) / (max_radius - min_radius)
     }
 
+    /// Generates a random initial velocity based on configuration.
+    pub fn random_velocity(rng: &mut SharedRng, position: Vec3, config: &SimulationConfig) -> Vec3 {
+        use crate::config::VelocityMode;
+
+        if !config.physics.initial_velocity.enabled {
+            return Vec3::ZERO;
+        }
+
+        let speed = rng.random_range(
+            config.physics.initial_velocity.min_speed..=config.physics.initial_velocity.max_speed,
+        );
+
+        let velocity_dir = match config.physics.initial_velocity.velocity_mode {
+            VelocityMode::Random => {
+                // Pure random direction
+                random_unit_vector(rng).as_vec3()
+            }
+            VelocityMode::Orbital => {
+                // Perpendicular to position vector (circular orbit tendency)
+                let up = Vec3::Y;
+                let tangent = position.cross(up).normalize();
+                if tangent.is_finite() {
+                    tangent
+                } else {
+                    // Fallback if position is parallel to up
+                    position.cross(Vec3::X).normalize()
+                }
+            }
+            VelocityMode::Tangential => {
+                // Mix of random and orbital
+                let random_dir = random_unit_vector(rng).as_vec3();
+                let up = Vec3::Y;
+                let tangent = position.cross(up).normalize();
+                let tangent = if tangent.is_finite() {
+                    tangent
+                } else {
+                    position.cross(Vec3::X).normalize()
+                };
+
+                let bias = config.physics.initial_velocity.tangential_bias as f32;
+                (tangent * bias + random_dir * (1.0 - bias)).normalize()
+            }
+            VelocityMode::Radial => {
+                // Away from or towards center
+                if rng.random_bool(0.5) {
+                    position.normalize()
+                } else {
+                    -position.normalize()
+                }
+            }
+        };
+
+        velocity_dir * (speed as f32)
+    }
+
     /// Creates a detailed mesh for a celestial body with high-quality subdivisions.
     pub fn create_detailed_mesh(meshes: &mut Assets<Mesh>, radius: f64) -> Handle<Mesh> {
         meshes.add(
@@ -111,6 +170,7 @@ pub mod factory {
         let position = random_position(rng, total_body_count, config);
         let radius = random_radius(rng, config);
         let temperature = calculate_temperature(radius, config);
+        let velocity = random_velocity(rng, position, config);
 
         let material = emissive_material_for_temp(
             materials,
@@ -121,7 +181,7 @@ pub mod factory {
 
         let mesh = create_detailed_mesh(meshes, radius);
 
-        BodyBundle::new(position, radius, material, mesh, config)
+        BodyBundle::new(position, radius, velocity, material, mesh, config)
     }
 }
 
