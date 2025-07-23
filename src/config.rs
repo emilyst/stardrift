@@ -138,6 +138,10 @@ pub struct TrailConfig {
     pub enable_tapering: bool,
     pub taper_curve: TaperCurve,
     pub min_width_ratio: Scalar,
+
+    // Bloom Effect
+    pub bloom_factor: Scalar,
+    pub use_additive_blending: bool,
 }
 
 #[cfg(feature = "trails")]
@@ -157,6 +161,8 @@ impl Default for TrailConfig {
             enable_tapering: false,              // Opt-in feature
             taper_curve: TaperCurve::Linear,     // Simple tapering
             min_width_ratio: 0.1,                // Tail is 10% of base width
+            bloom_factor: 100.0,                 // Strong bloom effect similar to bodies
+            use_additive_blending: true,         // Use additive blending by default
         }
     }
 }
@@ -520,6 +526,8 @@ bloom_intensity = 888.0
         assert!(!trail_config.enable_tapering);
         assert!(matches!(trail_config.taper_curve, TaperCurve::Linear));
         assert_eq!(trail_config.min_width_ratio, 0.1);
+        assert_eq!(trail_config.bloom_factor, 100.0);
+        assert!(!trail_config.use_additive_blending);
     }
 
     #[test]

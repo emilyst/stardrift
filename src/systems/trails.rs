@@ -49,6 +49,7 @@ pub fn initialize_trails(
     _meshes: ResMut<Assets<Mesh>>,
     app_state: Res<State<AppState>>,
     time: Res<Time>,
+    config: Res<SimulationConfig>,
 ) {
     let is_paused = matches!(app_state.get(), AppState::Paused);
     let current_time = time.elapsed_secs();
@@ -69,10 +70,20 @@ pub fn initialize_trails(
 
         commands.entity(entity).insert(trail);
 
+        // Choose blending mode based on configuration
+        // Additive: Strong bloom but no transparency
+        // Premultiplied: True transparency with bloom compensation
+        let alpha_mode = if config.trails.use_additive_blending {
+            AlphaMode::Add
+        } else {
+            AlphaMode::Premultiplied
+        };
+
         let trail_material = materials.add(StandardMaterial {
             base_color: color,
             unlit: true,
-            alpha_mode: AlphaMode::Add,
+            alpha_mode,
+            emissive: color.into(), // Add emissive for bloom effect
             ..default()
         });
 
@@ -222,6 +233,7 @@ fn update_trail_mesh(
 
     // Get base color once for efficiency
     let base_color = trail.color.to_srgba();
+    let bloom_intensity = trail_config.bloom_factor;
 
     for (i, vertex) in strip_vertices.iter().enumerate() {
         positions.push([vertex.x, vertex.y, vertex.z]);
@@ -234,7 +246,34 @@ fn update_trail_mesh(
         if point_index < trail.points.len() {
             let point = &trail.points[point_index];
             let alpha = trail.calculate_point_alpha(point, current_time, trail_config);
-            colors.push([base_color.red, base_color.green, base_color.blue, alpha]);
+
+            // Apply bloom intensification using luminance-based scaling
+            // This matches how celestial bodies create their bloom effect
+            let r = base_color.red;
+            let g = base_color.green;
+            let b = base_color.blue;
+
+            // Calculate luminance using ITU-R BT.601 formula
+            let luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+            let scale_factor = bloom_intensity as f32 * luminance + 1.0;
+
+            // For premultiplied alpha, we need to handle colors differently
+            // The bloom buffer sees: color * alpha, so we boost the color to compensate
+            // This allows both transparency AND bloom effect
+            let bloom_compensation = if alpha > 0.01 {
+                // Boost bloom inversely proportional to alpha
+                // At alpha=1.0, no boost needed. At alpha=0.1, 10x boost
+                1.0 / alpha.sqrt()
+            } else {
+                1.0
+            };
+
+            // Apply the scaling to create HDR colors for bloom
+            let bloomed_r = (r * scale_factor * bloom_compensation).min(20.0);
+            let bloomed_g = (g * scale_factor * bloom_compensation).min(20.0);
+            let bloomed_b = (b * scale_factor * bloom_compensation).min(20.0);
+
+            colors.push([bloomed_r, bloomed_g, bloomed_b, alpha]);
         } else {
             // Fallback for edge cases
             colors.push([1.0, 1.0, 1.0, 1.0]);
