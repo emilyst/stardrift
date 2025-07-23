@@ -135,32 +135,24 @@ pub struct TrailConfig {
     pub enable_tapering: bool,
     pub taper_curve: TaperCurve,
     pub min_width_ratio: Scalar,
-
-    // Performance & Quality
-    pub adaptive_quality: bool,
-    pub max_distance_for_full_quality: Scalar,
-    pub min_quality_ratio: Scalar,
 }
 
 impl Default for TrailConfig {
     fn default() -> Self {
         Self {
-            trail_length_seconds: 30.0,           // 30 second trails
-            update_interval_seconds: 1.0 / 10.0,  // 10 FPS updates (current)
-            max_points_per_trail: 10000,          // Reasonable limit
-            base_width: 1.0,                      // Matches current behavior
-            width_relative_to_body: false,        // Start with absolute sizing
-            body_size_multiplier: 2.0,            // 2x body radius when enabled
-            enable_fading: true,                  // Enable visual enhancement
-            fade_curve: FadeCurve::Linear,        // Simple and predictable
-            min_alpha: 0.0,                       // Fully transparent at tail
-            max_alpha: 1.0,                       // Fully opaque at head
-            enable_tapering: false,               // Opt-in feature
-            taper_curve: TaperCurve::Linear,      // Simple tapering
-            min_width_ratio: 0.1,                 // Tail is 10% of base width
-            adaptive_quality: true,               // Important for performance
-            max_distance_for_full_quality: 100.0, // Full detail within 100 units
-            min_quality_ratio: 0.2,               // Minimum 20% detail for distant trails
+            trail_length_seconds: 30.0,          // 30 second trails
+            update_interval_seconds: 1.0 / 10.0, // 10 FPS updates (current)
+            max_points_per_trail: 10000,         // Reasonable limit
+            base_width: 1.0,                     // Matches current behavior
+            width_relative_to_body: false,       // Start with absolute sizing
+            body_size_multiplier: 2.0,           // 2x body radius when enabled
+            enable_fading: true,                 // Enable visual enhancement
+            fade_curve: FadeCurve::Linear,       // Simple and predictable
+            min_alpha: 0.0,                      // Fully transparent at tail
+            max_alpha: 1.0,                      // Fully opaque at head
+            enable_tapering: false,              // Opt-in feature
+            taper_curve: TaperCurve::Linear,     // Simple tapering
+            min_width_ratio: 0.1,                // Tail is 10% of base width
         }
     }
 }
@@ -521,9 +513,6 @@ bloom_intensity = 888.0
         assert!(!trail_config.enable_tapering);
         assert!(matches!(trail_config.taper_curve, TaperCurve::Linear));
         assert_eq!(trail_config.min_width_ratio, 0.1);
-        assert!(trail_config.adaptive_quality);
-        assert_eq!(trail_config.max_distance_for_full_quality, 100.0);
-        assert_eq!(trail_config.min_quality_ratio, 0.2);
     }
 
     #[test]
