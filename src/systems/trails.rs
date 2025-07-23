@@ -176,11 +176,17 @@ fn update_trail_mesh(
     );
 
     if strip_vertices.is_empty() {
-        // Clear the mesh if no trail points
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, Vec::<[f32; 3]>::new());
-        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, Vec::<[f32; 3]>::new());
-        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, Vec::<[f32; 4]>::new());
+        // Create a minimal degenerate triangle strip to avoid empty buffer issues in WebGL
+        // This creates 4 vertices all at the origin with zero alpha (invisible)
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vec![[0.0, 0.0, 0.0]; 4]);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; 4]);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, vec![[0.0, 0.0, 0.0, 0.0]; 4]);
         mesh.remove_indices();
+        
+        // Still compute bounds to prevent culling issues
+        if mesh.compute_aabb().is_none() {
+            warn!("Failed to compute AABB for empty trail mesh");
+        }
         return;
     }
 
