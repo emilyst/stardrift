@@ -29,6 +29,7 @@ strip = true
 
 [profile.wasm]
 inherits = "distribution"
+opt-level = "s"
 
 [profile.bench]
 inherits = "release"
