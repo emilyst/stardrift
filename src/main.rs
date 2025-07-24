@@ -33,8 +33,10 @@ fn main() {
         DefaultPlugins
             .set(WindowPlugin {
                 primary_window: Some(Window {
+                    fit_canvas_to_parent: true,
                     fullsize_content_view: true,
                     mode: WindowMode::Windowed,
+                    prevent_default_event_handling: true,
                     title: "Stardrift".to_string(),
                     titlebar_transparent: true,
                     ..default()
