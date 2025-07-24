@@ -79,7 +79,7 @@ impl Default for PhysicsConfig {
             gravitational_constant: 1e2,
             body_count: 100,
             octree_theta: 0.5,
-            octree_leaf_threshold: 8,
+            octree_leaf_threshold: 4,
             body_distribution_sphere_radius_multiplier: 100.0,
             body_distribution_min_distance: 0.001,
             min_body_radius: 1.0,
