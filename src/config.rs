@@ -157,7 +157,7 @@ impl Default for TrailConfig {
             enable_fading: true,                 // Enable trail fade-out effect
             fade_curve: FadeCurve::Exponential,  // Aggressively fade out
             min_alpha: 0.0,                      // Fully transparent at tail
-            max_alpha: 1.0,                      // Fully opaque at head
+            max_alpha: 0.3333,                   // Translucent at head
             enable_tapering: true,               // Taper by default
             taper_curve: TaperCurve::Linear,     // Simple tapering
             min_width_ratio: 0.2,                // Tail is 20% of base width
