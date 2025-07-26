@@ -21,17 +21,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `include_timestamp`: Add timestamp to filenames (default: true)
   - `notification_enabled`: Log captures (default: true)
   - `hide_ui_frame_delay`: Frames to wait before capture (default: 2)
-- Added chrono dependency for timestamp generation
-- Quit button and 'Q' key shortcut for exiting application (non-WASM platforms only)
+- Chrono dependency for timestamp generation in screenshots
+- Quit button and 'Q' key shortcut for application exit (non-WASM platforms only)
 
 ### Changed
-- Updated UI system to include UIRoot marker component for programmatic visibility control
-- Updated diagnostics HUD to include DiagnosticsHudRoot marker component
-- Replaced BerkeleyMono fonts with Saira Semi-Condensed font family
-- Redesigned UI button layout from bottom-right horizontal to top-left vertical arrangement
-- Updated button styling with more subtle background colors and fixed width
-- Enhanced diagnostics HUD text layout with right-aligned values and improved contrast
-- Adjusted button dimensions and spacing for better visual hierarchy
+- UI system includes UIRoot marker component for programmatic visibility control
+- Diagnostics HUD includes DiagnosticsHudRoot marker component
+- Font system switched from BerkeleyMono to Saira Semi-Condensed family
+- UI layout repositioned from bottom-right horizontal to top-left vertical
+- Button styling with subtle backgrounds and fixed dimensions
+- Diagnostics HUD with right-aligned values and enhanced contrast
+- Button dimensions and spacing adjusted for visual hierarchy
+- UI button system refactored to event-driven architecture
+  - Text updates triggered by events with computed text
+  - Code duplication eliminated through shared functions
+  - `impl_button_behavior!` macro reduces boilerplate
+  - Improved extensibility for future button additions
 
 ### Fixed
 - N/A

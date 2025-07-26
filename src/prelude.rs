@@ -27,10 +27,10 @@ pub use crate::components::BodyBundle;
 // Internal re-exports - Physics
 pub use crate::physics::octree::{Octree, OctreeBody};
 
-// Internal re-exports - Simulation Action Events
-pub use crate::systems::simulation_actions::{
+// Internal re-exports - Events
+pub use crate::events::{
     RestartSimulationEvent, TakeScreenshotEvent, ToggleBarycenterGizmoVisibilityEvent,
-    ToggleOctreeVisualizationEvent, TogglePauseSimulationEvent,
+    ToggleOctreeVisualizationEvent, TogglePauseSimulationEvent, UpdateButtonTextEvent,
 };
 
 // Note: Utility functions are kept crate-private and not re-exported in prelude

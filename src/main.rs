@@ -3,6 +3,7 @@
 
 mod components;
 mod config;
+mod events;
 mod physics;
 mod plugins;
 mod prelude;

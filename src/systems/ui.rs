@@ -31,8 +31,73 @@ pub struct ScreenshotButton;
 #[derive(Component)]
 pub struct QuitButton;
 
+// Macro to implement ButtonBehavior for buttons
+macro_rules! impl_button_behavior {
+    // For unit struct events (most common case)
+    ($button:ty, $event:path) => {
+        impl ButtonBehavior for $button {
+            type Event = $event;
+
+            fn create_event() -> Self::Event {
+                $event
+            }
+        }
+    };
+    // For events with custom construction
+    ($button:ty, $event:ty, $create_expr:expr) => {
+        impl ButtonBehavior for $button {
+            type Event = $event;
+
+            fn create_event() -> Self::Event {
+                $create_expr
+            }
+        }
+    };
+}
+
+impl_button_behavior!(OctreeToggleButton, ToggleOctreeVisualizationEvent);
+impl_button_behavior!(RestartSimulationButton, RestartSimulationEvent);
+impl_button_behavior!(
+    BarycenterGizmoToggleButton,
+    ToggleBarycenterGizmoVisibilityEvent
+);
+impl_button_behavior!(PauseButton, TogglePauseSimulationEvent);
+impl_button_behavior!(ScreenshotButton, TakeScreenshotEvent);
+
+#[cfg(not(target_arch = "wasm32"))]
+impl_button_behavior!(QuitButton, AppExit, AppExit::Success);
+
 #[derive(Component)]
 pub struct UIRoot;
+
+pub trait ButtonBehavior: Component {
+    type Event: bevy::ecs::event::Event;
+
+    fn create_event() -> Self::Event;
+
+    fn trigger_event(event_writer: &mut EventWriter<Self::Event>) {
+        event_writer.write(Self::create_event());
+    }
+}
+
+#[inline]
+fn create_button_bundle() -> impl Bundle {
+    (
+        Button,
+        Node {
+            width: Val::Px(BUTTON_WIDTH_PX),
+            padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
+            display: Display::Flex,
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::FlexStart,
+            justify_content: JustifyContent::Center,
+            row_gap: Val::Px(1.0),
+            ..default()
+        },
+        BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
+        BackgroundColor(BUTTON_COLOR_NORMAL),
+    )
+}
 
 pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     let embedded_asset_source = &AssetSourceId::from("embedded");
@@ -77,22 +142,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .with_children(|parent| {
                     // Restart simulation button
                     parent
-                        .spawn((
-                            Button,
-                            Node {
-                                width: Val::Px(BUTTON_WIDTH_PX),
-                                padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
-                                display: Display::Flex,
-                                flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::FlexStart,
-                                justify_content: JustifyContent::Center,
-                                row_gap: Val::Px(1.0),
-                                ..default()
-                            },
-                            BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
-                            BackgroundColor(BUTTON_COLOR_NORMAL),
-                            RestartSimulationButton,
-                        ))
+                        .spawn((create_button_bundle(), RestartSimulationButton))
                         .with_children(|parent| {
                             parent.spawn((
                                 Text::new("New Simulation (N)"),
@@ -103,22 +153,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
 
                     // Octree toggle button
                     parent
-                        .spawn((
-                            Button,
-                            Node {
-                                width: Val::Px(BUTTON_WIDTH_PX),
-                                padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
-                                display: Display::Flex,
-                                flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::FlexStart,
-                                justify_content: JustifyContent::Center,
-                                row_gap: Val::Px(1.0),
-                                ..default()
-                            },
-                            BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
-                            BackgroundColor(BUTTON_COLOR_NORMAL),
-                            OctreeToggleButton,
-                        ))
+                        .spawn((create_button_bundle(), OctreeToggleButton))
                         .with_children(|parent| {
                             parent.spawn((
                                 Text::new("Show Octree (O)"),
@@ -129,22 +164,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
 
                     // Barycenter gizmo toggle button
                     parent
-                        .spawn((
-                            Button,
-                            Node {
-                                width: Val::Px(BUTTON_WIDTH_PX),
-                                padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
-                                display: Display::Flex,
-                                flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::FlexStart,
-                                justify_content: JustifyContent::Center,
-                                row_gap: Val::Px(1.0),
-                                ..default()
-                            },
-                            BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
-                            BackgroundColor(BUTTON_COLOR_NORMAL),
-                            BarycenterGizmoToggleButton,
-                        ))
+                        .spawn((create_button_bundle(), BarycenterGizmoToggleButton))
                         .with_children(|parent| {
                             parent.spawn((
                                 Text::new("Show Barycenter (C)"),
@@ -154,22 +174,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         });
 
                     parent
-                        .spawn((
-                            Button,
-                            Node {
-                                width: Val::Px(BUTTON_WIDTH_PX),
-                                padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
-                                display: Display::Flex,
-                                flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::FlexStart,
-                                justify_content: JustifyContent::Center,
-                                row_gap: Val::Px(1.0),
-                                ..default()
-                            },
-                            BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
-                            BackgroundColor(BUTTON_COLOR_NORMAL),
-                            PauseButton,
-                        ))
+                        .spawn((create_button_bundle(), PauseButton))
                         .with_children(|parent| {
                             parent.spawn((
                                 Text::new("Pause (Space)"),
@@ -180,22 +185,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
 
                     // Screenshot button
                     parent
-                        .spawn((
-                            Button,
-                            Node {
-                                width: Val::Px(BUTTON_WIDTH_PX),
-                                padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
-                                display: Display::Flex,
-                                flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::FlexStart,
-                                justify_content: JustifyContent::Center,
-                                row_gap: Val::Px(1.0),
-                                ..default()
-                            },
-                            BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
-                            BackgroundColor(BUTTON_COLOR_NORMAL),
-                            ScreenshotButton,
-                        ))
+                        .spawn((create_button_bundle(), ScreenshotButton))
                         .with_children(|parent| {
                             parent.spawn((
                                 Text::new("Screenshot (S)"),
@@ -207,22 +197,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     // Quit button (only on non-WASM platforms)
                     #[cfg(not(target_arch = "wasm32"))]
                     parent
-                        .spawn((
-                            Button,
-                            Node {
-                                width: Val::Px(BUTTON_WIDTH_PX),
-                                padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
-                                display: Display::Flex,
-                                flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::FlexStart,
-                                justify_content: JustifyContent::Center,
-                                row_gap: Val::Px(1.0),
-                                ..default()
-                            },
-                            BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
-                            BackgroundColor(BUTTON_COLOR_NORMAL),
-                            QuitButton,
-                        ))
+                        .spawn((create_button_bundle(), QuitButton))
                         .with_children(|parent| {
                             parent.spawn((
                                 Text::new("Quit (Q)"),
@@ -234,19 +209,19 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
-pub fn handle_octree_button(
+pub fn handle_button_interaction<T: ButtonBehavior>(
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<OctreeToggleButton>),
+        (Changed<Interaction>, With<T>),
     >,
-    mut octree_events: EventWriter<ToggleOctreeVisualizationEvent>,
+    mut event_writer: EventWriter<T::Event>,
 ) {
     interaction_query
         .iter_mut()
         .for_each(|(interaction, mut color)| match *interaction {
             Interaction::Pressed => {
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                octree_events.write(ToggleOctreeVisualizationEvent);
+                T::trigger_event(&mut event_writer);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);
@@ -257,190 +232,20 @@ pub fn handle_octree_button(
         });
 }
 
-pub fn handle_barycenter_gizmo_button(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<BarycenterGizmoToggleButton>),
-    >,
-    mut barycenter_events: EventWriter<ToggleBarycenterGizmoVisibilityEvent>,
-) {
-    interaction_query
-        .iter_mut()
-        .for_each(|(interaction, mut color)| match *interaction {
-            Interaction::Pressed => {
-                *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                barycenter_events.write(ToggleBarycenterGizmoVisibilityEvent);
-            }
-            Interaction::Hovered => {
-                *color = BackgroundColor(BUTTON_COLOR_HOVERED);
-            }
-            Interaction::None => {
-                *color = BackgroundColor(BUTTON_COLOR_NORMAL);
-            }
-        });
-}
-
-pub fn handle_restart_button(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<RestartSimulationButton>),
-    >,
-    mut restart_events: EventWriter<RestartSimulationEvent>,
-) {
-    interaction_query
-        .iter_mut()
-        .for_each(|(interaction, mut color)| match *interaction {
-            Interaction::Pressed => {
-                *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                restart_events.write(RestartSimulationEvent);
-            }
-            Interaction::Hovered => {
-                *color = BackgroundColor(BUTTON_COLOR_HOVERED);
-            }
-            Interaction::None => {
-                *color = BackgroundColor(BUTTON_COLOR_NORMAL);
-            }
-        });
-}
-
-pub fn handle_pause_button(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<PauseButton>),
-    >,
-    mut pause_events: EventWriter<TogglePauseSimulationEvent>,
-) {
-    interaction_query
-        .iter_mut()
-        .for_each(|(interaction, mut color)| match *interaction {
-            Interaction::Pressed => {
-                *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                pause_events.write(TogglePauseSimulationEvent);
-            }
-            Interaction::Hovered => {
-                *color = BackgroundColor(BUTTON_COLOR_HOVERED);
-            }
-            Interaction::None => {
-                *color = BackgroundColor(BUTTON_COLOR_NORMAL);
-            }
-        });
-}
-
-pub fn handle_screenshot_button(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<ScreenshotButton>),
-    >,
-    mut screenshot_events: EventWriter<TakeScreenshotEvent>,
-) {
-    interaction_query
-        .iter_mut()
-        .for_each(|(interaction, mut color)| match *interaction {
-            Interaction::Pressed => {
-                *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                screenshot_events.write(TakeScreenshotEvent);
-            }
-            Interaction::Hovered => {
-                *color = BackgroundColor(BUTTON_COLOR_HOVERED);
-            }
-            Interaction::None => {
-                *color = BackgroundColor(BUTTON_COLOR_NORMAL);
-            }
-        });
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn handle_quit_button(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<QuitButton>),
-    >,
-    mut exit_events: EventWriter<AppExit>,
-) {
-    interaction_query
-        .iter_mut()
-        .for_each(|(interaction, mut color)| match *interaction {
-            Interaction::Pressed => {
-                *color = BackgroundColor(BUTTON_COLOR_PRESSED);
-                exit_events.write(AppExit::Success);
-            }
-            Interaction::Hovered => {
-                *color = BackgroundColor(BUTTON_COLOR_HOVERED);
-            }
-            Interaction::None => {
-                *color = BackgroundColor(BUTTON_COLOR_NORMAL);
-            }
-        });
-}
-
-pub fn update_octree_button_text(
-    button_query: Query<Entity, With<OctreeToggleButton>>,
+pub fn update_button_text<T: Component>(
+    mut events: EventReader<UpdateButtonTextEvent<T>>,
+    button_query: Query<Entity, With<T>>,
     children_query: Query<&Children>,
     mut text_query: Query<&mut Text>,
-    settings: Res<OctreeVisualizationSettings>,
 ) {
-    if !settings.is_changed() {
-        return;
-    }
-
-    button_query.iter().for_each(|button_entity| {
-        if let Ok(children) = children_query.get(button_entity) {
-            children.iter().for_each(|child| {
-                if let Ok(mut text) = text_query.get_mut(child) {
-                    text.0 = if settings.enabled {
-                        "Hide Octree (O)".to_string()
-                    } else {
-                        "Show Octree (O)".to_string()
-                    };
-                }
-            });
-        }
-    });
-}
-
-pub fn update_barycenter_gizmo_button_text(
-    button_query: Query<Entity, With<BarycenterGizmoToggleButton>>,
-    children_query: Query<&Children>,
-    mut text_query: Query<&mut Text>,
-    settings: Res<BarycenterGizmoVisibility>,
-) {
-    if !settings.is_changed() {
-        return;
-    }
-
-    for button_entity in &button_query {
-        if let Ok(children) = children_query.get(button_entity) {
-            for child in children {
-                if let Ok(mut text) = text_query.get_mut(*child) {
-                    text.0 = if settings.enabled {
-                        "Hide Barycenter (C)".to_string()
-                    } else {
-                        "Show Barycenter (C)".to_string()
-                    };
-                }
-            }
-        }
-    }
-}
-
-pub fn update_pause_button_text(
-    button_query: Query<Entity, With<PauseButton>>,
-    children_query: Query<&Children>,
-    mut text_query: Query<&mut Text>,
-    current_state: Res<State<AppState>>,
-) {
-    for button_entity in &button_query {
-        if let Ok(children) = children_query.get(button_entity) {
-            for child in children {
-                if let Ok(mut text) = text_query.get_mut(*child) {
-                    let new_text = match current_state.get() {
-                        AppState::Running => "Pause (Space)".to_string(),
-                        AppState::Paused => "Resume (Space)".to_string(),
-                        _ => String::new(), // ignore Loading state
-                    };
-
-                    if **text != new_text {
-                        **text = new_text;
+    for event in events.read() {
+        for button_entity in &button_query {
+            if let Ok(children) = children_query.get(button_entity) {
+                for child in children {
+                    if let Ok(mut text) = text_query.get_mut(*child) {
+                        if **text != event.new_text {
+                            **text = event.new_text.clone();
+                        }
                     }
                 }
             }
@@ -448,34 +253,97 @@ pub fn update_pause_button_text(
     }
 }
 
+pub fn emit_octree_button_update(
+    settings: Res<OctreeVisualizationSettings>,
+    mut events: EventWriter<UpdateButtonTextEvent<OctreeToggleButton>>,
+) {
+    if settings.is_changed() {
+        let text = if settings.enabled {
+            "Hide Octree (O)"
+        } else {
+            "Show Octree (O)"
+        };
+        events.write(UpdateButtonTextEvent::new(text));
+    }
+}
+
+pub fn emit_barycenter_button_update(
+    settings: Res<BarycenterGizmoVisibility>,
+    mut events: EventWriter<UpdateButtonTextEvent<BarycenterGizmoToggleButton>>,
+) {
+    if settings.is_changed() {
+        let text = if settings.enabled {
+            "Hide Barycenter (C)"
+        } else {
+            "Show Barycenter (C)"
+        };
+        events.write(UpdateButtonTextEvent::new(text));
+    }
+}
+
+pub fn emit_pause_button_update_on_state_change(
+    state: Res<State<AppState>>,
+    mut events: EventWriter<UpdateButtonTextEvent<PauseButton>>,
+) {
+    let text = match state.get() {
+        AppState::Running => "Pause (Space)",
+        AppState::Paused => "Resume (Space)",
+        _ => return,
+    };
+    events.write(UpdateButtonTextEvent::new(text));
+}
+
 #[cfg(test)]
 mod ui_tests {
     use super::*;
 
     #[test]
-    fn test_octree_button_text_logic() {
+    fn test_update_button_text_event() {
+        // Test that UpdateButtonTextEvent carries text correctly
+        let event = UpdateButtonTextEvent::<OctreeToggleButton>::new("Hide Octree (O)");
+        assert_eq!(event.new_text, "Hide Octree (O)");
+
+        let event = UpdateButtonTextEvent::<OctreeToggleButton>::new("Show Octree (O)");
+        assert_eq!(event.new_text, "Show Octree (O)");
+    }
+
+    #[test]
+    fn test_button_text_event_creation() {
+        // Test various button text events
+        let octree_event = UpdateButtonTextEvent::<OctreeToggleButton>::new("Test Octree");
+        assert_eq!(octree_event.new_text, "Test Octree");
+
+        let barycenter_event =
+            UpdateButtonTextEvent::<BarycenterGizmoToggleButton>::new("Test Barycenter");
+        assert_eq!(barycenter_event.new_text, "Test Barycenter");
+
+        let pause_event = UpdateButtonTextEvent::<PauseButton>::new("Test Pause");
+        assert_eq!(pause_event.new_text, "Test Pause");
+    }
+
+    #[test]
+    fn test_event_text_computation() {
+        // Test that the emit functions would compute correct text
         let enabled_settings = OctreeVisualizationSettings {
             enabled: true,
             max_depth: None,
         };
+        let expected_text = if enabled_settings.enabled {
+            "Hide Octree (O)"
+        } else {
+            "Show Octree (O)"
+        };
+        assert_eq!(expected_text, "Hide Octree (O)");
+
         let disabled_settings = OctreeVisualizationSettings {
             enabled: false,
             max_depth: None,
         };
-
-        let expected_text_when_enabled = if enabled_settings.enabled {
+        let expected_text = if disabled_settings.enabled {
             "Hide Octree (O)"
         } else {
             "Show Octree (O)"
         };
-
-        let expected_text_when_disabled = if disabled_settings.enabled {
-            "Hide Octree (O)"
-        } else {
-            "Show Octree (O)"
-        };
-
-        assert_eq!(expected_text_when_enabled, "Hide Octree (O)");
-        assert_eq!(expected_text_when_disabled, "Show Octree (O)");
+        assert_eq!(expected_text, "Show Octree (O)");
     }
 }

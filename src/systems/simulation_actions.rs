@@ -5,21 +5,6 @@ use bevy_panorbit_camera::PanOrbitCamera;
 use chrono::Local;
 use std::path::PathBuf;
 
-#[derive(Event)]
-pub struct RestartSimulationEvent;
-
-#[derive(Event)]
-pub struct ToggleOctreeVisualizationEvent;
-
-#[derive(Event)]
-pub struct ToggleBarycenterGizmoVisibilityEvent;
-
-#[derive(Event)]
-pub struct TogglePauseSimulationEvent;
-
-#[derive(Event)]
-pub struct TakeScreenshotEvent;
-
 #[derive(Resource, Default)]
 pub struct ScreenshotState {
     pub pending: bool,

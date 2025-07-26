@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use crate::resources::LoadingProgress;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::systems::ui::handle_quit_button;
+use crate::systems::ui::QuitButton;
 use crate::systems::{
     camera::{draw_barycenter_gizmo, spawn_camera},
     input::{
@@ -19,9 +19,9 @@ use crate::systems::{
         handle_toggle_pause_simulation_event, process_screenshot_capture,
     },
     ui::{
-        handle_barycenter_gizmo_button, handle_octree_button, handle_pause_button,
-        handle_restart_button, handle_screenshot_button, update_barycenter_gizmo_button_text,
-        update_octree_button_text, update_pause_button_text,
+        BarycenterGizmoToggleButton, OctreeToggleButton, PauseButton, RestartSimulationButton,
+        ScreenshotButton, emit_barycenter_button_update, emit_octree_button_update,
+        emit_pause_button_update_on_state_change, handle_button_interaction, update_button_text,
     },
     visualization::visualize_octree,
 };
@@ -98,12 +98,10 @@ impl Plugin for SimulationPlugin {
             Update,
             (
                 SimulationSet::Loading,
-                (
-                    SimulationSet::Input,
-                    SimulationSet::UI,
-                    SimulationSet::Visualization,
-                ), // These can run in parallel
-                SimulationSet::Camera, // Camera follows after input/UI for responsiveness
+                SimulationSet::Input,
+                SimulationSet::UI,
+                SimulationSet::Visualization,
+                SimulationSet::Camera,
             )
                 .chain(),
         );
@@ -112,6 +110,15 @@ impl Plugin for SimulationPlugin {
         app.add_systems(
             OnEnter(AppState::Loading),
             (setup_loading_screen, start_loading_process),
+        );
+
+        app.add_systems(
+            OnEnter(AppState::Running),
+            emit_pause_button_update_on_state_change,
+        );
+        app.add_systems(
+            OnEnter(AppState::Paused),
+            emit_pause_button_update_on_state_change,
         );
         app.add_systems(
             FixedUpdate,
@@ -163,17 +170,23 @@ impl Plugin for SimulationPlugin {
                 .in_set(SimulationSet::Input)
                 .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
         );
+        app.add_event::<UpdateButtonTextEvent<OctreeToggleButton>>();
+        app.add_event::<UpdateButtonTextEvent<BarycenterGizmoToggleButton>>();
+        app.add_event::<UpdateButtonTextEvent<PauseButton>>();
+
         app.add_systems(
             Update,
             (
-                handle_barycenter_gizmo_button,
-                handle_octree_button,
-                handle_pause_button,
-                handle_restart_button,
-                handle_screenshot_button,
-                update_barycenter_gizmo_button_text,
-                update_octree_button_text,
-                update_pause_button_text,
+                handle_button_interaction::<BarycenterGizmoToggleButton>,
+                handle_button_interaction::<OctreeToggleButton>,
+                handle_button_interaction::<PauseButton>,
+                handle_button_interaction::<RestartSimulationButton>,
+                handle_button_interaction::<ScreenshotButton>,
+                emit_octree_button_update,
+                emit_barycenter_button_update,
+                update_button_text::<OctreeToggleButton>,
+                update_button_text::<BarycenterGizmoToggleButton>,
+                update_button_text::<PauseButton>,
             )
                 .in_set(SimulationSet::UI)
                 .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
@@ -182,7 +195,7 @@ impl Plugin for SimulationPlugin {
         #[cfg(not(target_arch = "wasm32"))]
         app.add_systems(
             Update,
-            handle_quit_button
+            handle_button_interaction::<QuitButton>
                 .in_set(SimulationSet::UI)
                 .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
         );
