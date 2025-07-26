@@ -4,6 +4,11 @@ pub fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<App
     if keys.just_pressed(KeyCode::Escape) {
         exit.write_default();
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    if keys.just_pressed(KeyCode::KeyQ) {
+        exit.write_default();
+    }
 }
 
 pub fn restart_simulation_on_n(

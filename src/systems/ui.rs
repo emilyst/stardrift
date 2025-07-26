@@ -27,6 +27,10 @@ pub struct PauseButton;
 #[derive(Component)]
 pub struct ScreenshotButton;
 
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Component)]
+pub struct QuitButton;
+
 #[derive(Component)]
 pub struct UIRoot;
 
@@ -199,6 +203,33 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                 TextColor(Color::WHITE),
                             ));
                         });
+
+                    // Quit button (only on non-WASM platforms)
+                    #[cfg(not(target_arch = "wasm32"))]
+                    parent
+                        .spawn((
+                            Button,
+                            Node {
+                                width: Val::Px(BUTTON_WIDTH_PX),
+                                padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
+                                display: Display::Flex,
+                                flex_direction: FlexDirection::Column,
+                                align_items: AlignItems::FlexStart,
+                                justify_content: JustifyContent::Center,
+                                row_gap: Val::Px(1.0),
+                                ..default()
+                            },
+                            BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
+                            BackgroundColor(BUTTON_COLOR_NORMAL),
+                            QuitButton,
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn((
+                                Text::new("Quit (Q)"),
+                                button_text_font.clone(),
+                                TextColor(Color::WHITE),
+                            ));
+                        });
                 });
         });
 }
@@ -308,6 +339,30 @@ pub fn handle_screenshot_button(
             Interaction::Pressed => {
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
                 screenshot_events.write(TakeScreenshotEvent);
+            }
+            Interaction::Hovered => {
+                *color = BackgroundColor(BUTTON_COLOR_HOVERED);
+            }
+            Interaction::None => {
+                *color = BackgroundColor(BUTTON_COLOR_NORMAL);
+            }
+        });
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn handle_quit_button(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<QuitButton>),
+    >,
+    mut exit_events: EventWriter<AppExit>,
+) {
+    interaction_query
+        .iter_mut()
+        .for_each(|(interaction, mut color)| match *interaction {
+            Interaction::Pressed => {
+                *color = BackgroundColor(BUTTON_COLOR_PRESSED);
+                exit_events.write(AppExit::Success);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);

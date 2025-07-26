@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `notification_enabled`: Log captures (default: true)
   - `hide_ui_frame_delay`: Frames to wait before capture (default: 2)
 - Added chrono dependency for timestamp generation
+- Quit button and 'Q' key shortcut for exiting application (non-WASM platforms only)
 
 ### Changed
 - Updated UI system to include UIRoot marker component for programmatic visibility control

@@ -1,5 +1,7 @@
 use crate::prelude::*;
 use crate::resources::LoadingProgress;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::systems::ui::handle_quit_button;
 use crate::systems::{
     camera::{draw_barycenter_gizmo, spawn_camera},
     input::{
@@ -173,6 +175,14 @@ impl Plugin for SimulationPlugin {
                 update_octree_button_text,
                 update_pause_button_text,
             )
+                .in_set(SimulationSet::UI)
+                .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
+        );
+
+        #[cfg(not(target_arch = "wasm32"))]
+        app.add_systems(
+            Update,
+            handle_quit_button
                 .in_set(SimulationSet::UI)
                 .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
         );
