@@ -1,15 +1,16 @@
 use crate::prelude::*;
 use bevy::asset::{AssetPath, io::AssetSourceId};
 
-const BUTTON_BORDER_RADIUS_PX: f32 = 5.0;
-const BUTTON_FONT_SIZE_PX: f32 = 12.0;
-const BUTTON_GAP_PX: f32 = 10.0;
-const BUTTON_MARGIN_PX: f32 = 10.0;
-const BUTTON_PADDING_PX: f32 = 5.0;
+const BUTTON_BORDER_RADIUS_PX: f32 = 4.0;
+const BUTTON_FONT_SIZE_PX: f32 = 14.0;
+const BUTTON_GAP_PX: f32 = 4.0;
+const BUTTON_MARGIN_PX: f32 = 4.0;
+const BUTTON_PADDING_PX: f32 = 4.0;
+const BUTTON_WIDTH_PX: f32 = 128.0;
 
-const BUTTON_COLOR_NORMAL: Color = Color::srgba(0.1, 0.1, 0.1, 0.8);
-const BUTTON_COLOR_HOVERED: Color = Color::srgba(0.2, 0.2, 0.2, 0.8);
-const BUTTON_COLOR_PRESSED: Color = Color::srgba(0.3, 0.3, 0.3, 0.8);
+const BUTTON_COLOR_NORMAL: Color = Color::srgba(1.0, 1.0, 1.0, 0.01);
+const BUTTON_COLOR_HOVERED: Color = Color::srgba(1.0, 1.0, 1.0, 0.1);
+const BUTTON_COLOR_PRESSED: Color = Color::srgba(1.0, 1.0, 1.0, 0.2);
 
 #[derive(Component)]
 pub struct OctreeToggleButton;
@@ -32,7 +33,7 @@ pub struct UIRoot;
 pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     let embedded_asset_source = &AssetSourceId::from("embedded");
     let regular_font_asset_path =
-        AssetPath::parse("fonts/BerkeleyMono-Regular").with_source(embedded_asset_source);
+        AssetPath::parse("fonts/SairaSemiCondensed-Light").with_source(embedded_asset_source);
     let regular_font = asset_server.load(regular_font_asset_path);
     let button_text_font = TextFont::from_font(regular_font).with_font_size(BUTTON_FONT_SIZE_PX);
 
@@ -42,22 +43,31 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::FlexEnd,
+                justify_content: JustifyContent::FlexStart,
+                align_items: AlignItems::FlexStart,
                 ..default()
             },
             UIRoot,
         ))
         .with_children(|parent| {
-            // Container for buttons in bottom right corner
+            // Container for buttons on left side
             parent
                 .spawn(Node {
                     display: Display::Flex,
-                    flex_direction: FlexDirection::Row,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::FlexEnd,
-                    column_gap: Val::Px(BUTTON_GAP_PX),
-                    margin: UiRect::all(Val::Px(BUTTON_MARGIN_PX)),
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::FlexStart,
+                    justify_content: JustifyContent::FlexStart,
+                    row_gap: Val::Px(BUTTON_GAP_PX),
+                    margin: UiRect {
+                        left: Val::Px(BUTTON_MARGIN_PX),
+                        right: Val::Px(BUTTON_MARGIN_PX),
+                        // Extra top margin on macOS for window controls
+                        #[cfg(target_os = "macos")]
+                        top: Val::Px(30.0),
+                        #[cfg(not(target_os = "macos"))]
+                        top: Val::Px(BUTTON_MARGIN_PX),
+                        bottom: Val::Px(BUTTON_MARGIN_PX),
+                    },
                     ..default()
                 })
                 .with_children(|parent| {
@@ -66,10 +76,11 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .spawn((
                             Button,
                             Node {
+                                width: Val::Px(BUTTON_WIDTH_PX),
                                 padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::Center,
+                                align_items: AlignItems::FlexStart,
                                 justify_content: JustifyContent::Center,
                                 row_gap: Val::Px(1.0),
                                 ..default()
@@ -91,10 +102,11 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .spawn((
                             Button,
                             Node {
+                                width: Val::Px(BUTTON_WIDTH_PX),
                                 padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::Center,
+                                align_items: AlignItems::FlexStart,
                                 justify_content: JustifyContent::Center,
                                 row_gap: Val::Px(1.0),
                                 ..default()
@@ -116,10 +128,11 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .spawn((
                             Button,
                             Node {
+                                width: Val::Px(BUTTON_WIDTH_PX),
                                 padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::Center,
+                                align_items: AlignItems::FlexStart,
                                 justify_content: JustifyContent::Center,
                                 row_gap: Val::Px(1.0),
                                 ..default()
@@ -140,10 +153,11 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .spawn((
                             Button,
                             Node {
+                                width: Val::Px(BUTTON_WIDTH_PX),
                                 padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::Center,
+                                align_items: AlignItems::FlexStart,
                                 justify_content: JustifyContent::Center,
                                 row_gap: Val::Px(1.0),
                                 ..default()
@@ -165,10 +179,11 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .spawn((
                             Button,
                             Node {
+                                width: Val::Px(BUTTON_WIDTH_PX),
                                 padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::Center,
+                                align_items: AlignItems::FlexStart,
                                 justify_content: JustifyContent::Center,
                                 row_gap: Val::Px(1.0),
                                 ..default()

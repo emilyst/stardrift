@@ -1,14 +1,16 @@
-//! UI plugin module.
+//! Embedded assets plugin module.
 //!
-//! This module provides the UI plugin that handles font asset registration
-//! and other UI-related initialization that needs to happen before other
-//! plugins with UI code run.
+//! This module provides the embedded assets plugin that handles font asset registration
+//! and other asset embedding for web deployment. All embedded assets are available
+//! through their asset paths.
 
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::prelude::*;
 
-static REGULAR_OTF_BYTES: &[u8] = include_bytes!("../../assets/fonts/BerkeleyMono-Regular.otf");
-static BOLD_OTF_BYTES: &[u8] = include_bytes!("../../assets/fonts/BerkeleyMono-Bold.otf");
+static SAIRA_SEMI_CONDENSED_LIGHT: &[u8] =
+    include_bytes!("../../assets/fonts/SairaSemiCondensed-Light.ttf");
+static SAIRA_SEMI_CONDENSED_BOLD: &[u8] =
+    include_bytes!("../../assets/fonts/SairaSemiCondensed-Bold.ttf");
 
 pub struct EmbeddedAssetsPlugin;
 
@@ -17,15 +19,15 @@ impl EmbeddedAssetsPlugin {
         let embedded_asset_registry = world.resource_mut::<EmbeddedAssetRegistry>();
 
         embedded_asset_registry.insert_asset(
-            "fonts/BerkeleyMono-Regular".into(),
-            "fonts/BerkeleyMono-Regular".as_ref(),
-            REGULAR_OTF_BYTES,
+            "fonts/SairaSemiCondensed-Light".into(),
+            "fonts/SairaSemiCondensed-Light".as_ref(),
+            SAIRA_SEMI_CONDENSED_LIGHT,
         );
 
         embedded_asset_registry.insert_asset(
-            "fonts/BerkeleyMono-Bold".into(),
-            "fonts/BerkeleyMono-Bold".as_ref(),
-            BOLD_OTF_BYTES,
+            "fonts/SairaSemiCondensed-Bold".into(),
+            "fonts/SairaSemiCondensed-Bold".as_ref(),
+            SAIRA_SEMI_CONDENSED_BOLD,
         );
     }
 }

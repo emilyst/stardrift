@@ -60,12 +60,12 @@ impl DiagnosticsHudPlugin {
         let embedded_asset_source = &AssetSourceId::from("embedded");
 
         let regular_font_asset_path =
-            AssetPath::parse("fonts/BerkeleyMono-Regular").with_source(embedded_asset_source);
+            AssetPath::parse("fonts/SairaSemiCondensed-Light").with_source(embedded_asset_source);
         let regular_font = asset_server.load(regular_font_asset_path);
         let regular_text_font = TextFont::from_font(regular_font).with_font_size(12.0);
 
         let bold_font_asset_path =
-            AssetPath::parse("fonts/BerkeleyMono-Bold").with_source(embedded_asset_source);
+            AssetPath::parse("fonts/SairaSemiCondensed-Bold").with_source(embedded_asset_source);
         let bold_font = asset_server.load(bold_font_asset_path);
         let bold_text_font = TextFont::from_font(bold_font).with_font_size(12.0);
 
@@ -101,28 +101,47 @@ impl DiagnosticsHudPlugin {
                 (
                     hud_row_node.clone(),
                     children![
-                        (Text::new("FPS"), bold_text_font.clone()),
-                        (FpsTextNode, Text::new("-"), regular_text_font.clone()),
-                    ],
-                ),
-                (
-                    hud_row_node.clone(),
-                    children![
-                        (Text::new("Frame count"), bold_text_font.clone()),
+                        (Text::new("FPS"), regular_text_font.clone()),
                         (
-                            FrameCountTextNode,
+                            FpsTextNode,
+                            Node {
+                                width: Val::Px(50.0),
+                                ..default()
+                            },
+                            TextLayout::new_with_justify(JustifyText::Right),
                             Text::new("-"),
-                            regular_text_font.clone()
+                            bold_text_font.clone(),
                         ),
                     ],
                 ),
                 (
                     hud_row_node.clone(),
                     children![
-                        (Text::new("Body count"), bold_text_font.clone()),
+                        (Text::new("Frame count"), regular_text_font.clone()),
+                        (
+                            FrameCountTextNode,
+                            Node {
+                                width: Val::Px(50.0),
+                                ..default()
+                            },
+                            TextLayout::new_with_justify(JustifyText::Right),
+                            Text::new("-"),
+                            bold_text_font.clone(),
+                        ),
+                    ],
+                ),
+                (
+                    hud_row_node.clone(),
+                    children![
+                        (Text::new("Body count"), regular_text_font.clone()),
                         (
                             Text::new(format!("{}", **body_count)),
-                            regular_text_font.clone()
+                            Node {
+                                width: Val::Px(50.0),
+                                ..default()
+                            },
+                            TextLayout::new_with_justify(JustifyText::Right),
+                            bold_text_font.clone(),
                         ),
                     ],
                 ),

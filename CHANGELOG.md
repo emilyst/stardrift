@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated UI system to include UIRoot marker component for programmatic visibility control
 - Updated diagnostics HUD to include DiagnosticsHudRoot marker component
+- Replaced BerkeleyMono fonts with Saira Semi-Condensed font family
+- Redesigned UI button layout from bottom-right horizontal to top-left vertical arrangement
+- Updated button styling with more subtle background colors and fixed width
+- Enhanced diagnostics HUD text layout with right-aligned values and improved contrast
+- Adjusted button dimensions and spacing for better visual hierarchy
 
 ### Fixed
 - N/A
