@@ -79,9 +79,9 @@ impl Default for PhysicsConfig {
     fn default() -> Self {
         Self {
             gravitational_constant: 2e2,
-            body_count: 10,
-            octree_theta: 0.0,
-            octree_leaf_threshold: 1,
+            body_count: 30,
+            octree_theta: 0.5,
+            octree_leaf_threshold: 2,
             body_distribution_sphere_radius_multiplier: 100.0,
             body_distribution_min_distance: 0.001,
             min_body_radius: 1.0,
