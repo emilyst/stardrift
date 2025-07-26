@@ -1,3 +1,10 @@
+//! Simulation diagnostics plugin - Self-contained plugin pattern
+//!
+//! This plugin follows the self-contained pattern for collecting and tracking
+//! simulation-specific performance metrics. Currently a placeholder for future
+//! diagnostics implementation such as octree build time, force calculation
+//! performance, and physics step timing.
+
 use crate::states::AppState;
 use bevy::diagnostic::DEFAULT_MAX_HISTORY_LENGTH;
 use bevy::diagnostic::Diagnostic;

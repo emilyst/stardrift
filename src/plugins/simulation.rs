@@ -1,3 +1,11 @@
+//! Simulation plugin - Orchestration plugin pattern
+//!
+//! This plugin follows the orchestration pattern where it coordinates systems
+//! defined in external modules. This pattern is ideal for core functionality
+//! where systems have complex interdependencies and need to interact with each
+//! other. The plugin acts as a central coordinator, managing system registration,
+//! ordering, and resource initialization.
+
 use crate::prelude::*;
 use crate::resources::LoadingProgress;
 #[cfg(not(target_arch = "wasm32"))]

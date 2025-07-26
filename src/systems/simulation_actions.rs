@@ -18,7 +18,7 @@ pub fn handle_restart_simulation_event(
     simulation_bodies: Query<Entity, With<RigidBody>>,
     #[cfg(feature = "trails")] trail_renderers: Query<
         Entity,
-        With<crate::systems::trails::TrailRenderer>,
+        With<crate::plugins::trails::TrailRenderer>,
     >,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,

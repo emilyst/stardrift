@@ -1,8 +1,10 @@
-//! Embedded assets plugin module.
+//! Embedded assets plugin - Self-contained plugin pattern
 //!
-//! This module provides the embedded assets plugin that handles font asset registration
-//! and other asset embedding for web deployment. All embedded assets are available
-//! through their asset paths.
+//! This plugin follows the self-contained pattern where all asset embedding logic
+//! is contained within the plugin module. It handles font asset registration and
+//! other asset embedding for web deployment. This pattern is ideal for this
+//! plugin since asset embedding is an independent concern that doesn't interact
+//! with other systems.
 
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::prelude::*;

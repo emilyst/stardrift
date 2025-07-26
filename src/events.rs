@@ -1,3 +1,14 @@
+//! Centralized event definitions
+//!
+//! All events in the stardrift application are defined in this module to maintain
+//! clear boundaries between systems and improve discoverability. Events are the
+//! primary mechanism for cross-system communication in the ECS architecture.
+//!
+//! Events are organized by category:
+//! - Simulation control events
+//! - Visualization toggle events  
+//! - UI update events
+
 use bevy::prelude::*;
 use std::marker::PhantomData;
 

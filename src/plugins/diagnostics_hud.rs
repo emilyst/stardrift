@@ -1,3 +1,10 @@
+//! Diagnostics HUD plugin - Self-contained plugin pattern
+//!
+//! This plugin follows the self-contained pattern where all systems, components,
+//! and resources are defined within the plugin module. This pattern is ideal for
+//! independent features that can be cleanly added or removed without affecting
+//! other systems.
+
 use crate::resources::BodyCount;
 use bevy::asset::AssetPath;
 use bevy::asset::io::AssetSourceId;
