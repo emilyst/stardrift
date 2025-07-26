@@ -10,17 +10,22 @@ interactive camera controls.
 
 - **N-body gravitational physics**: Accurate gravitational force calculations between all bodies
 - **Barnes-Hut octree algorithm**: Efficient O(N log N) gravitational force calculations using spatial partitioning
-- **High precision**: Uses f64 floating-point precision for enhanced accuracy
-- **Deterministic simulation**: Physics use enhanced determinism for reproducible results
-- **Parallel processing**: Multi-threaded physics calculations for optimal performance
+- **High precision**: Uses f64 floating-point precision for increased accuracy
+- **Deterministic simulation**: Physics use deterministic behavior for reproducible results
+- **Parallel processing**: Multi-threaded physics calculations for performance optimization
 - **Dynamic barycenter tracking**: Real-time calculation and visualization of the system's center of mass
 
 ### Visualization & Controls
 
-- **3D real-time rendering**: Smooth 3D visualization with Bevy's rendering pipeline
+- **3D real-time rendering**: 3D visualization with Bevy's rendering pipeline
 - **Interactive camera**: Pan, orbit, and zoom controls
 - **Touch support**: Touch controls for mobile and tablet devices
-- **Visual effects**: Bloom effects and tone mapping for enhanced visual quality
+- **Visual effects**: Bloom effects and tone mapping for visual rendering
+- **Screenshot capture**: Take screenshots without UI elements
+    - Automatic UI and HUD hiding during capture
+    - Configurable save directory and filename format
+    - Timestamp-based filenames for chronological organization
+    - PNG format with full window resolution
 - **Dynamic trails**: High-performance fading trails for celestial bodies (optional feature)
     - Time-based trail length management
     - Multiple fade curves (Linear, Exponential, SmoothStep, EaseInOut)
@@ -43,6 +48,7 @@ interactive camera controls.
     - **Octree toggle button**: Show/hide octree visualization
     - **Barycenter gizmo toggle button**: Show/hide barycenter cross-hair indicator
     - **Restart simulation button**: Generate new random bodies and restart the simulation
+    - **Screenshot button**: Capture the current view without UI elements
 
 ### Platform Support
 
@@ -124,6 +130,7 @@ miniserve out -p 8000 --index index.html
 | **N**           | Restart simulation with new random bodies       |
 | **O**           | Toggle octree visualization on/off              |
 | **C**           | Toggle barycenter gizmo visibility on/off       |
+| **S**           | Take screenshot (hides UI and HUD)              |
 | **0-9**         | Set octree visualization depth (0 = all levels) |
 | **Escape**      | Quit application                                |
 | **Touch**       | Pan, orbit, and zoom (mobile/tablet)            |
@@ -132,7 +139,7 @@ miniserve out -p 8000 --index index.html
 
 - The camera automatically follows the barycenter (center of mass) of the system
 - Pan and orbit controls allow you to explore the simulation from different angles
-- The camera smoothly tracks the movement of the gravitational system
+- The camera tracks the movement of the gravitational system
 
 ### Configuration
 
@@ -173,6 +180,14 @@ parameters. Configuration is managed through TOML files and supports XDG config 
 - **Width tapering**: Enable/disable tapering, taper curves, minimum width ratio
 - **Blending mode**: Additive or standard blending for trail rendering
 
+**Screenshot Configuration:**
+
+- **Directory**: Custom save location for screenshots (default: current directory)
+- **Filename prefix**: Customizable filename prefix (default: "stardrift_screenshot")
+- **Timestamp**: Include timestamp in filenames (default: true)
+- **Notifications**: Log screenshot captures (default: true)
+- **UI hiding delay**: Frame delay before capture to ensure UI is hidden (default: 2)
+
 
 #### Configuration File Location
 
@@ -182,7 +197,7 @@ The configuration is automatically loaded from the platform-specific config dire
 - **macOS**: `~/Library/Application Support/Stardrift/config.toml`
 - **Windows**: `%APPDATA%\Stardrift\config.toml`
 
-If no configuration file exists, the application uses sensible defaults and can generate a configuration file for
+If no configuration file exists, the application uses default values and can generate a configuration file for
 customization.
 
 ## Technical Details
@@ -195,7 +210,7 @@ customization.
   balance
 - **Rendering**: Bevy's PBR (Physically Based Rendering) pipeline with real-time octree wireframe visualization
 - **Random Number Generation**: ChaCha8 algorithm for efficient PRNG
-- **Mathematical Utilities**: Advanced sphere surface distribution algorithms and statistical validation
+- **Mathematical Utilities**: Sphere surface distribution algorithms and statistical validation
 
 ### Performance Optimizations
 
@@ -215,10 +230,11 @@ customization.
 
 - **bevy**: Game engine and rendering framework
 - **avian3d**: 3D physics engine with gravitational simulation support
-- **bevy_panorbit_camera**: Advanced camera controls with touch support
+- **bevy_panorbit_camera**: Camera controls with touch support
 - **libm**: Mathematical functions for no-std environments
 - **rand**: Random number generation
 - **rand_chacha**: ChaCha random number generator
+- **chrono**: Date and time handling for screenshot timestamps
 
 #### WASM-Specific Dependencies
 
@@ -233,7 +249,7 @@ customization.
     - Chrome 57+ (WebAssembly requirement)
     - Firefox 52+ (WebAssembly requirement)
     - Safari 15+ (WebGL2 requirement)
-    - Edge 79+ (Modern Chromium-based Edge)
+    - Edge 79+ (Chromium-based Edge)
 - **Hardware acceleration**: Required for optimal performance
 
 ## Project Structure
@@ -286,8 +302,8 @@ src/
 - **Plugin Architecture**: Functionality is organized into composable Bevy plugins
 - **Resource Management**: Global state is managed through Bevy's resource system
 - **System Organization**: Game logic is separated into focused, testable systems
-- **Configuration-Driven**: Centralized configuration system for easy customization
-- **AI-Friendly Structure**: Clear module boundaries and consistent naming for AI navigation
+- **Configuration-Driven**: Centralized configuration system for runtime customization
+- **Structured organization**: Module boundaries and consistent naming for navigation
 
 ### Key Modules
 
@@ -304,14 +320,14 @@ src/
 - **`states.rs`**: Application state management and transitions
 - **`physics/octree.rs`**: High-performance Barnes-Hut spatial partitioning implementation
 
-This structure enables easy extension, testing, and maintenance while providing clear entry points for understanding and
+This structure enables extension, testing, and maintenance while providing defined entry points for understanding and
 modifying the simulation behavior.
 
 ## Development
 
 ### Development Features
 
-Enable development features for enhanced debugging:
+Enable development features for additional debugging:
 
 ```bash
 cargo run --features dev
@@ -321,7 +337,7 @@ Development features include:
 
 - Asset hot-reloading
 - File watching
-- Enhanced debugging information
+- Additional debugging information
 - Dynamic linking for faster compilation
 
 ### Available Features
@@ -348,7 +364,7 @@ cargo run --all-features            # All features enabled
 cargo install wasm-bindgen-cli --force
 ```
 
-**WebGL2 not supported**: Use a modern browser or enable hardware acceleration in browser settings.
+**WebGL2 not supported**: Use a supported browser or enable hardware acceleration in browser settings.
 
 **Poor performance**: Try the native build for better performance, or reduce the number of bodies in the simulation.
 

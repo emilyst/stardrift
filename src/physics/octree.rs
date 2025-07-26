@@ -623,7 +623,7 @@ mod tests {
         let bodies3 = pool.get_external_bodies(15);
         assert_eq!(pool.stats(), (0, 0));
 
-        // Clean up
+        // Resource cleanup
         pool.return_internal_children(children2);
         pool.return_internal_children(children3);
         pool.return_external_bodies(bodies2);

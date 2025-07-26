@@ -159,7 +159,7 @@ impl Default for TrailConfig {
             min_alpha: 0.0,                      // Fully transparent at tail
             max_alpha: 0.3333,                   // Translucent at head
             enable_tapering: true,               // Taper by default
-            taper_curve: TaperCurve::Linear,     // Simple tapering
+            taper_curve: TaperCurve::Linear,     // Linear tapering
             min_width_ratio: 0.2,                // Tail is 20% of base width
             bloom_factor: 1.0,                   // Disable bloom by default
             use_additive_blending: true,         // Use additive blending by default

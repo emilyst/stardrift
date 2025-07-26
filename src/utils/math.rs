@@ -66,7 +66,7 @@ pub(crate) fn random_unit_vector(rng: &mut SharedRng) -> Vector {
 mod math_tests {
     use super::*;
 
-    // Alternative simpler test using coordinate moments
+    // Alternative test using coordinate moments
     #[test]
     fn test_random_unit_vector_coordinate_moments_uniformity() {
         let count_of_samples = 100_000;
