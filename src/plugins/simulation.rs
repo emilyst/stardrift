@@ -3,7 +3,7 @@ use crate::resources::LoadingProgress;
 use crate::systems::{
     camera::{draw_barycenter_gizmo, spawn_camera},
     input::{
-        pause_physics_on_space, quit_on_escape, restart_simulation_on_n,
+        pause_physics_on_space, quit_on_escape, restart_simulation_on_n, take_screenshot_on_s,
         toggle_barycenter_gizmo_visibility_on_c, toggle_octree_visualization,
     },
     loading::{
@@ -12,13 +12,14 @@ use crate::systems::{
     },
     physics::{PhysicsSet, apply_gravitation_octree, counteract_barycentric_drift, rebuild_octree},
     simulation_actions::{
-        handle_restart_simulation_event, handle_toggle_barycenter_gizmo_visibility_event,
-        handle_toggle_octree_visualization_event, handle_toggle_pause_simulation_event,
+        ScreenshotState, handle_restart_simulation_event, handle_take_screenshot_event,
+        handle_toggle_barycenter_gizmo_visibility_event, handle_toggle_octree_visualization_event,
+        handle_toggle_pause_simulation_event, process_screenshot_capture,
     },
     ui::{
         handle_barycenter_gizmo_button, handle_octree_button, handle_pause_button,
-        handle_restart_button, update_barycenter_gizmo_button_text, update_octree_button_text,
-        update_pause_button_text,
+        handle_restart_button, handle_screenshot_button, update_barycenter_gizmo_button_text,
+        update_octree_button_text, update_pause_button_text,
     },
     visualization::visualize_octree,
 };
@@ -70,11 +71,13 @@ impl Plugin for SimulationPlugin {
         });
         app.init_resource::<BarycenterGizmoVisibility>();
         app.init_resource::<LoadingProgress>();
+        app.init_resource::<ScreenshotState>();
 
         app.add_event::<RestartSimulationEvent>();
         app.add_event::<ToggleOctreeVisualizationEvent>();
         app.add_event::<ToggleBarycenterGizmoVisibilityEvent>();
         app.add_event::<TogglePauseSimulationEvent>();
+        app.add_event::<TakeScreenshotEvent>();
 
         #[cfg(feature = "diagnostics")]
         app.edit_schedule(FixedUpdate, |schedule| {
@@ -145,12 +148,15 @@ impl Plugin for SimulationPlugin {
             (
                 pause_physics_on_space,
                 restart_simulation_on_n,
+                take_screenshot_on_s,
                 toggle_barycenter_gizmo_visibility_on_c,
                 toggle_octree_visualization,
                 handle_restart_simulation_event,
                 handle_toggle_octree_visualization_event,
                 handle_toggle_barycenter_gizmo_visibility_event,
                 handle_toggle_pause_simulation_event,
+                handle_take_screenshot_event,
+                process_screenshot_capture,
             )
                 .in_set(SimulationSet::Input)
                 .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
@@ -162,6 +168,7 @@ impl Plugin for SimulationPlugin {
                 handle_octree_button,
                 handle_pause_button,
                 handle_restart_button,
+                handle_screenshot_button,
                 update_barycenter_gizmo_button_text,
                 update_octree_button_text,
                 update_pause_button_text,

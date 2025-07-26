@@ -59,3 +59,12 @@ pub fn toggle_barycenter_gizmo_visibility_on_c(
         }
     }
 }
+
+pub fn take_screenshot_on_s(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut screenshot_events: EventWriter<TakeScreenshotEvent>,
+) {
+    if keys.just_pressed(KeyCode::KeyS) {
+        screenshot_events.write(TakeScreenshotEvent);
+    }
+}

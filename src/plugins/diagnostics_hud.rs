@@ -12,6 +12,9 @@ struct FrameCountTextNode;
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
 struct FpsTextNode;
 
+#[derive(Component)]
+pub struct DiagnosticsHudRoot;
+
 // TODO: change detection
 #[derive(Resource, Reflect, Debug)]
 #[reflect(Resource, Debug)]
@@ -93,6 +96,7 @@ impl DiagnosticsHudPlugin {
             hud_node,
             border_radius,
             background_color,
+            DiagnosticsHudRoot,
             children![
                 (
                     hud_row_node.clone(),

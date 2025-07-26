@@ -23,6 +23,12 @@ pub struct BarycenterGizmoToggleButton;
 #[derive(Component)]
 pub struct PauseButton;
 
+#[derive(Component)]
+pub struct ScreenshotButton;
+
+#[derive(Component)]
+pub struct UIRoot;
+
 pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     let embedded_asset_source = &AssetSourceId::from("embedded");
     let regular_font_asset_path =
@@ -32,13 +38,16 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // Root UI node
     commands
-        .spawn(Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::FlexEnd,
-            ..default()
-        })
+        .spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::FlexEnd,
+                ..default()
+            },
+            UIRoot,
+        ))
         .with_children(|parent| {
             // Container for buttons in bottom right corner
             parent
@@ -150,6 +159,31 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                 TextColor(Color::WHITE),
                             ));
                         });
+
+                    // Screenshot button
+                    parent
+                        .spawn((
+                            Button,
+                            Node {
+                                padding: UiRect::all(Val::Px(BUTTON_PADDING_PX)),
+                                display: Display::Flex,
+                                flex_direction: FlexDirection::Column,
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                row_gap: Val::Px(1.0),
+                                ..default()
+                            },
+                            BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
+                            BackgroundColor(BUTTON_COLOR_NORMAL),
+                            ScreenshotButton,
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn((
+                                Text::new("Screenshot (S)"),
+                                button_text_font.clone(),
+                                TextColor(Color::WHITE),
+                            ));
+                        });
                 });
         });
 }
@@ -236,6 +270,29 @@ pub fn handle_pause_button(
             Interaction::Pressed => {
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
                 pause_events.write(TogglePauseSimulationEvent);
+            }
+            Interaction::Hovered => {
+                *color = BackgroundColor(BUTTON_COLOR_HOVERED);
+            }
+            Interaction::None => {
+                *color = BackgroundColor(BUTTON_COLOR_NORMAL);
+            }
+        });
+}
+
+pub fn handle_screenshot_button(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<ScreenshotButton>),
+    >,
+    mut screenshot_events: EventWriter<TakeScreenshotEvent>,
+) {
+    interaction_query
+        .iter_mut()
+        .for_each(|(interaction, mut color)| match *interaction {
+            Interaction::Pressed => {
+                *color = BackgroundColor(BUTTON_COLOR_PRESSED);
+                screenshot_events.write(TakeScreenshotEvent);
             }
             Interaction::Hovered => {
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);

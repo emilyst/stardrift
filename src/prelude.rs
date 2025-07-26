@@ -29,8 +29,8 @@ pub use crate::physics::octree::{Octree, OctreeBody};
 
 // Internal re-exports - Simulation Action Events
 pub use crate::systems::simulation_actions::{
-    RestartSimulationEvent, ToggleBarycenterGizmoVisibilityEvent, ToggleOctreeVisualizationEvent,
-    TogglePauseSimulationEvent,
+    RestartSimulationEvent, TakeScreenshotEvent, ToggleBarycenterGizmoVisibilityEvent,
+    ToggleOctreeVisualizationEvent, TogglePauseSimulationEvent,
 };
 
 // Note: Utility functions are kept crate-private and not re-exported in prelude

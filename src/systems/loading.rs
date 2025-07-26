@@ -129,8 +129,9 @@ pub fn spawn_bodies_async(
     }
 
     if let Some(ref mut progress) = spawning_progress.as_mut() {
-        let bodies_to_spawn =
-            (progress.batch_size).min(progress.total_bodies - progress.bodies_spawned);
+        let bodies_to_spawn = progress
+            .batch_size
+            .min(progress.total_bodies - progress.bodies_spawned);
 
         for _ in 0..bodies_to_spawn {
             use crate::components::body::factory;

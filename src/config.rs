@@ -12,6 +12,7 @@ pub struct SimulationConfig {
     pub rendering: RenderingConfig,
     #[cfg(feature = "trails")]
     pub trails: TrailConfig,
+    pub screenshots: ScreenshotConfig,
 }
 
 impl Default for SimulationConfig {
@@ -22,6 +23,7 @@ impl Default for SimulationConfig {
             rendering: RenderingConfig::default(),
             #[cfg(feature = "trails")]
             trails: TrailConfig::default(),
+            screenshots: ScreenshotConfig::default(),
         }
     }
 }
@@ -182,6 +184,27 @@ pub enum TaperCurve {
     Linear,
     Exponential,
     SmoothStep,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ScreenshotConfig {
+    pub directory: Option<String>,
+    pub filename_prefix: String,
+    pub include_timestamp: bool,
+    pub notification_enabled: bool,
+    pub hide_ui_frame_delay: u32,
+}
+
+impl Default for ScreenshotConfig {
+    fn default() -> Self {
+        Self {
+            directory: None, // None means current working directory
+            filename_prefix: "stardrift_screenshot".to_string(),
+            include_timestamp: true,
+            notification_enabled: true,
+            hide_ui_frame_delay: 2,
+        }
+    }
 }
 
 impl SimulationConfig {

@@ -36,6 +36,7 @@ inherits = "release"
 
 [dependencies]
 bevy_panorbit_camera = "0.27.0"
+chrono = "0.4"
 config = "0.15.12"
 directories = "6.0.0"
 libm = "0.2.15"
@@ -73,6 +74,7 @@ features = [
     "tonemapping_luts",
     "webgl2",
     "x11",
+    "png",
 ]
 
 [dependencies.avian3d]
