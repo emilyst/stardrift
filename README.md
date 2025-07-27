@@ -384,6 +384,63 @@ the [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) lice
 You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission. See
 the [LICENSE](LICENSE) file for details.
 
+## Release Process
+
+This project uses [cargo-release](https://github.com/crate-ci/cargo-release) for automated release management following semantic versioning principles.
+
+### Version Numbering
+
+Following Rust ecosystem conventions:
+- **0.0.x** - Early experimental releases with frequent breaking changes
+- **0.x.y** - Pre-1.0 development phase where the API may still evolve
+- **1.0.0** - First stable release with a commitment to API stability
+
+### Making a Release
+
+1. **Ensure all changes are committed**:
+   ```bash
+   git status  # Should show a clean working directory
+   ```
+
+2. **Review changes since last release**:
+   ```bash
+   cargo release changes
+   ```
+
+3. **Perform a dry run** (recommended):
+   ```bash
+   cargo release patch  # Shows what would happen
+   cargo release minor  # For feature releases
+   ```
+
+4. **Execute the release**:
+   ```bash
+   cargo release patch --execute
+   ```
+
+5. **Push to GitHub**:
+   ```bash
+   git push origin main
+   git push origin --tags
+   ```
+
+### What Happens During Release
+
+The `cargo-release` tool automatically:
+1. Updates the version in `Cargo.toml`
+2. Updates `CHANGELOG.md` with the new version and current date
+3. Creates a signed git commit with message "chore: release vX.Y.Z"
+4. Tags the commit with "vX.Y.Z" (also signed)
+5. Updates `Cargo.lock` with the new version
+
+### Release Configuration
+
+Release behavior is configured in `Cargo.toml` under `[package.metadata.release]`:
+- Commits and tags are signed if GPG is configured
+- Publishing to crates.io is disabled (private project)
+- Releases are only allowed from the `main` branch
+- Changelog format follows [Keep a Changelog](https://keepachangelog.com/) conventions
+
 ## Acknowledgments
 
 - Built with [Bevy](https://bevyengine.org/) game engine
