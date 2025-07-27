@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `hide_ui_frame_delay`: Frames to wait before capture (default: 2)
 - Chrono dependency for timestamp generation in screenshots
 - Quit button and 'Q' key shortcut for application exit (non-WASM platforms only)
+- Comprehensive benchmark suite reorganization:
+    - Organized into focused groups: construction, physics, realworld, configurations, characteristics
+    - Added configuration profiles for testing different accuracy/performance trade-offs
+    - Created benchmark-specific configs: fast_inaccurate, balanced, high_accuracy, stress_test
+    - All benchmarks now report throughput metrics for easier comparison
+    - Pre-generate test data outside benchmark loops to reduce measurement noise
+- Benchmark configuration profiles in `configs/benchmark_profiles/` directory
 
 ### Changed
 

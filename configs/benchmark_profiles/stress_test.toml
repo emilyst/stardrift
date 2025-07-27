@@ -1,0 +1,30 @@
+# Stress test configuration for extreme scenarios
+# Target: Test limits with many bodies
+
+version = 5
+
+[physics]
+gravitational_constant = 10.0
+body_count = 10000                    # High body count for stress testing
+octree_theta = 0.8                    # Slightly relaxed for performance
+octree_leaf_threshold = 20            # Moderate leaf size
+body_distribution_sphere_radius_multiplier = 5.0  # Larger distribution
+body_distribution_min_distance = 15.0
+min_body_radius = 0.5
+max_body_radius = 3.0
+force_calculation_min_distance = 5.0
+force_calculation_max_force = 50000.0
+collision_restitution = 0.8
+collision_friction = 0.1
+
+[physics.initial_velocity]
+type = "OrbitWithPerturbation"
+scale = 1.0
+perturbation = 0.2
+
+[rendering]
+camera_distance_multiplier = 5.0      # Zoom out for many bodies
+camera_look_at_barycenter = true
+touch_controls_enabled = true
+touch_sensitivity = 1.0
+star_point_size_multiplier = 1.0      # Smaller points for many bodies
