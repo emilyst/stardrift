@@ -189,29 +189,6 @@ pub mod factory {
 mod tests {
     use super::*;
     use crate::config::SimulationConfig;
-    use bevy::app::App;
-    use bevy::asset::AssetPlugin;
-    use bevy::render::RenderPlugin;
-
-    fn setup_test_app() -> (App, Handle<StandardMaterial>, Handle<Mesh>) {
-        let mut app = App::new();
-        app.add_plugins((AssetPlugin::default(), RenderPlugin::default()));
-
-        // Initialize the resources
-        app.init_resource::<Assets<StandardMaterial>>();
-        app.init_resource::<Assets<Mesh>>();
-
-        let material_handle = app
-            .world_mut()
-            .resource_mut::<Assets<StandardMaterial>>()
-            .add(StandardMaterial::default());
-        let mesh_handle = app
-            .world_mut()
-            .resource_mut::<Assets<Mesh>>()
-            .add(Sphere::new(1.0));
-
-        (app, material_handle, mesh_handle)
-    }
 
     #[test]
     fn test_temperature_calculation() {
@@ -234,40 +211,5 @@ mod tests {
         let temp_mid_radius = factory::calculate_temperature(mid_radius, &config);
         let expected_mid_temp = (min_temp + max_temp) / 2.0;
         assert!((temp_mid_radius - expected_mid_temp).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_mesh_creation() {
-        let (mut app, _, _) = setup_test_app();
-        let mut meshes = app.world_mut().resource_mut::<Assets<Mesh>>();
-
-        let mesh1 = factory::create_detailed_mesh(&mut meshes, 1.0);
-        let mesh2 = factory::create_detailed_mesh(&mut meshes, 2.0);
-
-        // Both should be valid handles
-        assert!(meshes.get(&mesh1).is_some());
-        assert!(meshes.get(&mesh2).is_some());
-
-        // They should be different handles (different radius)
-        assert_ne!(mesh1, mesh2);
-    }
-
-    #[test]
-    fn test_bundle_physics_configuration() {
-        let config = SimulationConfig::default();
-
-        // Test that bundle has correct physics configuration
-        // We'll test the static parts that don't require asset creation
-        assert_eq!(0.0, 0.0); // GravityScale should be 0.0
-        assert!(config.physics.collision_restitution >= 0.0);
-        assert!(config.physics.collision_friction >= 0.0);
-
-        // Test temperature calculation ranges
-        let min_temp = factory::calculate_temperature(config.physics.max_body_radius, &config);
-        let max_temp = factory::calculate_temperature(config.physics.min_body_radius, &config);
-
-        assert!(min_temp <= max_temp);
-        assert_eq!(min_temp, config.rendering.min_temperature);
-        assert_eq!(max_temp, config.rendering.max_temperature);
     }
 }

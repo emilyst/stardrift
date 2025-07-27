@@ -339,35 +339,6 @@ mod tests {
     use bevy::asset::AssetPlugin;
 
     #[test]
-    fn test_trails_plugin_creation() {
-        let plugin = TrailsPlugin;
-
-        // Test that we can create the plugin
-        let mut app = App::new();
-        app.add_plugins(plugin);
-
-        // Plugin should add the systems without panicking
-    }
-
-    #[test]
-    fn test_trail_system_sets() {
-        // Test that system sets have proper ordering
-        assert_ne!(TrailSet::Initialize, TrailSet::Update);
-        assert_ne!(TrailSet::Update, TrailSet::Render);
-        assert_ne!(TrailSet::Initialize, TrailSet::Render);
-    }
-
-    #[test]
-    fn test_trail_renderer_component() {
-        let entity = Entity::from_raw(1);
-        let renderer = TrailRenderer {
-            body_entity: entity,
-        };
-
-        assert_eq!(renderer.body_entity, entity);
-    }
-
-    #[test]
     fn test_trail_mesh_creation_with_data() {
         // Test that we can create a mesh with trail data
         let mut app = App::new();

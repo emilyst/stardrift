@@ -86,6 +86,36 @@ fn keyboard_input_handler(
             KeyCode::KeyS => {
                 commands.write(SimulationCommand::TakeScreenshot);
             }
+            KeyCode::Digit0 => {
+                commands.write(SimulationCommand::SetOctreeMaxDepth(None));
+            }
+            KeyCode::Digit1 => {
+                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(1)));
+            }
+            KeyCode::Digit2 => {
+                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(2)));
+            }
+            KeyCode::Digit3 => {
+                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(3)));
+            }
+            KeyCode::Digit4 => {
+                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(4)));
+            }
+            KeyCode::Digit5 => {
+                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(5)));
+            }
+            KeyCode::Digit6 => {
+                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(6)));
+            }
+            KeyCode::Digit7 => {
+                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(7)));
+            }
+            KeyCode::Digit8 => {
+                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(8)));
+            }
+            KeyCode::Digit9 => {
+                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(9)));
+            }
             _ => {}
         }
     }
@@ -389,5 +419,85 @@ impl CommandButton for PauseButton {
 impl CommandButton for ScreenshotButton {
     fn get_command() -> SimulationCommand {
         SimulationCommand::TakeScreenshot
+    }
+}
+
+impl CommandButton for QuitButton {
+    fn get_command() -> SimulationCommand {
+        SimulationCommand::Quit
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::create_test_app;
+
+    #[test]
+    fn test_dynamic_text_update_for_pause_button() {
+        let mut app = create_test_app();
+        app.add_plugins(ControlsPlugin);
+
+        // Create pause button with text
+        let button = app
+            .world_mut()
+            .spawn((PauseButton, Button))
+            .with_children(|parent| {
+                parent.spawn((Text::new("Pause (Space)"), TextFont::default()));
+            })
+            .id();
+
+        // Start in Running state
+        app.world_mut()
+            .insert_resource(NextState::Pending(AppState::Running));
+        app.update();
+
+        // Switch to Paused state
+        app.world_mut()
+            .insert_resource(NextState::Pending(AppState::Paused));
+        app.update();
+
+        // Check text was updated
+        let text_entity = app.world().entity(button).get::<Children>().unwrap()[0];
+        let text = app.world().entity(text_entity).get::<Text>().unwrap();
+        assert_eq!(text.0, "Resume (Space)");
+
+        // Switch back to Running
+        app.world_mut()
+            .insert_resource(NextState::Pending(AppState::Running));
+        app.update();
+
+        let text = app.world().entity(text_entity).get::<Text>().unwrap();
+        assert_eq!(text.0, "Pause (Space)");
+    }
+
+    #[test]
+    fn test_octree_button_text_updates() {
+        let mut app = create_test_app();
+        app.add_plugins(ControlsPlugin);
+
+        // Create octree button with text
+        let button = app
+            .world_mut()
+            .spawn((super::OctreeToggleButton, Button))
+            .with_children(|parent| {
+                parent.spawn((Text::new("Show Octree (O)"), TextFont::default()));
+            })
+            .id();
+
+        app.world_mut()
+            .insert_resource(NextState::Pending(AppState::Running));
+        app.update();
+
+        // Enable octree visualization
+        app.world_mut()
+            .resource_mut::<OctreeVisualizationSettings>()
+            .enabled = true;
+        app.update();
+
+        // Check text was updated
+        let text_entity = app.world().entity(button).get::<Children>().unwrap()[0];
+        let text = app.world().entity(text_entity).get::<Text>().unwrap();
+        assert_eq!(text.0, "Hide Octree (O)");
     }
 }

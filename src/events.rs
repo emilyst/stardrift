@@ -19,6 +19,8 @@ pub enum SimulationCommand {
     ToggleOctreeVisualization,
     ToggleBarycenterGizmo,
     TakeScreenshot,
+    Quit,
+    SetOctreeMaxDepth(Option<u8>),
 }
 
 // UI update events

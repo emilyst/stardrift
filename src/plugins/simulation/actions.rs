@@ -197,3 +197,79 @@ pub fn process_screenshot_capture(
         screenshot_state.frame_count = 0;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::create_test_app;
+    use avian3d::prelude::*;
+
+    #[test]
+    fn test_pause_toggle_physics_time() {
+        let mut app = create_test_app();
+        app.add_plugins(bevy_panorbit_camera::PanOrbitCameraPlugin);
+        app.add_plugins(crate::plugins::simulation::SimulationPlugin);
+
+        app.world_mut()
+            .insert_resource(NextState::Pending(AppState::Running));
+        app.update();
+
+        // Verify physics time is not paused initially
+        let physics_time = app.world().resource::<Time<Physics>>();
+        assert!(!physics_time.is_paused());
+
+        // Send pause command
+        app.world_mut().send_event(SimulationCommand::TogglePause);
+        app.update();
+
+        // Verify physics time is now paused
+        let physics_time = app.world().resource::<Time<Physics>>();
+        assert!(physics_time.is_paused());
+
+        // Toggle again
+        app.world_mut().send_event(SimulationCommand::TogglePause);
+        app.update();
+
+        // Verify physics time is unpaused
+        let physics_time = app.world().resource::<Time<Physics>>();
+        assert!(!physics_time.is_paused());
+    }
+
+    #[test]
+    fn test_screenshot_command_with_ui_hiding() {
+        let mut app = create_test_app();
+        app.add_plugins(bevy_panorbit_camera::PanOrbitCameraPlugin);
+        app.add_plugins(crate::plugins::simulation::SimulationPlugin);
+
+        // Add screenshot config and state
+        let mut config = SimulationConfig::default();
+        config.screenshots.hide_ui_frame_delay = 2;
+        app.insert_resource(config);
+        app.insert_resource(ScreenshotState::default());
+
+        // Create some UI entities
+        use bevy::ui::Node;
+        let ui_entity = app
+            .world_mut()
+            .spawn((Node::default(), crate::plugins::controls::UIRoot))
+            .id();
+
+        app.world_mut()
+            .insert_resource(NextState::Pending(AppState::Running));
+        app.update();
+
+        // Send screenshot command
+        app.world_mut()
+            .send_event(SimulationCommand::TakeScreenshot);
+        app.update();
+
+        // Check that UI was hidden
+        let visibility = app.world().entity(ui_entity).get::<Visibility>();
+        assert!(visibility.is_some());
+        assert_eq!(*visibility.unwrap(), Visibility::Hidden);
+
+        // Check that screenshot state was set
+        let screenshot_state = app.world().resource::<ScreenshotState>();
+        assert!(screenshot_state.pending);
+    }
+}

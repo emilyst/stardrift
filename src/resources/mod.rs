@@ -41,6 +41,12 @@ impl Default for BodyCount {
     }
 }
 
+impl From<usize> for BodyCount {
+    fn from(count: usize) -> Self {
+        Self(count)
+    }
+}
+
 #[derive(Resource, Deref, DerefMut, Copy, Clone, Default, PartialEq, Debug)]
 pub struct Barycenter(pub Option<Vector>);
 

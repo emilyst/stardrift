@@ -25,7 +25,6 @@ impl Plugin for VisualizationPlugin {
             Update,
             (
                 handle_visualization_commands,
-                handle_octree_depth_keys,
                 visualize_octree.run_if(resource_exists_and_equals(OctreeVisualizationSettings {
                     enabled: true,
                     max_depth: None,
@@ -68,29 +67,14 @@ fn handle_visualization_commands(
                     }
                 );
             }
+            SimulationCommand::SetOctreeMaxDepth(depth) => {
+                octree_settings.max_depth = depth.map(|d| d as usize);
+                info!(
+                    "Octree max depth set to {}",
+                    depth.map_or("all".to_string(), |d| d.to_string())
+                );
+            }
             _ => {} // Ignore other commands
-        }
-    }
-}
-
-/// Handles octree depth visualization keys (0-9)
-fn handle_octree_depth_keys(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut settings: ResMut<OctreeVisualizationSettings>,
-) {
-    for &keycode in keys.get_just_pressed() {
-        match keycode {
-            KeyCode::Digit0 => settings.max_depth = None,
-            KeyCode::Digit1 => settings.max_depth = Some(1),
-            KeyCode::Digit2 => settings.max_depth = Some(2),
-            KeyCode::Digit3 => settings.max_depth = Some(3),
-            KeyCode::Digit4 => settings.max_depth = Some(4),
-            KeyCode::Digit5 => settings.max_depth = Some(5),
-            KeyCode::Digit6 => settings.max_depth = Some(6),
-            KeyCode::Digit7 => settings.max_depth = Some(7),
-            KeyCode::Digit8 => settings.max_depth = Some(8),
-            KeyCode::Digit9 => settings.max_depth = Some(9),
-            _ => {}
         }
     }
 }
