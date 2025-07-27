@@ -122,6 +122,7 @@ fn keyboard_input_handler(
 }
 
 /// Generic button interaction handler that emits SimulationCommand
+#[allow(clippy::type_complexity)]
 fn button_interaction_handler<T: Component + CommandButton>(
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor),
@@ -146,6 +147,7 @@ fn button_interaction_handler<T: Component + CommandButton>(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::type_complexity)]
 fn quit_button_handler(
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor),

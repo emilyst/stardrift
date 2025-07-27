@@ -146,9 +146,7 @@ mod tests {
         // Allow some tolerance for floating point comparison
         assert!(
             (ratio - expected_ratio).abs() < 0.1,
-            "Camera multiplier not applied correctly: expected ratio {}, got {}",
-            expected_ratio,
-            ratio
+            "Camera multiplier not applied correctly: expected ratio {expected_ratio}, got {ratio}"
         );
     }
 }

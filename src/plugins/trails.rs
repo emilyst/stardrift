@@ -145,6 +145,7 @@ impl Trail {
     }
 
     /// Each trail vertex becomes two vertices forming a strip with configurable width
+    #[allow(clippy::too_many_arguments)]
     pub fn get_triangle_strip_vertices(
         &self,
         camera_pos: Option<Vec3>,
@@ -300,6 +301,7 @@ impl TrailsPlugin {
     }
 
     /// This system should run after bodies are spawned
+    #[allow(clippy::type_complexity)]
     fn initialize_trails(
         mut commands: Commands,
         query: Query<
@@ -599,26 +601,26 @@ mod tests {
         TrailsPlugin::update_trail_mesh(&mut mesh, &trail, None, 0.0, &trail_config, Some(1.0));
 
         // Should have 4 vertices for the degenerate triangle strip
-        if let Some(positions) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
-            if let bevy::render::mesh::VertexAttributeValues::Float32x3(pos_vec) = positions {
-                assert_eq!(pos_vec.len(), 4);
-                // All vertices should be at origin
-                for pos in pos_vec {
-                    assert_eq!(pos[0], 0.0);
-                    assert_eq!(pos[1], 0.0);
-                    assert_eq!(pos[2], 0.0);
-                }
+        if let Some(bevy::render::mesh::VertexAttributeValues::Float32x3(pos_vec)) =
+            mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+        {
+            assert_eq!(pos_vec.len(), 4);
+            // All vertices should be at origin
+            for pos in pos_vec {
+                assert_eq!(pos[0], 0.0);
+                assert_eq!(pos[1], 0.0);
+                assert_eq!(pos[2], 0.0);
             }
         }
 
         // Should have colors with zero alpha (invisible)
-        if let Some(colors) = mesh.attribute(Mesh::ATTRIBUTE_COLOR) {
-            if let bevy::render::mesh::VertexAttributeValues::Float32x4(color_vec) = colors {
-                assert_eq!(color_vec.len(), 4);
-                // All colors should have zero alpha
-                for color in color_vec {
-                    assert_eq!(color[3], 0.0);
-                }
+        if let Some(bevy::render::mesh::VertexAttributeValues::Float32x4(color_vec)) =
+            mesh.attribute(Mesh::ATTRIBUTE_COLOR)
+        {
+            assert_eq!(color_vec.len(), 4);
+            // All colors should have zero alpha
+            for color in color_vec {
+                assert_eq!(color[3], 0.0);
             }
         }
     }
@@ -641,24 +643,23 @@ mod tests {
         TrailsPlugin::update_trail_mesh(&mut mesh, &trail, None, 2.0, &trail_config, Some(1.0));
 
         // Should have position data
-        if let Some(positions) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
-            if let bevy::render::mesh::VertexAttributeValues::Float32x3(pos_vec) = positions {
-                assert!(pos_vec.len() > 0);
-                assert_eq!(pos_vec.len() % 2, 0); // Should be pairs (triangle strip)
-            }
+        if let Some(bevy::render::mesh::VertexAttributeValues::Float32x3(pos_vec)) =
+            mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+        {
+            assert!(!pos_vec.is_empty());
+            assert_eq!(pos_vec.len() % 2, 0); // Should be pairs (triangle strip)
         }
 
         // Should have color data with alpha
-        if let Some(colors) = mesh.attribute(Mesh::ATTRIBUTE_COLOR) {
-            if let bevy::render::mesh::VertexAttributeValues::Float32x4(color_vec) = colors {
-                assert!(color_vec.len() > 0);
-                // Colors should match position count
-                if let Some(positions) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
-                    if let bevy::render::mesh::VertexAttributeValues::Float32x3(pos_vec) = positions
-                    {
-                        assert_eq!(color_vec.len(), pos_vec.len());
-                    }
-                }
+        if let Some(bevy::render::mesh::VertexAttributeValues::Float32x4(color_vec)) =
+            mesh.attribute(Mesh::ATTRIBUTE_COLOR)
+        {
+            assert!(!color_vec.is_empty());
+            // Colors should match position count
+            if let Some(bevy::render::mesh::VertexAttributeValues::Float32x3(pos_vec)) =
+                mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+            {
+                assert_eq!(color_vec.len(), pos_vec.len());
             }
         }
     }
@@ -730,11 +731,13 @@ mod tests {
     #[test]
     fn test_alpha_calculation() {
         let trail = Trail::new(Color::WHITE);
-        let mut config = crate::config::TrailConfig::default();
-        config.trail_length_seconds = 10.0;
-        config.min_alpha = 0.0;
-        config.max_alpha = 1.0;
-        config.enable_fading = true;
+        let config = crate::config::TrailConfig {
+            trail_length_seconds: 10.0,
+            min_alpha: 0.0,
+            max_alpha: 1.0,
+            enable_fading: true,
+            ..Default::default()
+        };
 
         // Create a test point
         let point = TrailPoint {
@@ -760,9 +763,11 @@ mod tests {
     #[test]
     fn test_alpha_calculation_disabled() {
         let trail = Trail::new(Color::WHITE);
-        let mut config = crate::config::TrailConfig::default();
-        config.enable_fading = false;
-        config.max_alpha = 0.8;
+        let config = crate::config::TrailConfig {
+            enable_fading: false,
+            max_alpha: 0.8,
+            ..Default::default()
+        };
 
         let point = TrailPoint {
             position: Vec3::ZERO,

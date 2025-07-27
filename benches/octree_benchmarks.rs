@@ -83,7 +83,7 @@ fn generate_clustered_bodies(count: usize, seed: u64, clusters: usize) -> Vec<Oc
 
 /// Load configuration from file
 fn load_config(profile: &str) -> SimulationConfig {
-    let config_path = format!("configs/benchmark_profiles/{}.toml", profile);
+    let config_path = format!("configs/benchmark_profiles/{profile}.toml");
     SimulationConfig::load_or_default(&config_path)
 }
 

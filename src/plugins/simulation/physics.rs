@@ -29,6 +29,7 @@ pub fn spawn_simulation_bodies(
     commands.spawn_batch(spawn_data);
 }
 
+#[allow(clippy::type_complexity)]
 pub fn rebuild_octree(
     bodies: Query<(&Transform, &ComputedMass), (With<RigidBody>, Changed<Transform>)>,
     mut octree: ResMut<GravitationalOctree>,
@@ -43,6 +44,7 @@ pub fn rebuild_octree(
     }));
 }
 
+#[allow(clippy::type_complexity)]
 pub fn apply_gravitation_octree(
     g: Res<GravitationalConstant>,
     octree: Res<GravitationalOctree>,
@@ -52,8 +54,8 @@ pub fn apply_gravitation_octree(
     >,
 ) {
     // Explicit dereferences to avoid false positives in IDE code analysis
-    let octree: &GravitationalOctree = &*octree;
-    let octree: &Octree = &**octree;
+    let octree: &GravitationalOctree = &octree;
+    let octree: &Octree = octree;
     let g: Scalar = **g;
 
     bodies
@@ -112,9 +114,15 @@ mod tests {
     use super::*;
     use bevy::ecs::system::SystemState;
 
+    #[allow(clippy::type_complexity)]
+    type BodySystemState<'w, 's> = SystemState<(
+        Query<'w, 's, (&'static mut Transform, &'static ComputedMass), With<RigidBody>>,
+        ResMut<'w, Barycenter>,
+    )>;
+
     fn create_test_world() -> World {
         // Initialize task pools for parallel iteration
-        bevy::tasks::ComputeTaskPool::get_or_init(|| bevy::tasks::TaskPool::new());
+        bevy::tasks::ComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new);
 
         let mut world = World::new();
         world.insert_resource(Barycenter::default());
@@ -138,10 +146,7 @@ mod tests {
     #[test]
     fn test_counteract_barycentric_drift_initial_barycenter_setting() {
         let mut world = create_test_world();
-        let mut system_state: SystemState<(
-            Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<Barycenter>,
-        )> = SystemState::new(&mut world);
+        let mut system_state: BodySystemState = SystemState::new(&mut world);
 
         // Create a single body at position (1, 2, 3) with mass 5.0
         {
@@ -170,10 +175,7 @@ mod tests {
     #[test]
     fn test_counteract_barycentric_drift_multiple_bodies() {
         let mut world = create_test_world();
-        let mut system_state: SystemState<(
-            Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<Barycenter>,
-        )> = SystemState::new(&mut world);
+        let mut system_state: BodySystemState = SystemState::new(&mut world);
 
         // Create two bodies: mass 2.0 at (0,0,0) and mass 4.0 at (3,0,0)
         // Expected barycenter: (2*0 + 4*3)/(2+4) = 12/6 = 2.0 on x-axis
@@ -204,10 +206,7 @@ mod tests {
     #[test]
     fn test_counteract_barycentric_drift_correction() {
         let mut world = create_test_world();
-        let mut system_state: SystemState<(
-            Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<Barycenter>,
-        )> = SystemState::new(&mut world);
+        let mut system_state: BodySystemState = SystemState::new(&mut world);
 
         // Create a body and set initial barycenter
         {
@@ -254,10 +253,7 @@ mod tests {
     #[test]
     fn test_counteract_barycentric_drift_zero_mass() {
         let mut world = create_test_world();
-        let mut system_state: SystemState<(
-            Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<Barycenter>,
-        )> = SystemState::new(&mut world);
+        let mut system_state: BodySystemState = SystemState::new(&mut world);
 
         // Create a body with zero mass
         {
@@ -280,10 +276,7 @@ mod tests {
     #[test]
     fn test_counteract_barycentric_drift_no_bodies() {
         let mut world = create_test_world();
-        let mut system_state: SystemState<(
-            Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<Barycenter>,
-        )> = SystemState::new(&mut world);
+        let mut system_state: BodySystemState = SystemState::new(&mut world);
 
         let original_barycenter = **world.resource::<Barycenter>();
 
@@ -299,10 +292,7 @@ mod tests {
     #[test]
     fn test_counteract_barycentric_drift_small_drift() {
         let mut world = create_test_world();
-        let mut system_state: SystemState<(
-            Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<Barycenter>,
-        )> = SystemState::new(&mut world);
+        let mut system_state: BodySystemState = SystemState::new(&mut world);
 
         // Create a body
         {
@@ -344,10 +334,7 @@ mod tests {
     #[test]
     fn test_counteract_barycentric_drift_non_finite_barycenter() {
         let mut world = create_test_world();
-        let mut system_state: SystemState<(
-            Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<Barycenter>,
-        )> = SystemState::new(&mut world);
+        let mut system_state: BodySystemState = SystemState::new(&mut world);
 
         // Create a body at a position that would create non-finite barycenter when divided by zero
         // This is tricky to test directly, but we can test the is_finite check by creating
@@ -379,10 +366,7 @@ mod tests {
     #[test]
     fn test_counteract_barycentric_drift_complex_scenario() {
         let mut world = create_test_world();
-        let mut system_state: SystemState<(
-            Query<(&mut Transform, &ComputedMass), With<RigidBody>>,
-            ResMut<Barycenter>,
-        )> = SystemState::new(&mut world);
+        let mut system_state: BodySystemState = SystemState::new(&mut world);
 
         // Create multiple bodies with different masses and positions
         {
