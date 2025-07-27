@@ -422,6 +422,7 @@ impl CommandButton for ScreenshotButton {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl CommandButton for QuitButton {
     fn get_command() -> SimulationCommand {
         SimulationCommand::Quit
