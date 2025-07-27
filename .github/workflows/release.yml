@@ -51,21 +51,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform.target }}
-      
+
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.platform.target }}
-      
+
       - name: Install cross
         if: matrix.platform.use_cross
         uses: taiki-e/install-action@v2
         with:
           tool: cross
-      
+
       - name: Build binary
         run: |
           if [[ "${{ matrix.platform.use_cross }}" == "true" ]]; then
@@ -74,7 +74,7 @@ jobs:
             cargo build --profile distribution --target ${{ matrix.platform.target }} --all-features
           fi
         shell: bash
-      
+
       - name: Package binary (Unix)
         if: runner.os != 'Windows'
         run: |
@@ -82,7 +82,7 @@ jobs:
           tar czf ../../../stardrift-${{ matrix.platform.target }}.tar.gz stardrift
           cd ../../..
           sha256sum stardrift-${{ matrix.platform.target }}.tar.gz > stardrift-${{ matrix.platform.target }}.tar.gz.sha256
-      
+
       - name: Package binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -91,14 +91,14 @@ jobs:
           7z a ..\..\..\stardrift-${{ matrix.platform.target }}.zip stardrift.exe
           cd ..\..\..
           (Get-FileHash stardrift-${{ matrix.platform.target }}.zip -Algorithm SHA256).Hash | Out-File -FilePath stardrift-${{ matrix.platform.target }}.zip.sha256
-      
+
       - uses: actions/upload-artifact@v4
         with:
           name: stardrift-${{ matrix.platform.target }}
           path: |
             stardrift-${{ matrix.platform.target }}.*
           if-no-files-found: error
-      
+
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v2
         with:
@@ -116,18 +116,18 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      
+
       - uses: Swatinem/rust-cache@v2
-      
+
       - name: Install wasm-bindgen-cli
         uses: taiki-e/install-action@v2
         with:
           tool: wasm-bindgen-cli
-      
+
       - name: Build WASM
         run: |
           cargo build --profile wasm --target wasm32-unknown-unknown --features trails
@@ -138,7 +138,7 @@ jobs:
             --out-dir ./out/ \
             --out-name "stardrift" \
             ./target/wasm32-unknown-unknown/wasm/stardrift.wasm
-      
+
       - name: Check for index.html
         id: check_index
         run: |
@@ -148,7 +148,7 @@ jobs:
             echo "index_exists=false" >> $GITHUB_OUTPUT
             echo "Warning: index.html not found in repository root"
           fi
-      
+
       - name: Package WASM
         run: |
           if [ "${{ steps.check_index.outputs.index_exists }}" == "true" ]; then
@@ -158,7 +158,7 @@ jobs:
           tar czf ../stardrift-wasm.tar.gz *
           cd ..
           sha256sum stardrift-wasm.tar.gz > stardrift-wasm.tar.gz.sha256
-      
+
       - uses: actions/upload-artifact@v4
         with:
           name: stardrift-wasm
@@ -166,7 +166,7 @@ jobs:
             stardrift-wasm.tar.gz
             stardrift-wasm.tar.gz.sha256
           if-no-files-found: error
-      
+
       - name: Attest WASM build provenance
         uses: actions/attest-build-provenance@v2
         with:
@@ -174,25 +174,25 @@ jobs:
 
   release:
     name: Create Release
-    needs: [build, build-wasm]
+    needs: [ build, build-wasm ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
-      
+
       - name: List artifacts
         run: ls -la artifacts/
-      
+
       - name: Extract version from tag
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:

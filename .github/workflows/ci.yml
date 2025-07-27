@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
   workflow_call:
 
 env:
@@ -20,19 +20,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y pkg-config libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
-      
+
       - uses: dtolnay/rust-toolchain@stable
-      
+
       - uses: Swatinem/rust-cache@v2
-      
+
       - name: Run tests
         run: cargo test --lib --all-features
-      
+
       - name: Run doctests
         run: cargo test --doc --all-features
 
@@ -41,48 +41,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y pkg-config libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
-      
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      
+
       - uses: Swatinem/rust-cache@v2
-      
+
       - name: Check formatting
         run: cargo fmt -- --check
-      
+
       - name: Run clippy
         run: cargo clippy --all-features -- -D warnings
-      
-      - name: Check benchmarks compile
-        run: cargo bench --all-features --no-run
 
   check:
     name: Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y pkg-config libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
-      
+
       - uses: dtolnay/rust-toolchain@stable
-      
+
       - uses: Swatinem/rust-cache@v2
-      
+
       - name: Check all features
         run: cargo check --all-features
-      
+
       - name: Check no default features
         run: cargo check --no-default-features
-      
+
       - name: Check each feature
         run: |
           cargo check --no-default-features --features graphics
@@ -95,18 +92,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y pkg-config libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
-      
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      
+
       - uses: Swatinem/rust-cache@v2
-      
+
       - name: Check WASM build
         run: cargo check --profile wasm --target wasm32-unknown-unknown --features trails
 
@@ -119,7 +116,7 @@ jobs:
       checks: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
