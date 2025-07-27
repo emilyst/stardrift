@@ -1,7 +1,6 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 #![allow(dead_code)]
 
-mod components;
 mod config;
 mod events;
 mod physics;

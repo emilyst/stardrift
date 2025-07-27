@@ -3,7 +3,6 @@
 //! This provides the core functionality of stardrift as a library
 //! to enable integration testing.
 
-pub mod components;
 pub mod config;
 pub mod events;
 pub mod physics;

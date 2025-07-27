@@ -1,3 +1,8 @@
+//! Components for the simulation plugin.
+//!
+//! This module contains components that are specific to the physics simulation,
+//! following the self-contained plugin pattern.
+
 use crate::prelude::*;
 use crate::utils::color::emissive_material_for_temp;
 use crate::utils::math::{min_sphere_radius_for_surface_distribution, random_unit_vector};

@@ -7,6 +7,7 @@
 use crate::prelude::*;
 
 mod actions;
+mod components;
 mod physics;
 
 use actions::{

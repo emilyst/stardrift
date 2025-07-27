@@ -20,7 +20,7 @@ pub fn spawn_simulation_bodies(
     body_count: usize,
     config: &SimulationConfig,
 ) {
-    use crate::components::body::factory;
+    use super::components::{BodyBundle, factory};
 
     let spawn_data: Vec<BodyBundle> = (0..body_count)
         .map(|_| factory::create_random_body(meshes, materials, rng, config, body_count))

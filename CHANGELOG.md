@@ -71,6 +71,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Code duplication eliminated through shared functions
     - CommandButton trait pattern for consistent button behavior
     - Improved extensibility for future button additions
+- Component organization aligned with self-contained plugin architecture:
+    - Trail component moved into TrailsPlugin (`src/plugins/trails.rs`)
+    - BodyBundle moved into SimulationPlugin (`src/plugins/simulation/components.rs`)
+    - Eliminated separate `src/components/` directory
+    - Plugin-specific components now co-located with their plugins
 
 ### Fixed
 

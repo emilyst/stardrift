@@ -264,23 +264,21 @@ src/
 ├── config.rs                     # Configuration management system
 ├── states.rs                     # Application state management
 ├── events.rs                     # Centralized event definitions for inter-plugin communication
-├── components/                   # Bevy ECS components (data containers)
-│   ├── mod.rs
-│   ├── body.rs                   # Celestial body component
-│   └── trail.rs                  # Trail component for visual effects
 ├── plugins/                      # Self-contained Bevy plugins
 │   ├── mod.rs
 │   ├── simulation/               # Core simulation plugin with submodules
 │   │   ├── mod.rs                # Plugin definition and system coordination
 │   │   ├── physics.rs            # Physics calculations and body management
-│   │   └── actions.rs            # Simulation control and action handling
+│   │   ├── actions.rs            # Simulation control and action handling
+│   │   └── components.rs         # BodyBundle and celestial body factory functions
 │   ├── controls.rs               # Complete input handling and UI structure
 │   ├── camera.rs                 # Camera setup and positioning logic
 │   ├── visualization.rs          # Debug rendering (octree wireframe, barycenter gizmo)
 │   ├── simulation_diagnostics.rs # Simulation metrics and diagnostics plugin
 │   ├── diagnostics_hud.rs        # Real-time HUD display plugin (feature-gated)
 │   ├── embedded_assets.rs        # Embedded asset management plugin
-│   └── trails.rs                 # Trail rendering plugin (feature-gated)
+│   ├── trails.rs                 # Trail rendering plugin with Trail component (feature-gated)
+│   └── attribution.rs            # Version attribution display plugin
 ├── resources/                    # Bevy ECS resources (global state)
 │   └── mod.rs                    # Shared resources like RNG, constants, and octree
 ├── utils/                        # Utility modules
@@ -295,7 +293,8 @@ src/
 
 ### Design Principles
 
-- **Pure Plugin Architecture**: Each plugin is completely self-contained with internal systems and clear boundaries
+- **Plugin-Based Architecture**: Each plugin is completely self-contained with internal systems, components, and clear
+  boundaries
 - **Event-Driven Communication**: Plugins communicate exclusively through `SimulationCommand` events
 - **Zero Orchestration**: No external coordination or management of plugin internals
 - **Scalable Organization**: Large plugins use internal submodules for code organization
