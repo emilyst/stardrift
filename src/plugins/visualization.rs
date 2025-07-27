@@ -89,7 +89,8 @@ fn visualize_octree(
         return;
     }
 
-    let bounds = octree.bounds(settings.max_depth);
+    // Explicit dereference to avoid false positives in IDE code analysis
+    let bounds = octree.as_ref().bounds(settings.max_depth);
 
     for aabb in bounds {
         draw_bounding_box_wireframe_gizmo(&mut gizmos, &aabb, css::WHITE);

@@ -480,7 +480,7 @@ mod tests {
         // Create octree button with text
         let button = app
             .world_mut()
-            .spawn((super::OctreeToggleButton, Button))
+            .spawn((OctreeToggleButton, Button))
             .with_children(|parent| {
                 parent.spawn((Text::new("Show Octree (O)"), TextFont::default()));
             })

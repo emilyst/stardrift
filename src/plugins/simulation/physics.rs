@@ -51,6 +51,11 @@ pub fn apply_gravitation_octree(
         (With<RigidBody>, Changed<Transform>),
     >,
 ) {
+    // Explicit dereferences to avoid false positives in IDE code analysis
+    let octree: &GravitationalOctree = &*octree;
+    let octree: &Octree = &**octree;
+    let g: Scalar = **g;
+
     bodies
         .par_iter_mut()
         .for_each(|(transform, mass, mut external_force)| {
@@ -60,7 +65,7 @@ pub fn apply_gravitation_octree(
                     mass: mass.value(),
                 },
                 octree.root.as_ref(),
-                **g,
+                g,
             ));
         });
 }
@@ -147,7 +152,8 @@ mod tests {
 
         // Get barycenter and ensure it's not set
         let (bodies, barycenter) = system_state.get_mut(&mut world);
-        assert!(barycenter.is_none());
+        // Explicit dereference to avoid false positives in IDE code analysis
+        assert!(barycenter.as_ref().is_none());
 
         // Run the system
         counteract_barycentric_drift(bodies, barycenter);
@@ -180,7 +186,8 @@ mod tests {
 
         // Get barycenter and ensure it's not set
         let (bodies, barycenter) = system_state.get_mut(&mut world);
-        assert!(barycenter.is_none());
+        // Explicit dereference to avoid false positives in IDE code analysis
+        assert!(barycenter.as_ref().is_none());
 
         // Run the system
         counteract_barycentric_drift(bodies, barycenter);

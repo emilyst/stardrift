@@ -11,28 +11,28 @@ pub fn create_test_app() -> App {
     // Add minimal plugins needed for testing
     app.add_plugins((
         MinimalPlugins.set(TaskPoolPlugin::default()),
-        bevy::asset::AssetPlugin::default(),
+        AssetPlugin::default(),
         bevy::input::InputPlugin,
         bevy::state::app::StatesPlugin,
-        bevy::transform::TransformPlugin,
+        TransformPlugin,
         bevy::diagnostic::DiagnosticsPlugin,
     ));
 
     // Add Avian physics time resource
-    app.insert_resource(Time::<avian3d::prelude::Physics>::default());
+    app.insert_resource(Time::<Physics>::default());
 
     // Initialize assets needed by various plugins
-    app.init_asset::<bevy::text::Font>();
-    app.init_asset::<bevy::render::mesh::Mesh>();
-    app.init_asset::<bevy::render::prelude::Shader>();
-    app.init_asset::<bevy::pbr::StandardMaterial>();
+    app.init_asset::<Font>();
+    app.init_asset::<Mesh>();
+    app.init_asset::<Shader>();
+    app.init_asset::<StandardMaterial>();
 
     // Add gizmo-related resources
-    app.init_resource::<bevy::gizmos::config::GizmoConfigStore>();
+    app.init_resource::<GizmoConfigStore>();
 
     // Add visualization resources
-    app.init_resource::<crate::plugins::visualization::BarycenterGizmoVisibility>();
-    app.init_resource::<crate::plugins::visualization::OctreeVisualizationSettings>();
+    app.init_resource::<BarycenterGizmoVisibility>();
+    app.init_resource::<OctreeVisualizationSettings>();
 
     // Add events used by plugins
     app.add_event::<SimulationCommand>();
