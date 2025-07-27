@@ -57,6 +57,9 @@ jobs:
       
       - name: Run clippy
         run: cargo clippy --all-features -- -D warnings
+      
+      - name: Check benchmarks compile
+        run: cargo bench --all-features --no-run
 
   check:
     name: Check
