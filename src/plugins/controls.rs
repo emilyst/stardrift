@@ -251,7 +251,7 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .spawn((create_button_bundle(), RestartSimulationButton))
                 .with_children(|parent| {
                     parent.spawn((
-                        Text::new("Restart Simulation (N)"),
+                        Text::new("New Simulation (N)"),
                         light_text_font.clone(),
                         TextColor(Color::WHITE),
                     ));

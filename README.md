@@ -127,7 +127,7 @@ miniserve out -p 8000 --index index.html
 | **Mouse**       | Pan and orbit camera around the simulation      |
 | **Mouse Wheel** | Zoom in/out                                     |
 | **Space**       | Pause/Resume simulation                         |
-| **N**           | Restart simulation with new random bodies       |
+| **N**           | New simulation with new random bodies           |
 | **O**           | Toggle octree visualization on/off              |
 | **C**           | Toggle barycenter gizmo visibility on/off       |
 | **S**           | Take screenshot (hides UI and HUD)              |
@@ -187,7 +187,6 @@ parameters. Configuration is managed through TOML files and supports XDG config 
 - **Timestamp**: Include timestamp in filenames (default: true)
 - **Notifications**: Log screenshot captures (default: true)
 - **UI hiding delay**: Frame delay before capture to ensure UI is hidden (default: 2)
-
 
 #### Configuration File Location
 
@@ -307,9 +306,9 @@ src/
 ### Key Modules
 
 - **`plugins/simulation/`**: Self-contained physics simulation with internal submodules
-  - `mod.rs`: Plugin definition and system coordination
-  - `physics.rs`: Core physics calculations including octree rebuilding and force application
-  - `actions.rs`: Simulation control and action handlers (restart, pause, screenshot)
+    - `mod.rs`: Plugin definition and system coordination
+    - `physics.rs`: Core physics calculations including octree rebuilding and force application
+    - `actions.rs`: Simulation control and action handlers (restart, pause, screenshot)
 - **`plugins/controls.rs`**: Complete input handling and UI structure (keyboard, mouse, buttons)
 - **`plugins/camera.rs`**: Camera setup and positioning logic
 - **`plugins/visualization.rs`**: Debug rendering for octree wireframe and barycenter gizmo
