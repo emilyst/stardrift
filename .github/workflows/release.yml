@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  # Run CI checks before building
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Build - ${{ matrix.platform.name }}
+    needs: ci
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: Linux-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use_cross: true
+          - name: Linux-aarch64
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            use_cross: true
+          - name: Windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - name: Windows-aarch64
+            os: windows-latest
+            target: aarch64-pc-windows-msvc
+          - name: macOS-x86_64
+            os: macos-13
+            target: x86_64-apple-darwin
+          - name: macOS-aarch64
+            os: macos-14
+            target: aarch64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+      
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.platform.target }}
+      
+      - name: Install cross
+        if: matrix.platform.use_cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+      
+      - name: Build binary
+        run: |
+          if [[ "${{ matrix.platform.use_cross }}" == "true" ]]; then
+            cross build --profile distribution --target ${{ matrix.platform.target }} --all-features
+          else
+            cargo build --profile distribution --target ${{ matrix.platform.target }} --all-features
+          fi
+        shell: bash
+      
+      - name: Package binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd target/${{ matrix.platform.target }}/distribution
+          tar czf ../../../stardrift-${{ matrix.platform.target }}.tar.gz stardrift
+          cd ../../..
+          sha256sum stardrift-${{ matrix.platform.target }}.tar.gz > stardrift-${{ matrix.platform.target }}.tar.gz.sha256
+      
+      - name: Package binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd target\${{ matrix.platform.target }}\distribution
+          7z a ..\..\..\stardrift-${{ matrix.platform.target }}.zip stardrift.exe
+          cd ..\..\..
+          (Get-FileHash stardrift-${{ matrix.platform.target }}.zip -Algorithm SHA256).Hash | Out-File -FilePath stardrift-${{ matrix.platform.target }}.zip.sha256
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stardrift-${{ matrix.platform.target }}
+          path: |
+            stardrift-${{ matrix.platform.target }}.*
+          if-no-files-found: error
+
+  build-wasm:
+    name: Build WASM
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Install wasm-bindgen-cli
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli
+      
+      - name: Build WASM
+        run: |
+          cargo build --profile wasm --target wasm32-unknown-unknown --features trails
+          mkdir -p out
+          wasm-bindgen \
+            --no-typescript \
+            --target web \
+            --out-dir ./out/ \
+            --out-name "stardrift" \
+            ./target/wasm32-unknown-unknown/wasm/stardrift.wasm
+      
+      - name: Check for index.html
+        id: check_index
+        run: |
+          if [ -f "index.html" ]; then
+            echo "index_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "index_exists=false" >> $GITHUB_OUTPUT
+            echo "Warning: index.html not found in repository root"
+          fi
+      
+      - name: Package WASM
+        run: |
+          if [ "${{ steps.check_index.outputs.index_exists }}" == "true" ]; then
+            cp index.html ./out/
+          fi
+          cd out
+          tar czf ../stardrift-wasm.tar.gz *
+          cd ..
+          sha256sum stardrift-wasm.tar.gz > stardrift-wasm.tar.gz.sha256
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stardrift-wasm
+          path: |
+            stardrift-wasm.tar.gz
+            stardrift-wasm.tar.gz.sha256
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: [build, build-wasm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      
+      - name: List artifacts
+        run: ls -la artifacts/
+      
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          name: Stardrift v${{ steps.version.outputs.version }}
+          body: |
+            ## Downloads
+            
+            ### Desktop Binaries
+            - **Linux**: `stardrift-x86_64-unknown-linux-musl.tar.gz` (x86_64), `stardrift-aarch64-unknown-linux-musl.tar.gz` (ARM64)
+            - **Windows**: `stardrift-x86_64-pc-windows-msvc.zip` (x86_64), `stardrift-aarch64-pc-windows-msvc.zip` (ARM64)
+            - **macOS**: `stardrift-x86_64-apple-darwin.tar.gz` (Intel), `stardrift-aarch64-apple-darwin.tar.gz` (Apple Silicon)
+            
+            ### WebAssembly
+            - **WASM**: `stardrift-wasm.tar.gz` - Web build with trail rendering
+            
+            All downloads include SHA256 checksums for verification.
+            
+            ## What's Changed
+            
+            See below for full changelog.
