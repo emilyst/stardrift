@@ -15,6 +15,10 @@ jobs:
   # Run CI checks before building
   ci:
     uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      issues: write
+      checks: write
 
   build:
     name: Build - ${{ matrix.platform.name }}
