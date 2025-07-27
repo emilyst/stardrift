@@ -20,6 +20,10 @@ jobs:
     name: Build - ${{ matrix.platform.name }}
     needs: ci
     runs-on: ${{ matrix.platform.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -94,11 +98,22 @@ jobs:
           path: |
             stardrift-${{ matrix.platform.target }}.*
           if-no-files-found: error
+      
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            stardrift-${{ matrix.platform.target }}.tar.gz
+            stardrift-${{ matrix.platform.target }}.zip
 
   build-wasm:
     name: Build WASM
     needs: ci
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
       
@@ -151,6 +166,11 @@ jobs:
             stardrift-wasm.tar.gz
             stardrift-wasm.tar.gz.sha256
           if-no-files-found: error
+      
+      - name: Attest WASM build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: stardrift-wasm.tar.gz
 
   release:
     name: Create Release

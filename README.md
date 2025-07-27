@@ -384,6 +384,27 @@ the [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) lice
 You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission. See
 the [LICENSE](LICENSE) file for details.
 
+## Security & Verification
+
+### Build Provenance Attestation
+
+All release binaries include cryptographic attestations that prove they were built by the official GitHub Actions workflow. This provides supply chain security and ensures binaries haven't been tampered with.
+
+To verify a downloaded binary:
+
+```bash
+# Install GitHub CLI if needed
+# https://cli.github.com/
+
+# Verify a release binary
+gh attestation verify stardrift-x86_64-unknown-linux-musl.tar.gz \
+  --repo emilyst/stardrift
+
+# The command will confirm the binary was built from the official repository
+```
+
+Attestations use [Sigstore](https://sigstore.dev/) and follow the [SLSA](https://slsa.dev/) standard for software supply chain security.
+
 ## Release Process
 
 This project uses [cargo-release](https://github.com/crate-ci/cargo-release) for automated release management following semantic versioning principles.

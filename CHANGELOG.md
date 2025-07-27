@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- GitHub Actions CI/CD pipeline for automated testing and releases
+    - Continuous integration workflow for all commits and pull requests
+    - Automated cross-platform binary builds for releases
+    - Support for Linux (x86_64/aarch64), Windows (x86_64/aarch64), macOS (Intel/Apple Silicon)
+    - WebAssembly build automation with wasm-bindgen
+    - Security vulnerability scanning via cargo-audit
+- Build provenance attestation for all release binaries
+    - Cryptographic signatures proving binaries were built by official CI/CD
+    - Uses Sigstore and follows SLSA standard for supply chain security
+    - Verifiable via GitHub CLI: `gh attestation verify <binary> --repo emilyst/stardrift`
+    - Attestations for all platform binaries and WASM builds
+
+### Security
+
+- Added build provenance attestations to prevent tampering with release binaries
+- Integrated cargo-audit for automated dependency vulnerability scanning
+
 ## [0.0.1] - 2025-07-27
 
 ### Added
