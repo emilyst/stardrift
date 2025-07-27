@@ -5,30 +5,21 @@
 //! primary mechanism for cross-system communication in the ECS architecture.
 //!
 //! Events are organized by category:
-//! - Simulation control events
-//! - Visualization toggle events  
+//! - Simulation command pattern
 //! - UI update events
 
 use bevy::prelude::*;
 use std::marker::PhantomData;
 
-// Simulation control events
-#[derive(Event)]
-pub struct RestartSimulationEvent;
-
-#[derive(Event)]
-pub struct TogglePauseSimulationEvent;
-
-// Visualization toggle events
-#[derive(Event)]
-pub struct ToggleOctreeVisualizationEvent;
-
-#[derive(Event)]
-pub struct ToggleBarycenterGizmoVisibilityEvent;
-
-// Screenshot event
-#[derive(Event)]
-pub struct TakeScreenshotEvent;
+// Unified simulation command pattern
+#[derive(Event, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SimulationCommand {
+    Restart,
+    TogglePause,
+    ToggleOctreeVisualization,
+    ToggleBarycenterGizmo,
+    TakeScreenshot,
+}
 
 // UI update events
 #[derive(Event)]

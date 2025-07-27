@@ -1,3 +1,9 @@
+//! Physics systems for the simulation
+//!
+//! This module contains the core physics simulation systems including
+//! body spawning, octree rebuilding, gravitational force calculation,
+//! and barycentric drift correction.
+
 use crate::prelude::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]

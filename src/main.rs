@@ -9,16 +9,18 @@ mod plugins;
 mod prelude;
 mod resources;
 mod states;
-mod systems;
 mod utils;
 
 #[cfg(feature = "trails")]
 use crate::plugins::trails::TrailsPlugin;
+use crate::plugins::{
+    camera::CameraPlugin, controls::ControlsPlugin, embedded_assets::EmbeddedAssetsPlugin,
+    simulation::SimulationPlugin, visualization::VisualizationPlugin,
+};
 #[cfg(feature = "diagnostics")]
 use crate::plugins::{
     diagnostics_hud::DiagnosticsHudPlugin, simulation_diagnostics::SimulationDiagnosticsPlugin,
 };
-use crate::plugins::{embedded_assets::EmbeddedAssetsPlugin, simulation::SimulationPlugin};
 use crate::prelude::*;
 #[cfg(feature = "diagnostics")]
 use bevy::diagnostic::{
@@ -72,13 +74,15 @@ fn main() {
         #[cfg(feature = "diagnostics")]
         SystemInformationDiagnosticsPlugin,
         SimulationPlugin,
+        CameraPlugin,
+        ControlsPlugin,
+        VisualizationPlugin,
         #[cfg(feature = "trails")]
         TrailsPlugin,
     ));
 
     // Initialize app states after DefaultPlugins (which includes StatesPlugin)
     app.init_state::<AppState>();
-    app.add_sub_state::<LoadingState>();
 
     app.run();
 }

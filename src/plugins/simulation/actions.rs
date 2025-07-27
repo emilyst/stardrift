@@ -1,5 +1,10 @@
+//! Action handlers for simulation commands
+//!
+//! This module contains handlers for SimulationCommand events including
+//! restart, pause/resume, and screenshot functionality.
+
+use super::physics::spawn_simulation_bodies;
 use crate::prelude::*;
-use crate::systems::physics::spawn_simulation_bodies;
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 use bevy_panorbit_camera::PanOrbitCamera;
 use chrono::Local;
@@ -13,7 +18,7 @@ pub struct ScreenshotState {
 
 #[allow(clippy::too_many_arguments)]
 pub fn handle_restart_simulation_event(
-    mut restart_events: EventReader<RestartSimulationEvent>,
+    mut commands_reader: EventReader<SimulationCommand>,
     mut commands: Commands,
     simulation_bodies: Query<Entity, With<RigidBody>>,
     #[cfg(feature = "trails")] trail_renderers: Query<
@@ -29,7 +34,10 @@ pub fn handle_restart_simulation_event(
     mut pan_orbit_camera: Single<&mut PanOrbitCamera>,
     config: Res<SimulationConfig>,
 ) {
-    restart_events.read().for_each(|_| {
+    for command in commands_reader.read() {
+        if !matches!(command, SimulationCommand::Restart) {
+            continue;
+        }
         // Despawn all bodies
         simulation_bodies.iter().for_each(|entity| {
             commands.entity(entity).despawn();
@@ -58,34 +66,19 @@ pub fn handle_restart_simulation_event(
             **body_count,
             &config,
         );
-    });
-}
-
-pub fn handle_toggle_octree_visualization_event(
-    mut octree_events: EventReader<ToggleOctreeVisualizationEvent>,
-    mut settings: ResMut<OctreeVisualizationSettings>,
-) {
-    octree_events.read().for_each(|_| {
-        settings.enabled = !settings.enabled;
-    });
-}
-
-pub fn handle_toggle_barycenter_gizmo_visibility_event(
-    mut barycenter_events: EventReader<ToggleBarycenterGizmoVisibilityEvent>,
-    mut settings: ResMut<BarycenterGizmoVisibility>,
-) {
-    barycenter_events.read().for_each(|_| {
-        settings.enabled = !settings.enabled;
-    });
+    }
 }
 
 pub fn handle_toggle_pause_simulation_event(
-    mut pause_events: EventReader<TogglePauseSimulationEvent>,
+    mut commands_reader: EventReader<SimulationCommand>,
     current_state: Res<State<AppState>>,
     mut next_state: ResMut<NextState<AppState>>,
     mut time: ResMut<Time<Physics>>,
 ) {
-    pause_events.read().for_each(|_| {
+    for command in commands_reader.read() {
+        if !matches!(command, SimulationCommand::TogglePause) {
+            continue;
+        }
         match current_state.get() {
             AppState::Running => {
                 next_state.set(AppState::Paused);
@@ -95,24 +88,26 @@ pub fn handle_toggle_pause_simulation_event(
                 next_state.set(AppState::Running);
                 time.unpause();
             }
-            _ => {} // ignore Loading state
         }
-    });
+    }
 }
 
 pub fn handle_take_screenshot_event(
-    mut screenshot_events: EventReader<TakeScreenshotEvent>,
+    mut commands_reader: EventReader<SimulationCommand>,
     mut screenshot_state: ResMut<ScreenshotState>,
-    mut ui_query: Query<&mut Visibility, With<crate::systems::ui::UIRoot>>,
+    mut ui_query: Query<&mut Visibility, With<crate::plugins::controls::UIRoot>>,
     mut hud_query: Query<
         &mut Visibility,
         (
             With<crate::plugins::diagnostics_hud::DiagnosticsHudRoot>,
-            Without<crate::systems::ui::UIRoot>,
+            Without<crate::plugins::controls::UIRoot>,
         ),
     >,
 ) {
-    screenshot_events.read().for_each(|_| {
+    for command in commands_reader.read() {
+        if !matches!(command, SimulationCommand::TakeScreenshot) {
+            continue;
+        }
         // Hide UI
         for mut visibility in &mut ui_query {
             *visibility = Visibility::Hidden;
@@ -126,18 +121,18 @@ pub fn handle_take_screenshot_event(
         // Set screenshot pending
         screenshot_state.pending = true;
         screenshot_state.frame_count = 0;
-    });
+    }
 }
 
 pub fn process_screenshot_capture(
     mut commands: Commands,
     mut screenshot_state: ResMut<ScreenshotState>,
-    mut ui_query: Query<&mut Visibility, With<crate::systems::ui::UIRoot>>,
+    mut ui_query: Query<&mut Visibility, With<crate::plugins::controls::UIRoot>>,
     mut hud_query: Query<
         &mut Visibility,
         (
             With<crate::plugins::diagnostics_hud::DiagnosticsHudRoot>,
-            Without<crate::systems::ui::UIRoot>,
+            Without<crate::plugins::controls::UIRoot>,
         ),
     >,
     config: Res<SimulationConfig>,

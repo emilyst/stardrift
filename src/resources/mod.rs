@@ -53,33 +53,6 @@ impl GravitationalOctree {
     }
 }
 
-#[derive(Resource, Default)]
-pub struct OctreeVisualizationSettings {
-    pub enabled: bool,
-    pub max_depth: Option<usize>, // None means show all levels
-}
-
-#[derive(Resource, Default)]
-pub struct BarycenterGizmoVisibility {
-    pub enabled: bool,
-}
-
-#[derive(Resource, Default)]
-pub struct LoadingProgress {
-    pub progress: f32, // 0.0 to 1.0
-    pub current_message: String,
-}
-
-#[derive(Resource)]
-pub struct BodySpawningProgress {
-    pub bodies_spawned: usize,
-    pub total_bodies: usize,
-    pub batch_size: usize,
-}
-
-#[derive(Resource, Deref, DerefMut)]
-pub struct LoadingTimer(pub Timer);
-
 #[cfg(test)]
 mod tests {
     use super::*;

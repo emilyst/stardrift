@@ -13,13 +13,15 @@ pub use rand::Rng;
 pub use crate::config::SimulationConfig;
 
 // Internal re-exports - States
-pub use crate::states::{AppState, LoadingState};
+pub use crate::states::AppState;
 
 // Internal re-exports - Resources (most commonly used)
 pub use crate::resources::{
-    Barycenter, BarycenterGizmoVisibility, BodyCount, GravitationalConstant, GravitationalOctree,
-    OctreeVisualizationSettings, SharedRng,
+    Barycenter, BodyCount, GravitationalConstant, GravitationalOctree, SharedRng,
 };
+
+// Internal re-exports - Visualization
+pub use crate::plugins::visualization::{BarycenterGizmoVisibility, OctreeVisualizationSettings};
 
 // Internal re-exports - Components
 pub use crate::components::BodyBundle;
@@ -28,9 +30,6 @@ pub use crate::components::BodyBundle;
 pub use crate::physics::octree::{Octree, OctreeBody};
 
 // Internal re-exports - Events
-pub use crate::events::{
-    RestartSimulationEvent, TakeScreenshotEvent, ToggleBarycenterGizmoVisibilityEvent,
-    ToggleOctreeVisualizationEvent, TogglePauseSimulationEvent, UpdateButtonTextEvent,
-};
+pub use crate::events::{SimulationCommand, UpdateButtonTextEvent};
 
 // Note: Utility functions are kept crate-private and not re-exported in prelude

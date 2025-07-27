@@ -1,23 +1,30 @@
+//! Camera plugin - Self-contained plugin pattern
+//!
+//! This plugin handles camera setup and positioning. While the camera positioning
+//! is calculated based on physics parameters (body count and distribution), the
+//! camera itself is conceptually separate from the physics simulation.
+
 use crate::config::SimulationConfig;
-use crate::resources::Barycenter;
-use crate::resources::BarycenterGizmoVisibility;
-use crate::resources::BodyCount;
+use crate::prelude::*;
 use crate::utils::math::min_sphere_radius_for_surface_distribution;
-use avian3d::math::Scalar;
-use bevy::color::palettes::css;
 use bevy::core_pipeline::bloom::Bloom;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::pbr::ClusterConfig;
-use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCamera;
 use bevy_panorbit_camera::TouchControls;
 use bevy_panorbit_camera::TrackpadBehavior;
 
-pub fn spawn_camera(
-    mut commands: Commands,
-    body_count: Res<BodyCount>,
-    config: Res<SimulationConfig>,
-) {
+/// Plugin that handles camera setup and control
+pub struct CameraPlugin;
+
+impl Plugin for CameraPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, spawn_camera);
+    }
+}
+
+/// Spawns the main camera with appropriate positioning based on simulation parameters
+fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>, config: Res<SimulationConfig>) {
     // TODO: calculate distance at which min sphere radius subtends camera frustum
     let body_distribution_sphere_radius = min_sphere_radius_for_surface_distribution(
         **body_count,
@@ -51,23 +58,4 @@ pub fn spawn_camera(
             ..default()
         },
     ));
-}
-
-pub fn draw_barycenter_gizmo(
-    mut gizmos: Gizmos,
-    body_count: Res<BodyCount>,
-    barycenter_gizmo_visibility: Res<BarycenterGizmoVisibility>,
-    barycenter: Res<Barycenter>,
-) {
-    if barycenter_gizmo_visibility.enabled {
-        if let Some(barycenter) = **barycenter {
-            if barycenter.is_finite() {
-                gizmos.cross(
-                    barycenter.as_vec3(),
-                    libm::cbrt(**body_count as Scalar * **body_count as Scalar / 3.0) as f32,
-                    css::WHITE,
-                );
-            }
-        }
-    }
 }

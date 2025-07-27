@@ -25,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Quit button and 'Q' key shortcut for application exit (non-WASM platforms only)
 
 ### Changed
+- **BREAKING**: Complete architectural transformation to pure self-contained plugin pattern
+  - Eliminated orchestration patterns in favor of event-driven communication
+  - All plugins now self-contained with internal systems and clear boundaries
+  - Removed entire `src/systems/` directory - all code migrated to plugins
+  - Plugin communication exclusively through `SimulationCommand` events
+  - Large plugins use internal submodules for organization (e.g., `simulation/physics.rs`)
+- Plugin architecture reorganization:
+  - `ControlsPlugin`: Complete input handling and UI structure (was `systems/ui.rs` + `systems/input.rs`)
+  - `SimulationPlugin`: Self-contained physics with submodules (was orchestration plugin)
+  - `CameraPlugin`: Camera setup and positioning (was `systems/camera.rs`)
+  - `VisualizationPlugin`: Debug rendering for octree and barycenter (was `systems/visualization.rs`)
+  - All feature-gated plugins remain self-contained (`DiagnosticsHudPlugin`, `TrailsPlugin`, `EmbeddedAssetsPlugin`)
+- Event system centralized in `src/events.rs` with `SimulationCommand` enum for inter-plugin communication
 - UI system includes UIRoot marker component for programmatic visibility control
 - Diagnostics HUD includes DiagnosticsHudRoot marker component
 - Font system switched from BerkeleyMono to Saira Semi-Condensed family
@@ -35,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI button system refactored to event-driven architecture
   - Text updates triggered by events with computed text
   - Code duplication eliminated through shared functions
-  - `impl_button_behavior!` macro reduces boilerplate
+  - CommandButton trait pattern for consistent button behavior
   - Improved extensibility for future button additions
 
 ### Fixed

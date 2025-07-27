@@ -254,8 +254,9 @@ customization.
 
 ## Project Structure
 
-The codebase is organized using a modular architecture designed for maintainability, scalability, and ease of use by AI
-agents. The structure follows Rust best practices and separates concerns clearly:
+The codebase uses a pure self-contained plugin architecture designed for maintainability, scalability, and clear
+separation of concerns. Each plugin owns all its functionality internally with event-driven communication between
+plugins:
 
 ```
 src/
@@ -263,29 +264,26 @@ src/
 ├── prelude.rs                    # Common imports and type aliases
 ├── config.rs                     # Configuration management system
 ├── states.rs                     # Application state management
+├── events.rs                     # Centralized event definitions for inter-plugin communication
 ├── components/                   # Bevy ECS components (data containers)
 │   ├── mod.rs
 │   ├── body.rs                   # Celestial body component
 │   └── trail.rs                  # Trail component for visual effects
-├── plugins/                      # Bevy plugins for modular functionality
+├── plugins/                      # Self-contained Bevy plugins
 │   ├── mod.rs
-│   ├── simulation.rs             # Main simulation plugin orchestrating all systems
+│   ├── simulation/               # Core simulation plugin with submodules
+│   │   ├── mod.rs                # Plugin definition and system coordination
+│   │   ├── physics.rs            # Physics calculations and body management
+│   │   └── actions.rs            # Simulation control and action handling
+│   ├── controls.rs               # Complete input handling and UI structure
+│   ├── camera.rs                 # Camera setup and positioning logic
+│   ├── visualization.rs          # Debug rendering (octree wireframe, barycenter gizmo)
 │   ├── simulation_diagnostics.rs # Simulation metrics and diagnostics plugin
-│   ├── diagnostics_hud.rs        # Real-time HUD display plugin
+│   ├── diagnostics_hud.rs        # Real-time HUD display plugin (feature-gated)
 │   ├── embedded_assets.rs        # Embedded asset management plugin
-│   └── trails.rs                 # Trail rendering plugin (when trails feature enabled)
+│   └── trails.rs                 # Trail rendering plugin (feature-gated)
 ├── resources/                    # Bevy ECS resources (global state)
 │   └── mod.rs                    # Shared resources like RNG, constants, and octree
-├── systems/                      # Bevy ECS systems (game logic)
-│   ├── mod.rs
-│   ├── physics.rs                # Physics simulation and body management
-│   ├── camera.rs                 # Camera controls and barycenter following
-│   ├── input.rs                  # Keyboard and interaction handling
-│   ├── ui.rs                     # User interface systems
-│   ├── visualization.rs          # Octree and visual debugging systems
-│   ├── loading.rs                # Asset and resource loading systems
-│   ├── simulation_actions.rs     # Simulation control and action handling
-│   └── trails.rs                 # Trail update and management systems
 ├── utils/                        # Utility modules
 │   ├── mod.rs
 │   ├── math.rs                   # Mathematical functions and algorithms
@@ -298,22 +296,28 @@ src/
 
 ### Design Principles
 
-- **Separation of Concerns**: Each module has a single, well-defined responsibility
-- **Plugin Architecture**: Functionality is organized into composable Bevy plugins
+- **Pure Plugin Architecture**: Each plugin is completely self-contained with internal systems and clear boundaries
+- **Event-Driven Communication**: Plugins communicate exclusively through `SimulationCommand` events
+- **Zero Orchestration**: No external coordination or management of plugin internals
+- **Scalable Organization**: Large plugins use internal submodules for code organization
 - **Resource Management**: Global state is managed through Bevy's resource system
-- **System Organization**: Game logic is separated into focused, testable systems
 - **Configuration-Driven**: Centralized configuration system for runtime customization
-- **Structured organization**: Module boundaries and consistent naming for navigation
+- **Clear Feature Boundaries**: Plugin boundaries enforce architectural constraints
 
 ### Key Modules
 
-- **`plugins/simulation.rs`**: Central orchestrator that coordinates all simulation systems
+- **`plugins/simulation/`**: Self-contained physics simulation with internal submodules
+  - `mod.rs`: Plugin definition and system coordination
+  - `physics.rs`: Core physics calculations including octree rebuilding and force application
+  - `actions.rs`: Simulation control and action handlers (restart, pause, screenshot)
+- **`plugins/controls.rs`**: Complete input handling and UI structure (keyboard, mouse, buttons)
+- **`plugins/camera.rs`**: Camera setup and positioning logic
+- **`plugins/visualization.rs`**: Debug rendering for octree wireframe and barycenter gizmo
 - **`plugins/simulation_diagnostics.rs`**: Simulation metrics and performance diagnostics
-- **`plugins/diagnostics_hud.rs`**: Real-time HUD display for simulation information
+- **`plugins/diagnostics_hud.rs`**: Real-time HUD display for simulation information (feature-gated)
+- **`plugins/trails.rs`**: Visual trail rendering system (feature-gated)
 - **`plugins/embedded_assets.rs`**: Embedded asset management for web deployment
-- **`systems/physics.rs`**: Core physics calculations including octree rebuilding and force application
-- **`systems/loading.rs`**: Asset and resource loading management
-- **`systems/simulation_actions.rs`**: Simulation control and user action handling
+- **`events.rs`**: Centralized event definitions with `SimulationCommand` enum for inter-plugin communication
 - **`resources/mod.rs`**: Shared state including RNG, gravitational constants, and octree data
 - **`utils/math.rs`**: Mathematical utilities for sphere distribution and random vector generation
 - **`config.rs`**: Centralized configuration management with serialization support
