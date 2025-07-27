@@ -31,6 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - All benchmarks now report throughput metrics for easier comparison
     - Pre-generate test data outside benchmark loops to reduce measurement noise
 - Benchmark configuration profiles in `configs/benchmark_profiles/` directory
+- Attribution plugin displaying "Stardrift v{version} ({date})" in bottom-right corner
+    - Shows application name and version from Cargo.toml
+    - Includes build date captured at compile time via build script
+    - Remains visible during screenshots for proper attribution
+    - Uses 10px Regular font with 30% opacity for subtlety
+    - Self-contained plugin following established architecture patterns
+- Build script (`build.rs`) to capture compile-time date using chrono crate
+- Extended `EmbeddedAssetsPlugin` to include SairaSemiCondensed-Regular font
 
 ### Changed
 
@@ -74,7 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- N/A
+- Attribution text that was mistakenly added to controls UI
+    - Replaced with proper version attribution in bottom-right corner
 
 ### Security
 

@@ -11,6 +11,8 @@ use bevy::prelude::*;
 
 static SAIRA_SEMI_CONDENSED_LIGHT: &[u8] =
     include_bytes!("../../assets/fonts/SairaSemiCondensed-Light.ttf");
+static SAIRA_SEMI_CONDENSED_REGULAR: &[u8] =
+    include_bytes!("../../assets/fonts/SairaSemiCondensed-Regular.ttf");
 static SAIRA_SEMI_CONDENSED_BOLD: &[u8] =
     include_bytes!("../../assets/fonts/SairaSemiCondensed-Bold.ttf");
 
@@ -24,6 +26,12 @@ impl EmbeddedAssetsPlugin {
             "fonts/SairaSemiCondensed-Light".into(),
             "fonts/SairaSemiCondensed-Light".as_ref(),
             SAIRA_SEMI_CONDENSED_LIGHT,
+        );
+
+        embedded_asset_registry.insert_asset(
+            "fonts/SairaSemiCondensed-Regular".into(),
+            "fonts/SairaSemiCondensed-Regular".as_ref(),
+            SAIRA_SEMI_CONDENSED_REGULAR,
         );
 
         embedded_asset_registry.insert_asset(

@@ -8,7 +8,7 @@ use crate::prelude::*;
 use bevy::asset::{AssetPath, io::AssetSourceId};
 
 const BUTTON_BORDER_RADIUS_PX: f32 = 5.0;
-const BUTTON_FONT_SIZE_PX: f32 = 14.0;
+const BUTTON_FONT_SIZE_PX: f32 = 12.0;
 const BUTTON_GAP_PX: f32 = 4.0;
 const BUTTON_MARGIN_PX: f32 = 4.0;
 const BUTTON_PADDING_PX: f32 = 4.0;
@@ -227,11 +227,6 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     let light_font = asset_server.load(light_font_asset_path);
     let light_text_font = TextFont::from_font(light_font).with_font_size(BUTTON_FONT_SIZE_PX);
 
-    let regular_font_asset_path =
-        AssetPath::parse("fonts/SairaSemiCondensed-Regular").with_source(embedded_asset_source);
-    let regular_font = asset_server.load(regular_font_asset_path);
-    let regular_text_font = TextFont::from_font(regular_font).with_font_size(10.0);
-
     commands
         .spawn((
             Node {
@@ -311,18 +306,6 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         ));
                     });
             }
-
-            // Attribution text at the bottom
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    bottom: Val::Px(-22.0),
-                    ..default()
-                },
-                Text::new("stardrift // staropolis"),
-                regular_text_font,
-                TextColor(Color::srgba(1.0, 1.0, 1.0, 0.3)),
-            ));
         });
 }
 

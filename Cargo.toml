@@ -35,6 +35,9 @@ opt-level = "s"
 [profile.bench]
 inherits = "release"
 
+[build-dependencies]
+chrono = "0.4"
+
 [dependencies]
 bevy_panorbit_camera = "0.27.0"
 chrono = "0.4"

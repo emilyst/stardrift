@@ -17,8 +17,9 @@ mod test_utils;
 #[cfg(feature = "trails")]
 use crate::plugins::trails::TrailsPlugin;
 use crate::plugins::{
-    camera::CameraPlugin, controls::ControlsPlugin, embedded_assets::EmbeddedAssetsPlugin,
-    simulation::SimulationPlugin, visualization::VisualizationPlugin,
+    attribution::AttributionPlugin, camera::CameraPlugin, controls::ControlsPlugin,
+    embedded_assets::EmbeddedAssetsPlugin, simulation::SimulationPlugin,
+    visualization::VisualizationPlugin,
 };
 #[cfg(feature = "diagnostics")]
 use crate::plugins::{
@@ -80,6 +81,7 @@ fn main() {
         CameraPlugin,
         ControlsPlugin,
         VisualizationPlugin,
+        AttributionPlugin,
         #[cfg(feature = "trails")]
         TrailsPlugin,
     ));
