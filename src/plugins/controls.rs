@@ -12,7 +12,7 @@ const BUTTON_FONT_SIZE_PX: f32 = 12.0;
 const BUTTON_GAP_PX: f32 = 4.0;
 const BUTTON_MARGIN_PX: f32 = 4.0;
 const BUTTON_PADDING_PX: f32 = 4.0;
-const BUTTON_WIDTH_PX: f32 = 150.0;
+const BUTTON_WIDTH_PX: f32 = 128.0;
 
 const BUTTON_COLOR_NORMAL: Color = Color::srgba(1.0, 1.0, 1.0, 0.01);
 const BUTTON_COLOR_HOVERED: Color = Color::srgba(1.0, 1.0, 1.0, 0.1);
