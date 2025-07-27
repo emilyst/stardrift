@@ -83,7 +83,7 @@ default-features = false
 features = ["3d", "enhanced-determinism", "f64", "parallel", "parry-f64"]
 
 [dev-dependencies]
-criterion = { version = "0.6.0", features = ["csv_output", "html_reports"] }
+criterion = { version = "0.7.0", features = ["csv_output", "html_reports"] }
 
 [[bin]]
 name = "stardrift"
