@@ -346,7 +346,14 @@ mod tests {
         let path_str = binding.to_string_lossy();
 
         assert!(path_str.ends_with("config.toml"));
-        assert!(path_str.contains("Stardrift"));
+        // On different platforms, the directory name might be lowercased or modified
+        // Check that it contains either "Stardrift" or "stardrift"
+        let path_lower = path_str.to_lowercase();
+        assert!(
+            path_lower.contains("stardrift"),
+            "Config path should contain 'stardrift' (case-insensitive): {}",
+            path_str
+        );
     }
 
     #[test]
