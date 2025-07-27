@@ -387,7 +387,7 @@ fn update_button_text<T: Component>(
 }
 
 /// Trait for buttons that emit SimulationCommand
-pub trait CommandButton: Component {
+pub trait CommandButton {
     fn get_command() -> SimulationCommand;
 }
 
