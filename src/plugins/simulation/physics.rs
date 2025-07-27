@@ -97,7 +97,7 @@ pub fn counteract_barycentric_drift(
         return;
     }
 
-    bodies.iter_mut().for_each(|(mut transform, _)| {
+    bodies.par_iter_mut().for_each(|(mut transform, _)| {
         transform.translation += -barycentric_drift.as_vec3();
     });
 }
@@ -108,6 +108,9 @@ mod tests {
     use bevy::ecs::system::SystemState;
 
     fn create_test_world() -> World {
+        // Initialize task pools for parallel iteration
+        bevy::tasks::ComputeTaskPool::get_or_init(|| bevy::tasks::TaskPool::new());
+
         let mut world = World::new();
         world.insert_resource(Barycenter::default());
         world

@@ -10,7 +10,7 @@ pub fn create_test_app() -> App {
 
     // Add minimal plugins needed for testing
     app.add_plugins((
-        MinimalPlugins,
+        MinimalPlugins.set(TaskPoolPlugin::default()),
         bevy::asset::AssetPlugin::default(),
         bevy::input::InputPlugin,
         bevy::state::app::StatesPlugin,
