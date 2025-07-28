@@ -15,7 +15,7 @@ Stardrift is an N-body gravity simulation toy that provides a real-time visualiz
 """
 copyright = "Copyright (c) 2025 Emily Strickland"
 # icon = ["assets/icon/32x32.png", "assets/icon/128x128.png", "assets/icon/128x128@2x.png"]
-resources = ["assets", "configs/benchmark_profiles"]
+#resources = ["assets", "configs/benchmark_profiles"]
 
 [profile.dev]
 debug = 2
