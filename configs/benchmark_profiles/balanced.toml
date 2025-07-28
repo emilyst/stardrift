@@ -18,13 +18,15 @@ collision_restitution = 0.8
 collision_friction = 0.1
 
 [physics.initial_velocity]
-type = "OrbitWithPerturbation"
-scale = 1.0
-perturbation = 0.1
+enabled = true
+min_speed = 5.0
+max_speed = 20.0
+velocity_mode = "Random"
+tangential_bias = 0.7
 
 [rendering]
-camera_distance_multiplier = 3.0
-camera_look_at_barycenter = true
-touch_controls_enabled = true
-touch_sensitivity = 1.0
-star_point_size_multiplier = 1.5
+min_temperature = 3000.0
+max_temperature = 15000.0
+bloom_intensity = 100.0             # Standard bloom
+saturation_intensity = 3.0          # Standard saturation
+camera_radius_multiplier = 4.0      # Default viewing distance

@@ -143,50 +143,127 @@ miniserve out -p 8000 --index index.html
 
 ### Configuration
 
-The simulation features a comprehensive configuration system that allows customization of physics, rendering, and UI
-parameters. Configuration is managed through TOML files and supports XDG config directory standards.
+The simulation uses a TOML-based configuration system with support for XDG config directories. Below is a complete
+reference of all available configuration options.
 
-#### Configuration Categories
+#### Configuration File Format
 
-**Physics Configuration:**
+```toml
+version = 5  # Configuration format version (required)
 
-- **Body count**: Number of bodies in the simulation (default: 100)
-- **Gravitational constant**: Strength of gravitational interactions (default: 1e2)
-- **Octree theta**: Barnes-Hut approximation parameter for accuracy/performance balance (default: 0.5)
-- **Octree leaf threshold**: Maximum bodies per octree leaf node before subdivision (default: 8)
-- **Body distribution**: Sphere radius multiplier (default: 100.0) and minimum distance parameters (default: 0.001)
-- **Body size**: Minimum and maximum body radius settings (default: 1.0-2.0)
-- **Force calculation**: Minimum distance (default: 2.0) and maximum force limits (default: 1e5)
-- **Collision settings**: Restitution coefficient (default: 0.8) and friction coefficient (default: 0.5)
-- **Random seed**: Optional seed for deterministic body generation (default: None - random each time)
-- **Initial velocity**: Bodies spawn with configurable initial velocities
-    - Multiple velocity modes: Random (default), Orbital, Tangential, Radial
-    - Configurable speed range (default: 5.0-20.0)
-    - Tangential bias for mixed orbital/random motion (default: 0.7)
+[physics]
+# Physics simulation parameters
 
-**Rendering Configuration:**
+[physics.initial_velocity]
+# Initial velocity settings for bodies
 
-- **Temperature range**: Min/max temperature for stellar color mapping (default: 2000-15000K)
-- **Bloom intensity**: Visual bloom effect strength (default: 100.0)
-- **Saturation intensity**: Color saturation level (default: 3.0)
-- **Camera settings**: Radius multiplier for camera positioning (default: 2.0)
+[rendering]
+# Visual rendering settings
 
-**Trail Configuration (when trails feature is enabled):**
+[trails]  # Only available when trails feature is enabled
+# Trail visualization settings
 
-- **Trail length**: Time-based trail duration in seconds (default: 10.0)
-- **Update frequency**: Trail point creation rate (default: 10 FPS)
-- **Visual appearance**: Base width, relative sizing to body, bloom factor
-- **Fading effects**: Enable/disable fading, fade curves, alpha transparency range
-- **Width tapering**: Enable/disable tapering, taper curves, minimum width ratio
-- **Blending mode**: Additive or standard blending for trail rendering
+[screenshots]
+# Screenshot capture settings
+```
 
-**Screenshot Configuration:**
+#### Complete Configuration Reference
 
-- **Directory**: Custom save location for screenshots (default: current directory)
-- **Filename prefix**: Customizable filename prefix (default: "stardrift_screenshot")
-- **Timestamp**: Include timestamp in filenames (default: true)
-- **Notifications**: Log screenshot captures (default: true)
-- **UI hiding delay**: Frame delay before capture to ensure UI is hidden (default: 2)
+##### Root Settings
+
+| Field     | Type  | Default | Description                                                              |
+|-----------|-------|---------|--------------------------------------------------------------------------|
+| `version` | `u32` | `5`     | Configuration format version. Configs with outdated versions are ignored |
+
+##### Physics Configuration (`[physics]`)
+
+| Field                                        | Type          | Default    | Description                                                            |
+|----------------------------------------------|---------------|------------|------------------------------------------------------------------------|
+| `gravitational_constant`                     | `f64`         | `200.0`    | Strength of gravitational attraction between bodies                    |
+| `body_count`                                 | `usize`       | `30`       | Number of celestial bodies to simulate                                 |
+| `octree_theta`                               | `f64`         | `0.5`      | Barnes-Hut accuracy parameter (0.0-2.0). Lower = more accurate, slower |
+| `octree_leaf_threshold`                      | `usize`       | `2`        | Maximum bodies per octree leaf before subdivision                      |
+| `body_distribution_sphere_radius_multiplier` | `f64`         | `100.0`    | Multiplier for initial body distribution radius                        |
+| `body_distribution_min_distance`             | `f64`         | `0.001`    | Minimum distance between bodies at spawn                               |
+| `min_body_radius`                            | `f64`         | `1.0`      | Minimum radius for generated bodies                                    |
+| `max_body_radius`                            | `f64`         | `2.0`      | Maximum radius for generated bodies                                    |
+| `force_calculation_min_distance`             | `f64`         | `2.0`      | Minimum distance for force calculations (prevents singularities)       |
+| `force_calculation_max_force`                | `f64`         | `100000.0` | Maximum force magnitude to prevent instabilities                       |
+| `initial_seed`                               | `Option<u64>` | `None`     | Random seed for deterministic generation. None = random                |
+| `collision_restitution`                      | `f64`         | `0.8`      | Bounciness of collisions (0.0 = inelastic, 1.0 = perfectly elastic)    |
+| `collision_friction`                         | `f64`         | `0.5`      | Friction coefficient for collisions                                    |
+
+##### Initial Velocity Configuration (`[physics.initial_velocity]`)
+
+| Field             | Type     | Default    | Description                                                    |
+|-------------------|----------|------------|----------------------------------------------------------------|
+| `enabled`         | `bool`   | `true`     | Whether bodies spawn with initial velocities                   |
+| `min_speed`       | `f64`    | `5.0`      | Minimum initial speed                                          |
+| `max_speed`       | `f64`    | `20.0`     | Maximum initial speed                                          |
+| `velocity_mode`   | `string` | `"Random"` | Velocity distribution mode (see below)                         |
+| `tangential_bias` | `f64`    | `0.7`      | Bias toward tangential motion (0.0-1.0) when using Random mode |
+
+**Velocity Modes:**
+
+- `"Random"` - Random velocity vectors with optional tangential bias
+- `"Orbital"` - Circular orbital velocities around barycenter
+- `"Tangential"` - Pure tangential motion perpendicular to radius
+- `"Radial"` - Pure radial motion toward/away from barycenter
+
+##### Rendering Configuration (`[rendering]`)
+
+| Field                      | Type  | Default   | Description                                           |
+|----------------------------|-------|-----------|-------------------------------------------------------|
+| `min_temperature`          | `f64` | `3000.0`  | Minimum stellar temperature in Kelvin (affects color) |
+| `max_temperature`          | `f64` | `15000.0` | Maximum stellar temperature in Kelvin (affects color) |
+| `bloom_intensity`          | `f64` | `100.0`   | Intensity of bloom visual effect                      |
+| `saturation_intensity`     | `f64` | `3.0`     | Color saturation multiplier                           |
+| `camera_radius_multiplier` | `f64` | `4.0`     | Camera distance multiplier relative to system size    |
+
+##### Trail Configuration (`[trails]`) - Feature-gated
+
+Only available when compiled with the `trails` feature.
+
+| Field                     | Type     | Default         | Description                                     |
+|---------------------------|----------|-----------------|-------------------------------------------------|
+| `trail_length_seconds`    | `f64`    | `60.0`          | How long trails persist in seconds              |
+| `update_interval_seconds` | `f64`    | `0.03333`       | How often to add trail points (default: 30 FPS) |
+| `max_points_per_trail`    | `usize`  | `10000`         | Maximum trail points per body                   |
+| `base_width`              | `f64`    | `1.0`           | Base trail width                                |
+| `width_relative_to_body`  | `bool`   | `false`         | Scale trail width relative to body size         |
+| `body_size_multiplier`    | `f64`    | `2.0`           | Trail width multiplier when relative to body    |
+| `enable_fading`           | `bool`   | `true`          | Enable trail fade-out effect                    |
+| `fade_curve`              | `string` | `"Exponential"` | Fade curve type (see below)                     |
+| `min_alpha`               | `f64`    | `0.0`           | Minimum trail transparency (0.0-1.0)            |
+| `max_alpha`               | `f64`    | `0.3333`        | Maximum trail transparency (0.0-1.0)            |
+| `enable_tapering`         | `bool`   | `true`          | Enable trail width tapering                     |
+| `taper_curve`             | `string` | `"Linear"`      | Taper curve type (see below)                    |
+| `min_width_ratio`         | `f64`    | `0.2`           | Minimum width ratio at trail end                |
+| `bloom_factor`            | `f64`    | `1.0`           | Trail bloom intensity multiplier                |
+| `use_additive_blending`   | `bool`   | `true`          | Use additive blending for trails                |
+
+**Fade Curves:**
+
+- `"Linear"` - Linear fade from head to tail
+- `"Exponential"` - Exponential fade (aggressive)
+- `"SmoothStep"` - Smooth interpolation curve
+- `"EaseInOut"` - Ease in and out curve
+
+**Taper Curves:**
+
+- `"Linear"` - Linear width reduction
+- `"Exponential"` - Exponential width reduction
+- `"SmoothStep"` - Smooth width transition
+
+##### Screenshot Configuration (`[screenshots]`)
+
+| Field                  | Type             | Default                  | Description                                          |
+|------------------------|------------------|--------------------------|------------------------------------------------------|
+| `directory`            | `Option<String>` | `None`                   | Save directory. None = current directory             |
+| `filename_prefix`      | `String`         | `"stardrift_screenshot"` | Filename prefix for screenshots                      |
+| `include_timestamp`    | `bool`           | `true`                   | Add timestamp to filenames                           |
+| `notification_enabled` | `bool`           | `true`                   | Log screenshot captures                              |
+| `hide_ui_frame_delay`  | `u32`            | `2`                      | Frames to wait before capture (ensures UI is hidden) |
 
 #### Configuration File Location
 
@@ -196,8 +273,69 @@ The configuration is automatically loaded from the platform-specific config dire
 - **macOS**: `~/Library/Application Support/Stardrift/config.toml`
 - **Windows**: `%APPDATA%\Stardrift\config.toml`
 
-If no configuration file exists, the application uses default values and can generate a configuration file for
-customization.
+If no configuration file exists, the application uses default values.
+
+#### Example Configuration
+
+Here's a complete example configuration file with all default values:
+
+```toml
+version = 5
+
+[physics]
+gravitational_constant = 200.0
+body_count = 30
+octree_theta = 0.5
+octree_leaf_threshold = 2
+body_distribution_sphere_radius_multiplier = 100.0
+body_distribution_min_distance = 0.001
+min_body_radius = 1.0
+max_body_radius = 2.0
+force_calculation_min_distance = 2.0
+force_calculation_max_force = 100000.0
+# initial_seed = 12345  # Uncomment to use a specific seed for deterministic generation
+collision_restitution = 0.8
+collision_friction = 0.5
+
+[physics.initial_velocity]
+enabled = true
+min_speed = 5.0
+max_speed = 20.0
+velocity_mode = "Random"  # Options: "Random", "Orbital", "Tangential", "Radial"
+tangential_bias = 0.7
+
+[rendering]
+min_temperature = 3000.0
+max_temperature = 15000.0
+bloom_intensity = 100.0
+saturation_intensity = 3.0
+camera_radius_multiplier = 4.0
+
+# Trails section only works when compiled with --features trails
+[trails]
+trail_length_seconds = 60.0
+update_interval_seconds = 0.03333333333333333
+max_points_per_trail = 10000
+base_width = 1.0
+width_relative_to_body = false
+body_size_multiplier = 2.0
+enable_fading = true
+fade_curve = "Exponential"  # Options: "Linear", "Exponential", "SmoothStep", "EaseInOut"
+min_alpha = 0.0
+max_alpha = 0.3333
+enable_tapering = true
+taper_curve = "Linear"  # Options: "Linear", "Exponential", "SmoothStep"
+min_width_ratio = 0.2
+bloom_factor = 1.0
+use_additive_blending = true
+
+[screenshots]
+# directory = "screenshots"  # Uncomment to set a custom screenshot directory
+filename_prefix = "stardrift_screenshot"
+include_timestamp = true
+notification_enabled = true
+hide_ui_frame_delay = 2
+```
 
 ## Technical Details
 
@@ -388,7 +526,8 @@ the [LICENSE](LICENSE) file for details.
 
 ### Build Provenance Attestation
 
-All release binaries include cryptographic attestations that prove they were built by the official GitHub Actions workflow. This provides supply chain security and ensures binaries haven't been tampered with.
+All release binaries include cryptographic attestations that prove they were built by the official GitHub Actions
+workflow. This provides supply chain security and ensures binaries haven't been tampered with.
 
 To verify a downloaded binary:
 
@@ -403,15 +542,18 @@ gh attestation verify stardrift-x86_64-unknown-linux-musl.tar.gz \
 # The command will confirm the binary was built from the official repository
 ```
 
-Attestations use [Sigstore](https://sigstore.dev/) and follow the [SLSA](https://slsa.dev/) standard for software supply chain security.
+Attestations use [Sigstore](https://sigstore.dev/) and follow the [SLSA](https://slsa.dev/) standard for software supply
+chain security.
 
 ## Release Process
 
-This project uses [cargo-release](https://github.com/crate-ci/cargo-release) for automated release management following semantic versioning principles.
+This project uses [cargo-release](https://github.com/crate-ci/cargo-release) for automated release management following
+semantic versioning principles.
 
 ### Version Numbering
 
 Following Rust ecosystem conventions:
+
 - **0.0.x** - Early experimental releases with frequent breaking changes
 - **0.x.y** - Pre-1.0 development phase where the API may still evolve
 - **1.0.0** - First stable release with a commitment to API stability
@@ -448,6 +590,7 @@ Following Rust ecosystem conventions:
 ### What Happens During Release
 
 The `cargo-release` tool automatically:
+
 1. Updates the version in `Cargo.toml`
 2. Updates `CHANGELOG.md` with the new version and current date
 3. Creates a signed git commit with message "chore: release vX.Y.Z"
@@ -457,6 +600,7 @@ The `cargo-release` tool automatically:
 ### Release Configuration
 
 Release behavior is configured in `Cargo.toml` under `[package.metadata.release]`:
+
 - Commits and tags are signed if GPG is configured
 - Publishing to crates.io is disabled (private project)
 - Releases are only allowed from the `main` branch
