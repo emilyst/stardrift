@@ -98,7 +98,7 @@ name = "stardrift"
 path = "src/main.rs"
 
 [features]
-default = ["graphics"]
+default = ["graphics", "trails"]
 graphics = []
 diagnostics = []
 benchmarks = []

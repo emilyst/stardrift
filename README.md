@@ -26,7 +26,7 @@ interactive camera controls.
     - Configurable save directory and filename format
     - Timestamp-based filenames for chronological organization
     - PNG format with full window resolution
-- **Dynamic trails**: High-performance fading trails for celestial bodies (optional feature)
+- **Dynamic trails**: High-performance fading trails for celestial bodies
     - Time-based trail length management
     - Multiple fade curves (Linear, Exponential, SmoothStep, EaseInOut)
     - Configurable width with tapering options
@@ -80,7 +80,7 @@ cargo run --release --all-features
 
 # Build with specific features
 cargo run --features dev        # Development features only
-cargo run --features trails      # Enable trail visualization
+cargo run --no-default-features --features graphics  # Run without trails
 ```
 
 ### WebAssembly Build
@@ -160,7 +160,7 @@ version = 5  # Configuration format version (required)
 [rendering]
 # Visual rendering settings
 
-[trails]  # Only available when trails feature is enabled
+[trails]
 # Trail visualization settings
 
 [screenshots]
@@ -220,9 +220,9 @@ version = 5  # Configuration format version (required)
 | `saturation_intensity`     | `f64` | `3.0`     | Color saturation multiplier                           |
 | `camera_radius_multiplier` | `f64` | `4.0`     | Camera distance multiplier relative to system size    |
 
-##### Trail Configuration (`[trails]`) - Feature-gated
+##### Trail Configuration (`[trails]`)
 
-Only available when compiled with the `trails` feature.
+Trail visualization configuration options.
 
 | Field                     | Type     | Default         | Description                                     |
 |---------------------------|----------|-----------------|-------------------------------------------------|
@@ -311,7 +311,6 @@ bloom_intensity = 100.0
 saturation_intensity = 3.0
 camera_radius_multiplier = 4.0
 
-# Trails section only works when compiled with --features trails
 [trails]
 trail_length_seconds = 60.0
 update_interval_seconds = 0.03333333333333333
@@ -415,7 +414,7 @@ src/
 │   ├── simulation_diagnostics.rs # Simulation metrics and diagnostics plugin
 │   ├── diagnostics_hud.rs        # Real-time HUD display plugin (feature-gated)
 │   ├── embedded_assets.rs        # Embedded asset management plugin
-│   ├── trails.rs                 # Trail rendering plugin with Trail component (feature-gated)
+│   ├── trails.rs                 # Trail rendering plugin with Trail component
 │   └── attribution.rs            # Version attribution display plugin
 ├── resources/                    # Bevy ECS resources (global state)
 │   └── mod.rs                    # Shared resources like RNG, constants, and octree
@@ -451,7 +450,7 @@ src/
 - **`plugins/visualization.rs`**: Debug rendering for octree wireframe and barycenter gizmo
 - **`plugins/simulation_diagnostics.rs`**: Simulation metrics and performance diagnostics
 - **`plugins/diagnostics_hud.rs`**: Real-time HUD display for simulation information (feature-gated)
-- **`plugins/trails.rs`**: Visual trail rendering system (feature-gated)
+- **`plugins/trails.rs`**: Visual trail rendering system
 - **`plugins/embedded_assets.rs`**: Embedded asset management for web deployment
 - **`events.rs`**: Centralized event definitions with `SimulationCommand` enum for inter-plugin communication
 - **`resources/mod.rs`**: Shared state including RNG, gravitational constants, and octree data
@@ -490,7 +489,7 @@ Development features include:
 Combine features as needed:
 
 ```bash
-cargo run --features "dev trails"  # Development with trails
+cargo run --features dev           # Development features
 cargo run --all-features            # All features enabled
 ```
 

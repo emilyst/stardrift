@@ -7,14 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Made trails visualization a default feature
+    - Trail effects are now included in standard builds without requiring feature flags
+    - Users can still opt out with `--no-default-features --features graphics`
+
 ## [0.0.5] - 2025-07-28
 
 ### Changed
 
 - Replaced SairaSemiCondensed fonts with Saira fonts across the UI for improved readability
-  - Updated controls UI, diagnostics HUD, and attribution text
-  - Simplified font variants from 9 to 3 (Regular, Light, Bold)
-  - Reduced total font file size in embedded assets
+    - Updated controls UI, diagnostics HUD, and attribution text
+    - Simplified font variants from 9 to 3 (Regular, Light, Bold)
+    - Reduced total font file size in embedded assets
 
 ## [0.0.4] - 2025-07-28
 
@@ -23,18 +29,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Native OS installers via cargo-bundle integration
-  - macOS: DMG disk images with proper .app bundles
-  - Windows: MSI installers for all architectures
-  - Linux: DEB packages for Debian/Ubuntu systems
+    - macOS: DMG disk images with proper .app bundles
+    - Windows: MSI installers for all architectures
+    - Linux: DEB packages for Debian/Ubuntu systems
 - ARM64 support for Linux and Windows builds using GitHub's native ARM runners
 - Bundle metadata in Cargo.toml for application identity and descriptions
 
 ### Changed
 
 - Consolidated distribution profile into release profile for simplification
-  - Moved all optimizations (LTO, single codegen unit, stripping) to release profile
-  - Removed separate distribution profile to work better with cargo-bundle
-  - Updated all workflows to use standard --release flag
+    - Moved all optimizations (LTO, single codegen unit, stripping) to release profile
+    - Removed separate distribution profile to work better with cargo-bundle
+    - Updated all workflows to use standard --release flag
 - Enhanced release workflow to generate both installers and portable binaries
 - Fixed sha256 checksum generation for macOS builds (using shasum instead of sha256sum)
 
@@ -174,8 +180,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Platform-specific configuration paths (XDG compliant)
 
 [Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.5...HEAD
+
 [0.0.5]: https://github.com/emilyst/stardrift/compare/v0.0.4...v0.0.5
+
 [0.0.4]: https://github.com/emilyst/stardrift/compare/v0.0.3...v0.0.4
+
 [0.0.3]: https://github.com/emilyst/stardrift/compare/v0.0.2...v0.0.3
+
 [0.0.2]: https://github.com/emilyst/stardrift/compare/v0.0.1...v0.0.2
+
 [0.0.1]: https://github.com/emilyst/stardrift/releases/tag/v0.0.1
