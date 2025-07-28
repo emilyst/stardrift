@@ -35,16 +35,14 @@ jobs:
           - name: Linux-x86_64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            use_cross: false
           - name: Linux-aarch64
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            use_cross: true
           - name: Windows-x86_64
             os: windows-latest
             target: x86_64-pc-windows-msvc
           - name: Windows-aarch64
-            os: windows-latest
+            os: windows-11-arm
             target: aarch64-pc-windows-msvc
           - name: macOS-x86_64
             os: macos-13
@@ -70,19 +68,9 @@ jobs:
         with:
           key: ${{ matrix.platform.target }}
 
-      - name: Install cross
-        if: matrix.platform.use_cross
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cross
-
       - name: Build binary
         run: |
-          if [[ "${{ matrix.platform.use_cross }}" == "true" ]]; then
-            cross build --profile distribution --target ${{ matrix.platform.target }} --all-features
-          else
-            cargo build --profile distribution --target ${{ matrix.platform.target }} --all-features
-          fi
+          cargo build --profile distribution --target ${{ matrix.platform.target }} --all-features
         shell: bash
 
       - name: Package binary (Unix)
