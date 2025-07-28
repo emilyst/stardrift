@@ -68,15 +68,40 @@ jobs:
         with:
           key: ${{ matrix.platform.target }}
 
+      - name: Install cargo-bundle
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-bundle
+
       - name: Build binary
         run: |
-          cargo build --profile distribution --target ${{ matrix.platform.target }} --all-features
+          cargo build --release --target ${{ matrix.platform.target }} --all-features
         shell: bash
+
+      - name: Create bundle (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cargo bundle --release --target ${{ matrix.platform.target }}
+          # Create DMG from app bundle
+          hdiutil create -volname "Stardrift" -srcfolder target/${{ matrix.platform.target }}/release/bundle/osx/Stardrift.app -ov -format UDZO stardrift-${{ matrix.platform.target }}.dmg
+
+      - name: Create bundle (Windows MSI)
+        if: runner.os == 'Windows'
+        run: |
+          cargo bundle --release --target ${{ matrix.platform.target }} --format msi
+          Move-Item target\${{ matrix.platform.target }}\release\bundle\msi\*.msi stardrift-${{ matrix.platform.target }}.msi
+        shell: pwsh
+
+      - name: Create bundle (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cargo bundle --release --target ${{ matrix.platform.target }} --format deb
+          cp target/${{ matrix.platform.target }}/release/bundle/deb/*.deb stardrift-${{ matrix.platform.target }}.deb
 
       - name: Package binary (Unix)
         if: runner.os != 'Windows'
         run: |
-          cd target/${{ matrix.platform.target }}/distribution
+          cd target/${{ matrix.platform.target }}/release
           tar czf ../../../stardrift-${{ matrix.platform.target }}.tar.gz stardrift
           cd ../../..
           if [[ "$RUNNER_OS" == "macOS" ]]; then
@@ -89,7 +114,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          cd target\${{ matrix.platform.target }}\distribution
+          cd target\${{ matrix.platform.target }}\release
           7z a ..\..\..\stardrift-${{ matrix.platform.target }}.zip stardrift.exe
           cd ..\..\..
           (Get-FileHash stardrift-${{ matrix.platform.target }}.zip -Algorithm SHA256).Hash | Out-File -FilePath stardrift-${{ matrix.platform.target }}.zip.sha256
@@ -211,7 +236,12 @@ jobs:
           body: |
             ## Downloads
             
-            ### Desktop Binaries
+            ### Desktop Installers
+            - **Linux**: `.deb` packages for Debian/Ubuntu (x86_64, ARM64)
+            - **Windows**: `.msi` installers (x86_64, ARM64)
+            - **macOS**: `.dmg` disk images (Intel, Apple Silicon)
+            
+            ### Portable Binaries
             - **Linux**: `stardrift-x86_64-unknown-linux-gnu.tar.gz` (x86_64), `stardrift-aarch64-unknown-linux-gnu.tar.gz` (ARM64)
             - **Windows**: `stardrift-x86_64-pc-windows-msvc.zip` (x86_64), `stardrift-aarch64-pc-windows-msvc.zip` (ARM64)
             - **macOS**: `stardrift-x86_64-apple-darwin.tar.gz` (Intel), `stardrift-aarch64-apple-darwin.tar.gz` (Apple Silicon)

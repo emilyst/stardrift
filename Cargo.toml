@@ -7,7 +7,15 @@ publish = false
 
 [package.metadata.bundle]
 name = "Stardrift"
+identifier = "game.est.stardrift"
 category = "Game"
+short_description = "N-body celestial mechanics simulation with real-time visualization"
+long_description = """
+Stardrift is an N-body gravity simulation toy that provides a real-time visualization
+"""
+copyright = "Copyright (c) 2025 Emily Strickland"
+# icon = ["assets/icon/32x32.png", "assets/icon/128x128.png", "assets/icon/128x128@2x.png"]
+resources = ["assets", "configs/benchmark_profiles"]
 
 [profile.dev]
 debug = 2
@@ -17,19 +25,15 @@ opt-level = 0
 opt-level = 2
 
 [profile.release]
+codegen-units = 1
 debug = 0
+lto = true
 opt-level = 3
 panic = "abort"
-strip = "debuginfo"
-
-[profile.distribution]
-inherits = "release"
-codegen-units = 1
-lto = true
 strip = true
 
 [profile.wasm]
-inherits = "distribution"
+inherits = "release"
 opt-level = "s"
 
 [profile.bench]

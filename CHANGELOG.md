@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Native OS installers via cargo-bundle integration
+  - macOS: DMG disk images with proper .app bundles
+  - Windows: MSI installers for all architectures
+  - Linux: DEB packages for Debian/Ubuntu systems
+- ARM64 support for Linux and Windows builds using GitHub's native ARM runners
+- Bundle metadata in Cargo.toml for application identity and descriptions
+
+### Changed
+
+- Consolidated distribution profile into release profile for simplification
+  - Moved all optimizations (LTO, single codegen unit, stripping) to release profile
+  - Removed separate distribution profile to work better with cargo-bundle
+  - Updated all workflows to use standard --release flag
+- Enhanced release workflow to generate both installers and portable binaries
+- Fixed sha256 checksum generation for macOS builds (using shasum instead of sha256sum)
+
+### Fixed
+
+- Linux and macOS ARM64 builds now compile correctly without cross-compilation
+- Added missing system dependencies for Linux builds in release workflow
+
 ## [0.0.2] - 2025-07-27
 
 ### Added
