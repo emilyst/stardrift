@@ -7,6 +7,7 @@
 use crate::prelude::*;
 use bevy::asset::{AssetPath, io::AssetSourceId};
 
+const BUTTON_FONT_FACE: &str = "fonts/Saira-Regular";
 const BUTTON_BORDER_RADIUS_PX: f32 = 5.0;
 const BUTTON_FONT_SIZE_PX: f32 = 12.0;
 const BUTTON_GAP_PX: f32 = 4.0;
@@ -224,10 +225,9 @@ fn create_button_bundle() -> impl Bundle {
 fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     let embedded_asset_source = &AssetSourceId::from("embedded");
 
-    let light_font_asset_path =
-        AssetPath::parse("fonts/SairaSemiCondensed-Light").with_source(embedded_asset_source);
-    let light_font = asset_server.load(light_font_asset_path);
-    let light_text_font = TextFont::from_font(light_font).with_font_size(BUTTON_FONT_SIZE_PX);
+    let font_asset_path = AssetPath::parse(BUTTON_FONT_FACE).with_source(embedded_asset_source);
+    let font = asset_server.load(font_asset_path);
+    let text_font = TextFont::from_font(font).with_font_size(BUTTON_FONT_SIZE_PX);
 
     commands
         .spawn((
@@ -249,7 +249,7 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .with_children(|parent| {
                     parent.spawn((
                         Text::new("New Simulation (N)"),
-                        light_text_font.clone(),
+                        text_font.clone(),
                         TextColor(Color::WHITE),
                     ));
                 });
@@ -259,7 +259,7 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .with_children(|parent| {
                     parent.spawn((
                         Text::new("Show Octree (O)"),
-                        light_text_font.clone(),
+                        text_font.clone(),
                         TextColor(Color::WHITE),
                     ));
                 });
@@ -269,7 +269,7 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .with_children(|parent| {
                     parent.spawn((
                         Text::new("Show Barycenter (C)"),
-                        light_text_font.clone(),
+                        text_font.clone(),
                         TextColor(Color::WHITE),
                     ));
                 });
@@ -280,7 +280,7 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .with_children(|parent| {
                     parent.spawn((
                         Text::new("Pause (Space)"),
-                        light_text_font.clone(),
+                        text_font.clone(),
                         TextColor(Color::WHITE),
                     ));
                 });
@@ -290,7 +290,7 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .with_children(|parent| {
                     parent.spawn((
                         Text::new("Screenshot (S)"),
-                        light_text_font.clone(),
+                        text_font.clone(),
                         TextColor(Color::WHITE),
                     ));
                 });
@@ -301,11 +301,7 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 parent
                     .spawn((create_button_bundle(), QuitButton))
                     .with_children(|parent| {
-                        parent.spawn((
-                            Text::new("Quit (Q)"),
-                            light_text_font,
-                            TextColor(Color::WHITE),
-                        ));
+                        parent.spawn((Text::new("Quit (Q)"), text_font, TextColor(Color::WHITE)));
                     });
             }
         });

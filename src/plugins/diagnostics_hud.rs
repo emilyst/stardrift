@@ -67,12 +67,12 @@ impl DiagnosticsHudPlugin {
         let embedded_asset_source = &AssetSourceId::from("embedded");
 
         let regular_font_asset_path =
-            AssetPath::parse("fonts/SairaSemiCondensed-Light").with_source(embedded_asset_source);
+            AssetPath::parse("fonts/Saira-Regular").with_source(embedded_asset_source);
         let regular_font = asset_server.load(regular_font_asset_path);
         let regular_text_font = TextFont::from_font(regular_font).with_font_size(12.0);
 
         let bold_font_asset_path =
-            AssetPath::parse("fonts/SairaSemiCondensed-Bold").with_source(embedded_asset_source);
+            AssetPath::parse("fonts/Saira-Regular").with_source(embedded_asset_source);
         let bold_font = asset_server.load(bold_font_asset_path);
         let bold_text_font = TextFont::from_font(bold_font).with_font_size(12.0);
 

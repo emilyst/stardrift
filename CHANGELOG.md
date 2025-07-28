@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced SairaSemiCondensed fonts with Saira fonts across the UI for improved readability
+  - Updated controls UI, diagnostics HUD, and attribution text
+  - Simplified font variants from 9 to 3 (Regular, Light, Bold)
+  - Reduced total font file size in embedded assets
+
 ## [0.0.4] - 2025-07-28
 
 ## [0.0.3] - 2025-07-28

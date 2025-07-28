@@ -9,12 +9,9 @@
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::prelude::*;
 
-static SAIRA_SEMI_CONDENSED_LIGHT: &[u8] =
-    include_bytes!("../../assets/fonts/SairaSemiCondensed-Light.ttf");
-static SAIRA_SEMI_CONDENSED_REGULAR: &[u8] =
-    include_bytes!("../../assets/fonts/SairaSemiCondensed-Regular.ttf");
-static SAIRA_SEMI_CONDENSED_BOLD: &[u8] =
-    include_bytes!("../../assets/fonts/SairaSemiCondensed-Bold.ttf");
+static SAIRA_LIGHT: &[u8] = include_bytes!("../../assets/fonts/Saira-Light.ttf");
+static SAIRA_REGULAR: &[u8] = include_bytes!("../../assets/fonts/Saira-Regular.ttf");
+static SAIRA_BOLD: &[u8] = include_bytes!("../../assets/fonts/Saira-Bold.ttf");
 
 pub struct EmbeddedAssetsPlugin;
 
@@ -23,21 +20,21 @@ impl EmbeddedAssetsPlugin {
         let embedded_asset_registry = world.resource_mut::<EmbeddedAssetRegistry>();
 
         embedded_asset_registry.insert_asset(
-            "fonts/SairaSemiCondensed-Light".into(),
-            "fonts/SairaSemiCondensed-Light".as_ref(),
-            SAIRA_SEMI_CONDENSED_LIGHT,
+            "fonts/Saira-Light".into(),
+            "fonts/Saira-Light".as_ref(),
+            SAIRA_LIGHT,
         );
 
         embedded_asset_registry.insert_asset(
-            "fonts/SairaSemiCondensed-Regular".into(),
-            "fonts/SairaSemiCondensed-Regular".as_ref(),
-            SAIRA_SEMI_CONDENSED_REGULAR,
+            "fonts/Saira-Regular".into(),
+            "fonts/Saira-Regular".as_ref(),
+            SAIRA_REGULAR,
         );
 
         embedded_asset_registry.insert_asset(
-            "fonts/SairaSemiCondensed-Bold".into(),
-            "fonts/SairaSemiCondensed-Bold".as_ref(),
-            SAIRA_SEMI_CONDENSED_BOLD,
+            "fonts/Saira-Bold".into(),
+            "fonts/Saira-Bold".as_ref(),
+            SAIRA_BOLD,
         );
     }
 }

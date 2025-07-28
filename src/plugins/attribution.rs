@@ -21,7 +21,7 @@ fn setup_attribution(mut commands: Commands, asset_server: Res<AssetServer>) {
     let embedded_asset_source = &AssetSourceId::from("embedded");
 
     let regular_font_asset_path =
-        AssetPath::parse("fonts/SairaSemiCondensed-Regular").with_source(embedded_asset_source);
+        AssetPath::parse("fonts/Saira-Regular").with_source(embedded_asset_source);
     let regular_font = asset_server.load(regular_font_asset_path);
     let attribution_text_font = TextFont::from_font(regular_font).with_font_size(10.0);
 
