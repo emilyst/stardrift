@@ -78,7 +78,7 @@ pub enum VelocityMode {
 impl Default for PhysicsConfig {
     fn default() -> Self {
         Self {
-            gravitational_constant: 2e2,
+            gravitational_constant: 500.0,
             body_count: 30,
             octree_theta: 0.5,
             octree_leaf_threshold: 2,
@@ -110,7 +110,7 @@ impl Default for RenderingConfig {
         Self {
             min_temperature: 3000.0,
             max_temperature: 15000.0,
-            bloom_intensity: 100.0,
+            bloom_intensity: 250.0,
             saturation_intensity: 3.0,
             camera_radius_multiplier: 4.0,
         }
@@ -151,10 +151,10 @@ impl Default for TrailConfig {
     fn default() -> Self {
         Self {
             trail_length_seconds: 60.0,          // 60 second trails
-            update_interval_seconds: 1.0 / 30.0, // 30 FPS updates (current)
+            update_interval_seconds: 1.0 / 30.0, // 30 FPS updates
             max_points_per_trail: 10000,         // Reasonable limit
             base_width: 1.0,                     // Matches current behavior
-            width_relative_to_body: false,       // Start with absolute sizing
+            width_relative_to_body: true,        // Start with relative sizing
             body_size_multiplier: 2.0,           // 2x body radius when enabled
             enable_fading: true,                 // Enable trail fade-out effect
             fade_curve: FadeCurve::Exponential,  // Aggressively fade out
