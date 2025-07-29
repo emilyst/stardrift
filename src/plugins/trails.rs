@@ -523,18 +523,18 @@ impl TrailsPlugin {
                 // For premultiplied alpha, we need to handle colors differently
                 // The bloom buffer sees: color * alpha, so we boost the color to compensate
                 // This allows both transparency AND bloom effect
-                let bloom_compensation = if alpha > 0.01 {
-                    // Boost bloom inversely proportional to alpha
+                let bloom_compensation = if !trail_config.use_additive_blending && alpha > 0.01 {
+                    // Only compensate for premultiplied mode
                     // At alpha=1.0, no boost needed. At alpha=0.1, 10x boost
                     1.0 / alpha.sqrt()
                 } else {
-                    1.0
+                    1.0 // No compensation for additive mode
                 };
 
                 // Apply the scaling to create HDR colors for bloom
-                let bloomed_r = (r * scale_factor * bloom_compensation).min(20.0);
-                let bloomed_g = (g * scale_factor * bloom_compensation).min(20.0);
-                let bloomed_b = (b * scale_factor * bloom_compensation).min(20.0);
+                let bloomed_r = r * scale_factor * bloom_compensation;
+                let bloomed_g = g * scale_factor * bloom_compensation;
+                let bloomed_b = b * scale_factor * bloom_compensation;
 
                 colors.push([bloomed_r, bloomed_g, bloomed_b, alpha]);
             } else {
