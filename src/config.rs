@@ -150,7 +150,7 @@ pub struct TrailConfig {
 impl Default for TrailConfig {
     fn default() -> Self {
         Self {
-            trail_length_seconds: 60.0,          // 60 second trails
+            trail_length_seconds: 10.0,          // 10 second trails
             update_interval_seconds: 1.0 / 30.0, // 30 FPS updates
             max_points_per_trail: 10000,         // Reasonable limit
             base_width: 1.0,                     // Matches current behavior

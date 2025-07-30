@@ -226,7 +226,7 @@ Trail visualization configuration options.
 
 | Field                     | Type     | Default         | Description                                     |
 |---------------------------|----------|-----------------|-------------------------------------------------|
-| `trail_length_seconds`    | `f64`    | `60.0`          | How long trails persist in seconds              |
+| `trail_length_seconds`    | `f64`    | `10.0`          | How long trails persist in seconds              |
 | `update_interval_seconds` | `f64`    | `0.03333`       | How often to add trail points (default: 30 FPS) |
 | `max_points_per_trail`    | `usize`  | `10000`         | Maximum trail points per body                   |
 | `base_width`              | `f64`    | `1.0`           | Base trail width                                |
@@ -312,7 +312,7 @@ saturation_intensity = 3.0
 camera_radius_multiplier = 4.0
 
 [trails]
-trail_length_seconds = 60.0
+trail_length_seconds = 10.0
 update_interval_seconds = 0.03333333333333333
 max_points_per_trail = 10000
 base_width = 1.0
