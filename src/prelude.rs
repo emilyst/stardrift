@@ -21,7 +21,9 @@ pub use crate::resources::{
 };
 
 // Internal re-exports - Visualization
-pub use crate::plugins::visualization::{BarycenterGizmoVisibility, OctreeVisualizationSettings};
+pub use crate::plugins::visualization::{
+    BarycenterGizmoVisibility, OctreeVisualizationSettings, TrailsVisualizationSettings,
+};
 
 // Internal re-exports - Physics
 pub use crate::physics::octree::{Octree, OctreeBody};

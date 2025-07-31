@@ -36,6 +36,7 @@ impl Plugin for ControlsPlugin {
                 button_interaction_handler::<BarycenterGizmoToggleButton>,
                 button_interaction_handler::<PauseButton>,
                 button_interaction_handler::<ScreenshotButton>,
+                button_interaction_handler::<TrailsToggleButton>,
                 #[cfg(not(target_arch = "wasm32"))]
                 quit_button_handler,
                 #[cfg(not(target_arch = "wasm32"))]
@@ -47,15 +48,18 @@ impl Plugin for ControlsPlugin {
         app.add_event::<UpdateButtonTextEvent<OctreeToggleButton>>();
         app.add_event::<UpdateButtonTextEvent<BarycenterGizmoToggleButton>>();
         app.add_event::<UpdateButtonTextEvent<PauseButton>>();
+        app.add_event::<UpdateButtonTextEvent<TrailsToggleButton>>();
 
         app.add_systems(
             Update,
             (
                 emit_octree_button_update,
                 emit_barycenter_button_update,
+                emit_trails_button_update,
                 update_button_text::<OctreeToggleButton>,
                 update_button_text::<BarycenterGizmoToggleButton>,
                 update_button_text::<PauseButton>,
+                update_button_text::<TrailsToggleButton>,
             ),
         );
 
@@ -86,6 +90,9 @@ fn keyboard_input_handler(
             }
             KeyCode::KeyS => {
                 commands.write(SimulationCommand::TakeScreenshot);
+            }
+            KeyCode::KeyT => {
+                commands.write(SimulationCommand::ToggleTrailsVisualization);
             }
             KeyCode::Digit0 => {
                 commands.write(SimulationCommand::SetOctreeMaxDepth(None));
@@ -195,6 +202,9 @@ pub struct PauseButton;
 #[derive(Component)]
 pub struct ScreenshotButton;
 
+#[derive(Component)]
+pub struct TrailsToggleButton;
+
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Component)]
 pub struct QuitButton;
@@ -274,6 +284,16 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ));
                 });
 
+            parent
+                .spawn((create_button_bundle(), TrailsToggleButton))
+                .with_children(|parent| {
+                    parent.spawn((
+                        Text::new("Hide Trails (T)"),
+                        text_font.clone(),
+                        TextColor(Color::WHITE),
+                    ));
+                });
+
             // Second group: pause and screenshot
             parent
                 .spawn((create_button_bundle(), PauseButton))
@@ -331,6 +351,20 @@ fn emit_barycenter_button_update(
             "Hide Barycenter (C)"
         } else {
             "Show Barycenter (C)"
+        };
+        events.write(UpdateButtonTextEvent::new(text));
+    }
+}
+
+fn emit_trails_button_update(
+    settings: Res<TrailsVisualizationSettings>,
+    mut events: EventWriter<UpdateButtonTextEvent<TrailsToggleButton>>,
+) {
+    if settings.is_changed() {
+        let text = if settings.enabled {
+            "Hide Trails (T)"
+        } else {
+            "Show Trails (T)"
         };
         events.write(UpdateButtonTextEvent::new(text));
     }
@@ -400,6 +434,12 @@ impl CommandButton for PauseButton {
 impl CommandButton for ScreenshotButton {
     fn get_command() -> SimulationCommand {
         SimulationCommand::TakeScreenshot
+    }
+}
+
+impl CommandButton for TrailsToggleButton {
+    fn get_command() -> SimulationCommand {
+        SimulationCommand::ToggleTrailsVisualization
     }
 }
 

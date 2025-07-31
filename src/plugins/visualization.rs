@@ -19,6 +19,7 @@ impl Plugin for VisualizationPlugin {
             ..default()
         });
         app.init_resource::<BarycenterGizmoVisibility>();
+        app.insert_resource(TrailsVisualizationSettings { enabled: true });
 
         // Add systems
         app.add_systems(
@@ -32,6 +33,7 @@ impl Plugin for VisualizationPlugin {
                 draw_barycenter_gizmo.run_if(resource_exists_and_equals(
                     BarycenterGizmoVisibility { enabled: true },
                 )),
+                update_trail_visibility,
             ),
         );
     }
@@ -42,6 +44,7 @@ fn handle_visualization_commands(
     mut commands: EventReader<SimulationCommand>,
     mut octree_settings: ResMut<OctreeVisualizationSettings>,
     mut barycenter_visibility: ResMut<BarycenterGizmoVisibility>,
+    mut trails_settings: ResMut<TrailsVisualizationSettings>,
 ) {
     for command in commands.read() {
         match command {
@@ -61,6 +64,17 @@ fn handle_visualization_commands(
                 info!(
                     "Barycenter gizmo {}",
                     if barycenter_visibility.enabled {
+                        "enabled"
+                    } else {
+                        "disabled"
+                    }
+                );
+            }
+            SimulationCommand::ToggleTrailsVisualization => {
+                trails_settings.enabled = !trails_settings.enabled;
+                info!(
+                    "Trails visualization {}",
+                    if trails_settings.enabled {
                         "enabled"
                     } else {
                         "disabled"
@@ -177,3 +191,37 @@ impl PartialEq for BarycenterGizmoVisibility {
         self.enabled == other.enabled
     }
 }
+
+/// Resource to control trails visibility
+#[derive(Resource, Default)]
+pub struct TrailsVisualizationSettings {
+    pub enabled: bool,
+}
+
+impl PartialEq for TrailsVisualizationSettings {
+    fn eq(&self, other: &Self) -> bool {
+        self.enabled == other.enabled
+    }
+}
+
+#[cfg(feature = "trails")]
+fn update_trail_visibility(
+    trails_settings: Res<TrailsVisualizationSettings>,
+    mut trail_query: Query<&mut Visibility, With<crate::plugins::trails::TrailRenderer>>,
+) {
+    if !trails_settings.is_changed() {
+        return;
+    }
+
+    for mut visibility in &mut trail_query {
+        *visibility = if trails_settings.enabled {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+    }
+}
+
+/// Stub function when trails feature is disabled
+#[cfg(not(feature = "trails"))]
+fn handle_trails_visibility() {}
