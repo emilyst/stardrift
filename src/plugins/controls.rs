@@ -7,7 +7,7 @@
 use crate::prelude::*;
 use bevy::asset::{AssetPath, io::AssetSourceId};
 
-const BUTTON_FONT_FACE: &str = "fonts/Saira-Regular";
+const BUTTON_FONT_FACE: &str = "fonts/Saira-Medium";
 const BUTTON_BORDER_RADIUS_PX: f32 = 5.0;
 const BUTTON_FONT_SIZE_PX: f32 = 12.0;
 const BUTTON_GAP_PX: f32 = 4.0;
