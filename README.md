@@ -130,6 +130,7 @@ miniserve out -p 8000 --index index.html
 | **N**           | New simulation with new random bodies           |
 | **O**           | Toggle octree visualization on/off              |
 | **C**           | Toggle barycenter gizmo visibility on/off       |
+| **T**           | Toggle trail visibility on/off                  |
 | **S**           | Take screenshot (hides UI and HUD)              |
 | **0-9**         | Set octree visualization depth (0 = all levels) |
 | **Escape**      | Quit application                                |
