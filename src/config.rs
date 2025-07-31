@@ -351,8 +351,7 @@ mod tests {
         let path_lower = path_str.to_lowercase();
         assert!(
             path_lower.contains("stardrift"),
-            "Config path should contain 'stardrift' (case-insensitive): {}",
-            path_str
+            "Config path should contain 'stardrift' (case-insensitive): {path_str}"
         );
     }
 
