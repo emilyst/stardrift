@@ -224,4 +224,4 @@ fn update_trail_visibility(
 
 /// Stub function when trails feature is disabled
 #[cfg(not(feature = "trails"))]
-fn handle_trails_visibility() {}
+fn update_trail_visibility() {}
