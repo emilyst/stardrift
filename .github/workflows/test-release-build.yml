@@ -13,9 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  # Use the reusable workflow for test builds
   test-build:
-    uses: ./.github/workflows/build-binaries.yml
+    uses: ./.github/workflows/build.yml
     permissions:
       contents: read
       id-token: write
