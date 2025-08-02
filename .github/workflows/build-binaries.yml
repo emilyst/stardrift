@@ -1,0 +1,235 @@
+name: Build Binaries
+
+on:
+  workflow_call:
+    inputs:
+      upload-artifacts:
+        description: 'Whether to upload artifacts'
+        required: false
+        default: true
+        type: boolean
+      artifact-prefix:
+        description: 'Prefix for artifact names'
+        required: false
+        default: 'stardrift'
+        type: string
+      retention-days:
+        description: 'Artifact retention days'
+        required: false
+        default: 90
+        type: number
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build - ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: Linux-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - name: Linux-aarch64
+            os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - name: Windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - name: Windows-aarch64
+            os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+          - name: macOS-x86_64
+            os: macos-13
+            target: x86_64-apple-darwin
+          - name: macOS-aarch64
+            os: macos-14
+            target: aarch64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.platform.target }}
+
+      - name: Install cargo-bundle
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-bundle
+
+      - name: Build binary
+        run: |
+          cargo build --release --target ${{ matrix.platform.target }} --all-features
+        shell: bash
+
+      - name: Sign Windows binary
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Create a self-signed certificate for testing
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Stardrift Development" -KeySpec Signature -KeyUsage DigitalSignature -KeyUsageProperty Sign -KeyLength 2048 -KeyAlgorithm RSA -HashAlgorithm SHA256 -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" -CertStoreLocation "Cert:\CurrentUser\My"
+          
+          # Sign the executable
+          $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
+          if (Test-Path $signtool) {
+            & $signtool sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /v /sm /s My /n "Stardrift Development" target\${{ matrix.platform.target }}\release\stardrift.exe
+          } else {
+            Write-Host "SignTool not found, skipping signing"
+          }
+
+      - name: Create bundle (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cargo bundle --release --target ${{ matrix.platform.target }}
+          # Ad-hoc sign the app bundle
+          codesign --force --deep --sign - target/${{ matrix.platform.target }}/release/bundle/osx/Stardrift.app
+          # Create DMG from app bundle
+          hdiutil create -volname "Stardrift" -srcfolder target/${{ matrix.platform.target }}/release/bundle/osx/Stardrift.app -ov -format UDZO stardrift-${{ matrix.platform.target }}.dmg
+          # Ad-hoc sign the DMG
+          codesign --force --sign - stardrift-${{ matrix.platform.target }}.dmg
+
+      - name: Create bundle (Windows MSI)
+        if: runner.os == 'Windows'
+        run: |
+          cargo bundle --release --target ${{ matrix.platform.target }} --format msi
+          Move-Item target\${{ matrix.platform.target }}\release\bundle\msi\*.msi stardrift-${{ matrix.platform.target }}.msi
+        shell: pwsh
+
+      - name: Create bundle (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cargo bundle --release --target ${{ matrix.platform.target }} --format deb
+          cp target/${{ matrix.platform.target }}/release/bundle/deb/*.deb stardrift-${{ matrix.platform.target }}.deb
+
+      - name: Package binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd target/${{ matrix.platform.target }}/release
+          # Ad-hoc sign the binary on macOS
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            codesign --force --sign - stardrift
+          fi
+          tar czf ../../../stardrift-${{ matrix.platform.target }}.tar.gz stardrift
+          cd ../../..
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            shasum -a 256 stardrift-${{ matrix.platform.target }}.tar.gz > stardrift-${{ matrix.platform.target }}.tar.gz.sha256
+          else
+            sha256sum stardrift-${{ matrix.platform.target }}.tar.gz > stardrift-${{ matrix.platform.target }}.tar.gz.sha256
+          fi
+
+      - name: Package binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd target\${{ matrix.platform.target }}\release
+          7z a ..\..\..\stardrift-${{ matrix.platform.target }}.zip stardrift.exe
+          cd ..\..\..
+          (Get-FileHash stardrift-${{ matrix.platform.target }}.zip -Algorithm SHA256).Hash | Out-File -FilePath stardrift-${{ matrix.platform.target }}.zip.sha256
+
+      - uses: actions/upload-artifact@v4
+        if: inputs.upload-artifacts
+        with:
+          name: ${{ inputs.artifact-prefix }}-${{ matrix.platform.target }}
+          path: |
+            stardrift-${{ matrix.platform.target }}.*
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention-days }}
+
+      - name: Attest build provenance
+        if: inputs.upload-artifacts && inputs.artifact-prefix == 'stardrift'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            stardrift-${{ matrix.platform.target }}.tar.gz
+            stardrift-${{ matrix.platform.target }}.zip
+
+  build-wasm:
+    name: Build WASM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install wasm-bindgen-cli
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli
+
+      - name: Build WASM
+        run: |
+          cargo build --profile wasm --target wasm32-unknown-unknown --features trails
+          mkdir -p out
+          wasm-bindgen \
+            --no-typescript \
+            --target web \
+            --out-dir ./out/ \
+            --out-name "stardrift" \
+            ./target/wasm32-unknown-unknown/wasm/stardrift.wasm
+
+      - name: Check for index.html
+        id: check_index
+        run: |
+          if [ -f "index.html" ]; then
+            echo "index_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "index_exists=false" >> $GITHUB_OUTPUT
+            echo "Warning: index.html not found in repository root"
+          fi
+
+      - name: Package WASM
+        run: |
+          if [ "${{ steps.check_index.outputs.index_exists }}" == "true" ]; then
+            cp index.html ./out/
+          fi
+          cd out
+          tar czf ../stardrift-wasm.tar.gz *
+          cd ..
+          sha256sum stardrift-wasm.tar.gz > stardrift-wasm.tar.gz.sha256
+
+      - uses: actions/upload-artifact@v4
+        if: inputs.upload-artifacts
+        with:
+          name: ${{ inputs.artifact-prefix }}-wasm
+          path: |
+            stardrift-wasm.tar.gz
+            stardrift-wasm.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention-days }}
+
+      - name: Attest WASM build provenance
+        if: inputs.upload-artifacts && inputs.artifact-prefix == 'stardrift'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: stardrift-wasm.tar.gz
