@@ -56,6 +56,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Get version
+        id: get_version
+        shell: bash
+        run: |
+          VERSION=$(cargo pkgid | cut -d# -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -88,22 +96,22 @@ jobs:
           # Ad-hoc sign the app bundle
           codesign --force --deep --sign - target/${{ matrix.platform.target }}/release/bundle/osx/Stardrift.app
           # Create DMG from app bundle
-          hdiutil create -volname "Stardrift" -srcfolder target/${{ matrix.platform.target }}/release/bundle/osx/Stardrift.app -ov -format UDZO stardrift-${{ matrix.platform.target }}.dmg
+          hdiutil create -volname "Stardrift" -srcfolder target/${{ matrix.platform.target }}/release/bundle/osx/Stardrift.app -ov -format UDZO stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
           # Ad-hoc sign the DMG
-          codesign --force --sign - stardrift-${{ matrix.platform.target }}.dmg
+          codesign --force --sign - stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
 
       - name: Create bundle (Windows MSI)
         if: runner.os == 'Windows'
         run: |
           cargo bundle --release --target ${{ matrix.platform.target }} --format msi
-          Move-Item target\${{ matrix.platform.target }}\release\bundle\msi\*.msi stardrift-${{ matrix.platform.target }}.msi
+          Move-Item target\${{ matrix.platform.target }}\release\bundle\msi\*.msi stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.msi
         shell: pwsh
 
       - name: Create bundle (Linux)
         if: runner.os == 'Linux'
         run: |
           cargo bundle --release --target ${{ matrix.platform.target }} --format deb
-          cp target/${{ matrix.platform.target }}/release/bundle/deb/*.deb stardrift-${{ matrix.platform.target }}.deb
+          cp target/${{ matrix.platform.target }}/release/bundle/deb/*.deb stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.deb
 
       - name: Package binary (Unix)
         if: runner.os != 'Windows'
@@ -113,12 +121,12 @@ jobs:
           if [[ "$RUNNER_OS" == "macOS" ]]; then
             codesign --force --sign - stardrift
           fi
-          tar czf ../../../stardrift-${{ matrix.platform.target }}.tar.gz stardrift
+          tar czf ../../../stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.tar.gz stardrift
           cd ../../..
           if [[ "$RUNNER_OS" == "macOS" ]]; then
-            shasum -a 256 stardrift-${{ matrix.platform.target }}.tar.gz > stardrift-${{ matrix.platform.target }}.tar.gz.sha256
+            shasum -a 256 stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.tar.gz > stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.tar.gz.sha256
           else
-            sha256sum stardrift-${{ matrix.platform.target }}.tar.gz > stardrift-${{ matrix.platform.target }}.tar.gz.sha256
+            sha256sum stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.tar.gz > stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.tar.gz.sha256
           fi
 
       - name: Package binary (Windows)
@@ -126,16 +134,16 @@ jobs:
         shell: pwsh
         run: |
           cd target\${{ matrix.platform.target }}\release
-          7z a ..\..\..\stardrift-${{ matrix.platform.target }}.zip stardrift.exe
+          7z a ..\..\..\stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.zip stardrift.exe
           cd ..\..\..
-          (Get-FileHash stardrift-${{ matrix.platform.target }}.zip -Algorithm SHA256).Hash | Out-File -FilePath stardrift-${{ matrix.platform.target }}.zip.sha256
+          (Get-FileHash stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.zip -Algorithm SHA256).Hash | Out-File -FilePath stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.zip.sha256
 
       - uses: actions/upload-artifact@v4
         if: inputs.upload-artifacts
         with:
           name: ${{ inputs.artifact-prefix }}-${{ matrix.platform.target }}
           path: |
-            stardrift-${{ matrix.platform.target }}.*
+            stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.*
           if-no-files-found: error
           retention-days: ${{ inputs.retention-days }}
 
@@ -144,8 +152,11 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
-            stardrift-${{ matrix.platform.target }}.tar.gz
-            stardrift-${{ matrix.platform.target }}.zip
+            stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.tar.gz
+            stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.zip
+            stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
+            stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.msi
+            stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.deb
 
   build-wasm:
     name: Build WASM
@@ -156,6 +167,13 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=$(cargo pkgid | cut -d# -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
 
       - name: Install system dependencies
         run: |
@@ -168,49 +186,29 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Install wasm-bindgen-cli
+      - name: Install trunk
         uses: taiki-e/install-action@v2
         with:
-          tool: wasm-bindgen-cli
+          tool: trunk
 
       - name: Build WASM
         run: |
-          cargo build --profile wasm --target wasm32-unknown-unknown --features trails
-          mkdir -p out
-          wasm-bindgen \
-            --no-typescript \
-            --target web \
-            --out-dir ./out/ \
-            --out-name "stardrift" \
-            ./target/wasm32-unknown-unknown/wasm/stardrift.wasm
-
-      - name: Check for index.html
-        id: check_index
-        run: |
-          if [ -f "index.html" ]; then
-            echo "index_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "index_exists=false" >> $GITHUB_OUTPUT
-            echo "Warning: index.html not found in repository root"
-          fi
+          trunk build --release
 
       - name: Package WASM
         run: |
-          if [ "${{ steps.check_index.outputs.index_exists }}" == "true" ]; then
-            cp index.html ./out/
-          fi
-          cd out
-          tar czf ../stardrift-wasm.tar.gz *
+          cd dist
+          tar czf ../stardrift-${{ steps.get_version.outputs.version }}-wasm.tar.gz *
           cd ..
-          sha256sum stardrift-wasm.tar.gz > stardrift-wasm.tar.gz.sha256
+          sha256sum stardrift-${{ steps.get_version.outputs.version }}-wasm.tar.gz > stardrift-${{ steps.get_version.outputs.version }}-wasm.tar.gz.sha256
 
       - uses: actions/upload-artifact@v4
         if: inputs.upload-artifacts
         with:
           name: ${{ inputs.artifact-prefix }}-wasm
           path: |
-            stardrift-wasm.tar.gz
-            stardrift-wasm.tar.gz.sha256
+            stardrift-${{ steps.get_version.outputs.version }}-wasm.tar.gz
+            stardrift-${{ steps.get_version.outputs.version }}-wasm.tar.gz.sha256
           if-no-files-found: error
           retention-days: ${{ inputs.retention-days }}
 
@@ -218,4 +216,4 @@ jobs:
         if: inputs.upload-artifacts && inputs.artifact-prefix == 'stardrift'
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: stardrift-wasm.tar.gz
+          subject-path: stardrift-${{ steps.get_version.outputs.version }}-wasm.tar.gz

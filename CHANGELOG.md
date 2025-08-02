@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- WebAssembly build process changes
+    - Migrated from manual `wasm-bindgen` build script to `trunk` for automated WASM builds
+    - Removed custom `wasm` profile in favor of trunk's built-in optimizations
+    - Modified `index.html` to work with trunk's asset injection
+    - Added gzip compression as post-build hook
+
+- CI/CD binary naming changes
+    - All release artifacts now include version in filename (e.g., `stardrift-0.0.15-x86_64-unknown-linux-gnu.tar.gz`)
+    - Bundle outputs include version: `.dmg` (macOS), `.msi` (Windows), `.deb` (Linux)
+    - Updated build attestation to include all bundle formats
+
 ## [0.0.15] - 2025-08-02
 
 ## [0.0.14] - 2025-08-02

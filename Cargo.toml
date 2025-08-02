@@ -33,10 +33,6 @@ opt-level = 3
 panic = "abort"
 strip = true
 
-[profile.wasm]
-inherits = "release"
-opt-level = "s"
-
 [profile.bench]
 inherits = "release"
 

@@ -105,7 +105,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Check WASM build
-        run: cargo check --profile wasm --target wasm32-unknown-unknown --features trails
+        run: cargo check --target wasm32-unknown-unknown
 
   security:
     name: Security Audit

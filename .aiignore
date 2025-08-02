@@ -5,6 +5,4 @@
 *.log
 *.tmp
 dist/
-build/
-out/
 target/

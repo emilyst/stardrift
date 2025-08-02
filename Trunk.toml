@@ -1,0 +1,22 @@
+[build]
+target = "index.html"
+release = true
+public_url = "./"
+opt-level = "s"
+
+[[hooks]]
+stage = "pre_build"
+command = "sh"
+command_arguments = ["-c", "rustup target add wasm32-unknown-unknown"]
+
+[[hooks]]
+stage = "post_build"
+command = "sh"
+command_arguments = ["-c", "gzip --keep --force $TRUNK_STAGING_DIR/*"]
+
+[serve]
+port = 8080
+open = false
+
+[watch]
+ignore = ["dist"]

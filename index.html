@@ -2,143 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
     <title>Stardrift</title>
     <style>
         html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
             background-color: #000;
             font-family: Arial, sans-serif;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            padding: 0;
+            width: 100%;
         }
 
         body {
+            align-items: center;
             display: flex;
             justify-content: center;
-            align-items: center;
         }
 
         canvas {
             display: block;
-            width: 100% !important;
             height: 100% !important;
-        }
-
-        #loading {
-            color: white;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .spinner {
-            width: 60px;
-            height: 60px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid #ffffff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        .loading-text {
-            font-size: 18px;
-            font-weight: 300;
-            letter-spacing: 1px;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        .loading-dots {
-            display: inline-block;
-            font-size: 24px;
-        }
-
-        .loading-dots::after {
-            content: '';
-            animation: dots 1.5s steps(4, end) infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 0.7;
-            }
-            50% {
-                opacity: 1;
-            }
-        }
-
-        @keyframes dots {
-            0%, 20% {
-                content: '';
-            }
-            40% {
-                content: '.';
-            }
-            60% {
-                content: '..';
-            }
-            80%, 100% {
-                content: '...';
-            }
-        }
-
-        #error {
-            color: red;
-            text-align: center;
-            display: none;
+            width: 100% !important;
         }
     </style>
 </head>
 <body>
-<div id="loading">
-    <div class="spinner"></div>
-    <div class="loading-text">Loading Simulation<span class="loading-dots"></span></div>
-</div>
-<div id="error">
-    <h2>Error Loading Application</h2>
-    <p>Your browser may not support WebGL2 or WASM.</p>
-    <p>Please try using a modern browser like Chrome, Firefox, or Safari.</p>
-</div>
-
-<script type="module">
-    import init from './stardrift.js';
-
-    async function run() {
-        try {
-            // Check for WebGL2 support
-            const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl2');
-            if (!gl) {
-                throw new Error('WebGL2 not supported');
-            }
-
-            // Initialize the WASM module
-            init();
-
-            // Hide loading message
-            document.getElementById('loading').style.display = 'none';
-
-        } catch (error) {
-            console.error('Failed to initialize application:', error);
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('error').style.display = 'block';
-        }
-    }
-
-    run();
-</script>
 </body>
 </html>

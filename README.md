@@ -85,38 +85,24 @@ cargo run --no-default-features --features graphics  # Run without trails
 
 ### WebAssembly Build
 
-For WebAssembly builds, use the wasm-server-runner tool:
+The project uses [trunk](https://trunkrs.dev/) for WebAssembly builds:
 
 ```bash
-# Install wasm-server-runner if not present
-cargo install wasm-server-runner
+# Install trunk if not present
+cargo install trunk
 
-# Run the WASM build with the server
-cargo run --target wasm32-unknown-unknown --all-features
+# Development build with hot-reloading
+trunk serve
+
+# Production build
+trunk build --release
 ```
 
-Alternatively, you can manually build and serve:
-
-```bash
-# Add WASM target
-rustup target add wasm32-unknown-unknown
-
-# Build for WASM
-cargo build --target wasm32-unknown-unknown --release --all-features
-
-# Install and use wasm-bindgen
-cargo install wasm-bindgen-cli
-wasm-bindgen --out-dir out --target web target/wasm32-unknown-unknown/release/stardrift.wasm
-```
-
-After building, serve the `out/` directory with any HTTP server:
-
-```bash
-cargo install miniserve
-miniserve out -p 8000 --index index.html
-
-# Then open http://localhost:8000 in your browser
-```
+The built files will be in the `dist/` directory, ready for deployment. Trunk automatically handles:
+- WASM compilation and optimization
+- Asset bundling and injection
+- Development server with hot-reloading
+- Gzip compression for production builds
 
 ## Usage
 
@@ -355,7 +341,6 @@ hide_ui_frame_delay = 2
     - Development: Fast compilation with basic optimizations
     - Release: Full optimizations with debug info stripped
     - Distribution: Link-time optimization (LTO) and single codegen unit
-    - WASM: Size-optimized build for web deployment
 - **Algorithmic Efficiency**: Barnes-Hut octree reduces gravitational calculations from O(N²) to O(N log N)
 - **Parallel Processing**: Multi-threaded physics calculations
 - **Memory Efficiency**: Optimized data structures and minimal allocations
@@ -373,9 +358,10 @@ hide_ui_frame_delay = 2
 - **rand_chacha**: ChaCha random number generator
 - **chrono**: Date and time handling for screenshot timestamps
 
-#### WASM-Specific Dependencies
+#### Build Dependencies
 
-- **wasm-bindgen**: Rust-WASM bindings
+- **trunk**: Modern WASM application bundler (for WebAssembly builds)
+- **wasm-bindgen**: Rust-WASM bindings (handled automatically by trunk)
 - **web-sys**: Web API bindings
 - **getrandom**: With `wasm_js` backend
 
@@ -498,10 +484,10 @@ cargo run --all-features            # All features enabled
 
 ### Common Issues
 
-**WASM build fails**: Ensure you have the latest version of `wasm-bindgen-cli`:
+**WASM build fails**: Ensure you have the latest version of trunk:
 
 ```bash
-cargo install wasm-bindgen-cli --force
+cargo install trunk --force
 ```
 
 **WebGL2 not supported**: Use a supported browser or enable hardware acceleration in browser settings.
@@ -535,8 +521,8 @@ To verify a downloaded binary:
 # Install GitHub CLI if needed
 # https://cli.github.com/
 
-# Verify a release binary
-gh attestation verify stardrift-x86_64-unknown-linux-musl.tar.gz \
+# Verify a release binary (example with version)
+gh attestation verify stardrift-0.0.15-x86_64-unknown-linux-gnu.tar.gz \
   --repo emilyst/stardrift
 
 # The command will confirm the binary was built from the official repository
