@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Packaging system overhaul
+    - Replaced `cargo-bundle` with platform-specific packaging tools for improved reliability
+    - macOS: Now creates `.app` bundles directly using shell commands
+    - macOS: Uses `plutil` commands to generate Info.plist directly
+    - Linux: Uses `cargo-deb` for `.deb` packages
+    - Linux: Added `cargo-generate-rpm` to create `.rpm` packages for Fedora/RHEL/openSUSE
+
+### Added
+
+- RPM packages (`.rpm`) for Fedora, RHEL, and openSUSE distributions
+- Platform-specific packaging metadata in `Cargo.toml` for Linux packages
+
+### Removed
+
+- Dependency on `cargo-bundle` in all workflows
+- `[package.metadata.bundle]` configuration from Cargo.toml
+
 ## [0.0.16] - 2025-08-02
 
 ### Changed

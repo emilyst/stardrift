@@ -5,18 +5,7 @@ edition = "2024"
 license = "CC0-1.0"
 repository = "https://github.com/emilyst/stardrift"
 publish = false
-
-[package.metadata.bundle]
-name = "Stardrift"
-identifier = "game.est.stardrift"
-category = "Game"
-short_description = "N-body celestial mechanics simulation with real-time visualization"
-long_description = """
-Stardrift is an N-body gravity simulation toy that provides a real-time visualization
-"""
-copyright = "Copyright (c) 2025 Emily Strickland"
-# icon = ["assets/icon/32x32.png", "assets/icon/128x128.png", "assets/icon/128x128@2x.png"]
-#resources = ["assets", "configs/benchmark_profiles"]
+description = "N-body gravity simulation toy that provides a real-time visualization"
 
 [profile.dev]
 debug = 2
@@ -124,6 +113,32 @@ pre-release-replacements = [
 [[bench]]
 name = "octree_benchmarks"
 harness = false
+
+# Platform-specific packaging configuration
+
+[package.metadata.deb]
+maintainer = "Emily Strickland"
+copyright = "2025, Emily Strickland"
+license-file = ["LICENSE", "0"]
+extended-description = "Stardrift is an N-body gravity simulation toy that provides a real-time visualization"
+section = "games"
+priority = "optional"
+assets = [
+    ["target/release/stardrift", "usr/bin/", "755"],
+    ["LICENSE", "usr/share/doc/stardrift/", "644"],
+    ["README.md", "usr/share/doc/stardrift/", "644"],
+]
+depends = "$auto"
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/stardrift", dest = "/usr/bin/stardrift", mode = "755" },
+    { source = "LICENSE", dest = "/usr/share/doc/stardrift/LICENSE", mode = "644", doc = true },
+    { source = "README.md", dest = "/usr/share/doc/stardrift/README.md", mode = "644", doc = true },
+]
+
+[package.metadata.generate-rpm.requires]
+# Runtime dependencies will be detected automatically
 
 [lints.clippy]
 type_complexity = "allow"
