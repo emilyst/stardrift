@@ -79,7 +79,7 @@ jobs:
             
             ### WebAssembly
             - `stardrift-${{ steps.version.outputs.version }}-wasm.tar.gz` - Web build with trail rendering
-            - **[Play in Browser](https://emilyst.github.io/stardrift/)** - Try Stardrift directly in your web browser
+            - **[Play in Browser](https://stardrift.live/)** - Try Stardrift directly in your web browser
             
             All downloads include SHA256 checksums for verification.
             

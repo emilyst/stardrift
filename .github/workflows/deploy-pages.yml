@@ -56,7 +56,7 @@ jobs:
 
       - name: Build WASM
         run: |
-          trunk build --release --public-url /stardrift/
+          trunk build --release --public-url /
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
