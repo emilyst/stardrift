@@ -128,3 +128,6 @@ pre-release-replacements = [
 [[bench]]
 name = "octree_benchmarks"
 harness = false
+
+[lints.clippy]
+type_complexity = "allow"
