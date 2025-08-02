@@ -80,20 +80,6 @@ jobs:
           cargo build --release --target ${{ matrix.platform.target }} --all-features
         shell: bash
 
-      - name: Sign Windows binary
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # Create a self-signed certificate for testing
-          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Stardrift Development" -KeySpec Signature -KeyUsage DigitalSignature -KeyUsageProperty Sign -KeyLength 2048 -KeyAlgorithm RSA -HashAlgorithm SHA256 -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" -CertStoreLocation "Cert:\CurrentUser\My"
-          
-          # Sign the executable
-          $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
-          if (Test-Path $signtool) {
-            & $signtool sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /v /sm /s My /n "Stardrift Development" target\${{ matrix.platform.target }}\release\stardrift.exe
-          } else {
-            Write-Host "SignTool not found, skipping signing"
-          }
 
       - name: Create bundle (macOS)
         if: runner.os == 'macOS'
