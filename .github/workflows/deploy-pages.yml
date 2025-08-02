@@ -58,19 +58,6 @@ jobs:
         run: |
           trunk build --release --public-url /stardrift/
 
-      - name: Optimize WASM with wasm-opt
-        run: |
-          # Install binaryen for wasm-opt
-          sudo apt-get install -y binaryen
-          
-          # Find and optimize the WASM file
-          WASM_FILE=$(find dist -name "*.wasm" -type f | head -1)
-          if [ -n "$WASM_FILE" ]; then
-            echo "Optimizing: $WASM_FILE"
-            wasm-opt -O3 --enable-simd "$WASM_FILE" -o "$WASM_FILE.opt"
-            mv "$WASM_FILE.opt" "$WASM_FILE"
-          fi
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
