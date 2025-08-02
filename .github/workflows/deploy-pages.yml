@@ -1,0 +1,81 @@
+name: Deploy to GitHub Pages
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to deploy'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., 0.0.16)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install trunk
+        uses: taiki-e/install-action@v2
+        with:
+          tool: trunk
+
+      - name: Build WASM
+        run: |
+          trunk build --release --public-url /stardrift/
+
+      - name: Optimize WASM with wasm-opt
+        run: |
+          # Install binaryen for wasm-opt
+          sudo apt-get install -y binaryen
+          
+          # Find and optimize the WASM file
+          WASM_FILE=$(find dist -name "*.wasm" -type f | head -1)
+          if [ -n "$WASM_FILE" ]; then
+            echo "Optimizing: $WASM_FILE"
+            wasm-opt -O3 --enable-simd "$WASM_FILE" -o "$WASM_FILE.opt"
+            mv "$WASM_FILE.opt" "$WASM_FILE"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -33,6 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -77,6 +79,7 @@ jobs:
             
             ### WebAssembly
             - `stardrift-${{ steps.version.outputs.version }}-wasm.tar.gz` - Web build with trail rendering
+            - **[Play in Browser](https://emilyst.github.io/stardrift/)** - Try Stardrift directly in your web browser
             
             All downloads include SHA256 checksums for verification.
             
@@ -98,3 +101,14 @@ jobs:
             ## What's Changed
             
             See below for full changelog.
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: release
+    uses: ./.github/workflows/deploy-pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    with:
+      version: ${{ needs.release.outputs.version }}
