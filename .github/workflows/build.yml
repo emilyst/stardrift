@@ -78,10 +78,8 @@ jobs:
         with:
           key: ${{ matrix.platform.target }}
 
-      - name: Install cargo-bundle
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-bundle
+
+
 
       - name: Build binary
         run: |
@@ -89,29 +87,56 @@ jobs:
         shell: bash
 
 
-      - name: Create bundle (macOS)
+      - name: Create app bundle and DMG (macOS)
         if: runner.os == 'macOS'
         run: |
-          cargo bundle --release --target ${{ matrix.platform.target }}
+          # Create app bundle structure
+          APP_NAME="Stardrift"
+          BUNDLE_DIR="${APP_NAME}.app"
+          mkdir -p "$BUNDLE_DIR/Contents/MacOS"
+          mkdir -p "$BUNDLE_DIR/Contents/Resources"
+          
+          # Copy executable
+          cp "target/${{ matrix.platform.target }}/release/stardrift" "$BUNDLE_DIR/Contents/MacOS/$APP_NAME"
+          chmod +x "$BUNDLE_DIR/Contents/MacOS/$APP_NAME"
+          
+          # Create Info.plist using plutil commands
+          PLIST_FILE="$BUNDLE_DIR/Contents/Info.plist"
+          plutil -create xml1 "$PLIST_FILE"
+          plutil -insert CFBundleInfoDictionaryVersion -string "6.0" "$PLIST_FILE"
+          plutil -insert CFBundleDevelopmentRegion -string "en" "$PLIST_FILE"
+          plutil -insert CFBundlePackageType -string "APPL" "$PLIST_FILE"
+          plutil -insert CFBundleIdentifier -string "app.stardrift" "$PLIST_FILE"
+          plutil -insert CFBundleExecutable -string "$APP_NAME" "$PLIST_FILE"
+          plutil -insert CFBundleIconFile -string "AppIcon" "$PLIST_FILE"
+          plutil -insert CFBundleDisplayName -string "$APP_NAME" "$PLIST_FILE"
+          plutil -insert CFBundleName -string "$APP_NAME" "$PLIST_FILE"
+          plutil -insert CFBundleVersion -string "${{ steps.get_version.outputs.version }}" "$PLIST_FILE"
+          plutil -insert CFBundleShortVersionString -string "${{ steps.get_version.outputs.version }}" "$PLIST_FILE"
+          plutil -insert NSHumanReadableCopyright -string "Copyright © 2025 Emily Strickland" "$PLIST_FILE"
+          plutil -insert CFBundleSignature -string "????" "$PLIST_FILE"
+          plutil -insert LSApplicationCategoryType -string "public.app-category.games" "$PLIST_FILE"
+          plutil -insert LSMinimumSystemVersion -string "10.15" "$PLIST_FILE"
+          plutil -insert NSHighResolutionCapable -bool true "$PLIST_FILE"
+          plutil -insert NSPrincipalClass -string "NSApplication" "$PLIST_FILE"
+          
+          # Copy resources
+          if [ -d "assets" ]; then
+            cp -r "assets" "$BUNDLE_DIR/Contents/Resources/"
+          fi
+          if [ -d "configs" ]; then
+            cp -r "configs" "$BUNDLE_DIR/Contents/Resources/"
+          fi
+          
           # Ad-hoc sign the app bundle
-          codesign --force --deep --sign - target/${{ matrix.platform.target }}/release/bundle/osx/Stardrift.app
+          codesign --force --deep --sign - "$BUNDLE_DIR"
+          
           # Create DMG from app bundle
-          hdiutil create -volname "Stardrift" -srcfolder target/${{ matrix.platform.target }}/release/bundle/osx/Stardrift.app -ov -format UDZO stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
+          hdiutil create -volname "Stardrift" -srcfolder "$BUNDLE_DIR" -ov -format UDZO stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
           # Ad-hoc sign the DMG
           codesign --force --sign - stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
 
-      - name: Create bundle (Windows MSI)
-        if: runner.os == 'Windows'
-        run: |
-          cargo bundle --release --target ${{ matrix.platform.target }} --format msi
-          Move-Item target\${{ matrix.platform.target }}\release\bundle\msi\*.msi stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.msi
-        shell: pwsh
 
-      - name: Create bundle (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          cargo bundle --release --target ${{ matrix.platform.target }} --format deb
-          cp target/${{ matrix.platform.target }}/release/bundle/deb/*.deb stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.deb
 
       - name: Package binary (Unix)
         if: runner.os != 'Windows'
@@ -155,8 +180,6 @@ jobs:
             stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.tar.gz
             stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.zip
             stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
-            stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.msi
-            stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.deb
 
   build-wasm:
     name: Build WASM

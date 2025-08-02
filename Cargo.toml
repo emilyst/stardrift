@@ -5,18 +5,7 @@ edition = "2024"
 license = "CC0-1.0"
 repository = "https://github.com/emilyst/stardrift"
 publish = false
-
-[package.metadata.bundle]
-name = "Stardrift"
-identifier = "game.est.stardrift"
-category = "Game"
-short_description = "N-body celestial mechanics simulation with real-time visualization"
-long_description = """
-Stardrift is an N-body gravity simulation toy that provides a real-time visualization
-"""
-copyright = "Copyright (c) 2025 Emily Strickland"
-# icon = ["assets/icon/32x32.png", "assets/icon/128x128.png", "assets/icon/128x128@2x.png"]
-#resources = ["assets", "configs/benchmark_profiles"]
+description = "N-body gravity simulation toy that provides a real-time visualization"
 
 [profile.dev]
 debug = 2
@@ -124,6 +113,7 @@ pre-release-replacements = [
 [[bench]]
 name = "octree_benchmarks"
 harness = false
+
 
 [lints.clippy]
 type_complexity = "allow"

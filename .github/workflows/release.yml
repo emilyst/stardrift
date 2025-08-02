@@ -59,13 +59,7 @@ jobs:
           body: |
             ## Downloads
             
-            ### Desktop Installers
-            - **Linux** (Debian/Ubuntu)
-              - x86_64: `stardrift-${{ steps.version.outputs.version }}-x86_64-unknown-linux-gnu.deb`
-              - ARM64: `stardrift-${{ steps.version.outputs.version }}-aarch64-unknown-linux-gnu.deb`
-            - **Windows** (**currently not working!**)
-              - x86_64: `stardrift-${{ steps.version.outputs.version }}-x86_64-pc-windows-msvc.msi`
-              - ARM64: `stardrift-${{ steps.version.outputs.version }}-aarch64-pc-windows-msvc.msi`
+            ### Desktop Packages
             - **macOS**
               - Intel: `stardrift-${{ steps.version.outputs.version }}-x86_64-apple-darwin.dmg`
               - Apple Silicon: `stardrift-${{ steps.version.outputs.version }}-aarch64-apple-darwin.dmg`

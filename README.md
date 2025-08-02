@@ -57,12 +57,33 @@ interactive camera controls.
 
 ## Installation
 
-### Prerequisites
+### Pre-built Packages
+
+Pre-built packages are available from the [releases page](https://github.com/emilyst/stardrift/releases):
+
+#### Linux
+- **Portable**: `.tar.gz` archives for x86_64 and ARM64
+
+#### Windows
+- **Portable**: `.zip` archives for x86_64 and ARM64
+
+#### macOS
+- **Disk Image**: `.dmg` for Intel and Apple Silicon
+- **Portable**: `.tar.gz` archives for manual installation
+
+#### Web
+- **WebAssembly**: Pre-built WASM packages for web deployment
+
+All packages include SHA256 checksums for verification.
+
+### Building from Source
+
+#### Prerequisites
 
 - **Rust**: Install from [rustup.rs](https://rustup.rs/)
 - **Git**: For cloning the repository
 
-### Clone the Repository
+#### Clone the Repository
 
 ```bash
 git clone https://github.com/emilyst/stardrift.git

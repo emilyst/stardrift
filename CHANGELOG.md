@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Packaging system simplification
+    - macOS: Now creates `.app` bundles directly using shell commands
+    - macOS: Uses `plutil` commands to generate Info.plist directly
+
+### Removed
+
+- Linux packaging support (`.deb` and `.rpm` packages)
+    - Removed `cargo-deb` and `cargo-generate-rpm` dependencies from CI
+    - Removed `[package.metadata.deb]` and `[package.metadata.generate-rpm]` sections from Cargo.toml
+    - Linux distributions now only receive `.tar.gz` archives
+- Dependency on `cargo-bundle` in all workflows
+- `[package.metadata.bundle]` configuration from Cargo.toml
+
 ## [0.0.16] - 2025-08-02
 
 ### Changed
@@ -19,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - CI/CD binary naming changes
     - All release artifacts now include version in filename (e.g., `stardrift-0.0.15-x86_64-unknown-linux-gnu.tar.gz`)
-    - Bundle outputs include version: `.dmg` (macOS), `.msi` (Windows), `.deb` (Linux)
+    - Bundle outputs include version: `.dmg` (macOS)
     - Updated build attestation to include all bundle formats
 
 ## [0.0.15] - 2025-08-02
@@ -71,10 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Native OS installers via cargo-bundle integration
-    - macOS: DMG disk images with proper .app bundles
-    - Windows: MSI installers for all architectures
-    - Linux: DEB packages for Debian/Ubuntu systems
+- Native DMG disk images with proper .app bundles
 - ARM64 support for Linux and Windows builds using GitHub's native ARM runners
 - Bundle metadata in Cargo.toml for application identity and descriptions
 
@@ -84,7 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Moved all optimizations (LTO, single codegen unit, stripping) to release profile
     - Removed separate distribution profile to work better with cargo-bundle
     - Updated all workflows to use standard --release flag
-- Enhanced release workflow to generate both installers and portable binaries
+- Enhanced release workflow to generate both DMG packages (macOS) and portable binaries
 - Fixed sha256 checksum generation for macOS builds (using shasum instead of sha256sum)
 
 ### Fixed
@@ -223,9 +235,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Platform-specific configuration paths (XDG compliant)
 
 [Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.16...HEAD
+
 [0.0.16]: https://github.com/emilyst/stardrift/compare/v0.0.15...v0.0.16
+
 [0.0.15]: https://github.com/emilyst/stardrift/compare/v0.0.14...v0.0.15
+
 [0.0.14]: https://github.com/emilyst/stardrift/compare/v0.0.13...v0.0.14
+
 [0.0.13]: https://github.com/emilyst/stardrift/compare/v0.0.12...v0.0.13
 
 [0.0.12]: https://github.com/emilyst/stardrift/compare/v0.0.11...v0.0.12
