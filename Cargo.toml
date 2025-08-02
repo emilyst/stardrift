@@ -1,6 +1,6 @@
 [package]
 name = "stardrift"
-version = "0.0.14"
+version = "0.0.15"
 edition = "2024"
 license = "CC0-1.0"
 repository = "https://github.com/emilyst/stardrift"
