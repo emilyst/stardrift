@@ -7,6 +7,7 @@
 use crate::physics::aabb3d::Aabb3d;
 use crate::prelude::*;
 use bevy::color::palettes::css;
+use bevy::gizmos::config::{DefaultGizmoConfigGroup, GizmoConfigStore};
 
 /// Plugin that provides debug visualization features
 pub struct VisualizationPlugin;
@@ -20,8 +21,10 @@ impl Plugin for VisualizationPlugin {
         });
         app.init_resource::<BarycenterGizmoVisibility>();
         app.insert_resource(TrailsVisualizationSettings { enabled: true });
+        app.init_resource::<GizmoConfigStore>();
 
         // Add systems
+        app.add_systems(Startup, configure_gizmos);
         app.add_systems(
             Update,
             (
@@ -29,6 +32,7 @@ impl Plugin for VisualizationPlugin {
                 visualize_octree.run_if(resource_exists_and_equals(OctreeVisualizationSettings {
                     enabled: true,
                     max_depth: None,
+                    line_color: Color::srgba(0.0, 0.0, 0.0, 0.0), // Dummy value, only enabled is compared
                 })),
                 draw_barycenter_gizmo.run_if(resource_exists_and_equals(
                     BarycenterGizmoVisibility { enabled: true },
@@ -37,6 +41,13 @@ impl Plugin for VisualizationPlugin {
             ),
         );
     }
+}
+
+fn configure_gizmos(mut config_store: ResMut<GizmoConfigStore>) {
+    let (config, _) = config_store.config_mut::<DefaultGizmoConfigGroup>();
+
+    config.line.width = 1.0;
+    config.line.perspective = false;
 }
 
 /// Handles SimulationCommand events for visualization features
@@ -107,7 +118,7 @@ fn visualize_octree(
     let bounds = octree.as_ref().bounds(settings.max_depth);
 
     for aabb in bounds {
-        draw_bounding_box_wireframe_gizmo(&mut gizmos, &aabb, css::WHITE);
+        draw_bounding_box_wireframe_gizmo(&mut gizmos, &aabb, settings.line_color);
     }
 }
 
@@ -168,10 +179,21 @@ fn draw_barycenter_gizmo(
 }
 
 /// Resource to control octree visualization settings
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct OctreeVisualizationSettings {
     pub enabled: bool,
     pub max_depth: Option<usize>, // None means show all levels
+    pub line_color: Color,
+}
+
+impl Default for OctreeVisualizationSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            max_depth: None,
+            line_color: Color::srgba(1.0, 1.0, 1.0, 0.5),
+        }
+    }
 }
 
 impl PartialEq for OctreeVisualizationSettings {

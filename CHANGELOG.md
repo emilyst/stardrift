@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Eliminated explicit `NoFrustumCulling` component assignment
     - Improved type safety and code organization for trail entity creation
 
+- Octree visualization rendering
+    - Reduced line width from 2.0 to 1.0 pixels
+    - Added configurable line color with 50% opacity by default
+    - Disabled perspective scaling for consistent line appearance
+    - Improved visibility of bodies and trails during simulation
+
 ### Fixed
 
 - Trails now render continuously throughout the simulation
