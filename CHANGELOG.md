@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Trails now render continuously throughout the simulation
 - Trails persist when bodies are despawned, preparing for future collision/merging features
+- Keyboard input handling for non-QWERTY keyboard layouts
+    - Switched from physical key codes (KeyCode) to logical key values (KeyboardInput events)
+    - Keys now respond to the character printed on them regardless of keyboard layout
+    - All keyboard shortcuts (N, O, C, S, T, Q, Space, 0-9) now work correctly on AZERTY, Dvorak, and other layouts
 
 ## [0.0.17] - 2025-08-02
 

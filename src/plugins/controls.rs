@@ -6,6 +6,7 @@
 
 use crate::prelude::*;
 use bevy::asset::{AssetPath, io::AssetSourceId};
+use bevy::input::keyboard::{Key, KeyboardInput};
 
 const BUTTON_FONT_FACE: &str = "fonts/Saira-Medium";
 const BUTTON_BORDER_RADIUS_PX: f32 = 5.0;
@@ -71,58 +72,72 @@ impl Plugin for ControlsPlugin {
 
 /// Handles keyboard input and emits SimulationCommand events
 fn keyboard_input_handler(
-    keys: Res<ButtonInput<KeyCode>>,
+    mut keyboard_events: EventReader<KeyboardInput>,
     mut commands: EventWriter<SimulationCommand>,
 ) {
-    for &keycode in keys.get_just_pressed() {
-        match keycode {
-            KeyCode::KeyN => {
-                commands.write(SimulationCommand::Restart);
+    use bevy::input::ButtonState;
+
+    for event in keyboard_events.read() {
+        // Only process key press events, not releases
+        if event.state != ButtonState::Pressed {
+            continue;
+        }
+
+        match &event.logical_key {
+            Key::Character(c) => {
+                // Convert to lowercase for case-insensitive matching
+                let ch = c.to_lowercase();
+                match ch.as_str() {
+                    "n" => {
+                        commands.write(SimulationCommand::Restart);
+                    }
+                    "o" => {
+                        commands.write(SimulationCommand::ToggleOctreeVisualization);
+                    }
+                    "c" => {
+                        commands.write(SimulationCommand::ToggleBarycenterGizmo);
+                    }
+                    "s" => {
+                        commands.write(SimulationCommand::TakeScreenshot);
+                    }
+                    "t" => {
+                        commands.write(SimulationCommand::ToggleTrailsVisualization);
+                    }
+                    "0" => {
+                        commands.write(SimulationCommand::SetOctreeMaxDepth(None));
+                    }
+                    "1" => {
+                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(1)));
+                    }
+                    "2" => {
+                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(2)));
+                    }
+                    "3" => {
+                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(3)));
+                    }
+                    "4" => {
+                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(4)));
+                    }
+                    "5" => {
+                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(5)));
+                    }
+                    "6" => {
+                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(6)));
+                    }
+                    "7" => {
+                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(7)));
+                    }
+                    "8" => {
+                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(8)));
+                    }
+                    "9" => {
+                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(9)));
+                    }
+                    _ => {}
+                }
             }
-            KeyCode::Space => {
+            Key::Space => {
                 commands.write(SimulationCommand::TogglePause);
-            }
-            KeyCode::KeyO => {
-                commands.write(SimulationCommand::ToggleOctreeVisualization);
-            }
-            KeyCode::KeyC => {
-                commands.write(SimulationCommand::ToggleBarycenterGizmo);
-            }
-            KeyCode::KeyS => {
-                commands.write(SimulationCommand::TakeScreenshot);
-            }
-            KeyCode::KeyT => {
-                commands.write(SimulationCommand::ToggleTrailsVisualization);
-            }
-            KeyCode::Digit0 => {
-                commands.write(SimulationCommand::SetOctreeMaxDepth(None));
-            }
-            KeyCode::Digit1 => {
-                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(1)));
-            }
-            KeyCode::Digit2 => {
-                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(2)));
-            }
-            KeyCode::Digit3 => {
-                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(3)));
-            }
-            KeyCode::Digit4 => {
-                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(4)));
-            }
-            KeyCode::Digit5 => {
-                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(5)));
-            }
-            KeyCode::Digit6 => {
-                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(6)));
-            }
-            KeyCode::Digit7 => {
-                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(7)));
-            }
-            KeyCode::Digit8 => {
-                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(8)));
-            }
-            KeyCode::Digit9 => {
-                commands.write(SimulationCommand::SetOctreeMaxDepth(Some(9)));
             }
             _ => {}
         }
@@ -180,9 +195,23 @@ fn quit_button_handler(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn quit_on_escape(keys: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit>) {
-    if keys.just_pressed(KeyCode::Escape) || keys.just_pressed(KeyCode::KeyQ) {
-        exit.write_default();
+fn quit_on_escape(mut keyboard_events: EventReader<KeyboardInput>, mut exit: EventWriter<AppExit>) {
+    use bevy::input::ButtonState;
+
+    for event in keyboard_events.read() {
+        if event.state != ButtonState::Pressed {
+            continue;
+        }
+
+        match &event.logical_key {
+            Key::Escape => {
+                exit.write_default();
+            }
+            Key::Character(c) if c.to_lowercase() == "q" => {
+                exit.write_default();
+            }
+            _ => {}
+        }
     }
 }
 

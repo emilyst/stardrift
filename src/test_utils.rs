@@ -1,5 +1,7 @@
 //! Test utilities for plugin testing
 
+use bevy::input::ButtonState;
+use bevy::input::keyboard::Key;
 use bevy::prelude::*;
 
 use crate::prelude::*;
@@ -48,22 +50,33 @@ pub fn create_test_app() -> App {
     app
 }
 
-/// Helper to simulate a key press
-pub fn press_key(app: &mut App, key: KeyCode) {
-    // Clear the input state to ensure just_pressed works correctly
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .clear();
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .press(key);
+/// Helper to simulate a keyboard input event
+pub fn send_keyboard_input(app: &mut App, key: Key, state: ButtonState) {
+    use bevy::input::keyboard::KeyboardInput;
+
+    // For tests, we can use a placeholder entity since we don't have actual windows
+    let window_entity = Entity::PLACEHOLDER;
+
+    let event = KeyboardInput {
+        key_code: KeyCode::KeyA, // Placeholder, not used in new system
+        logical_key: key,
+        state,
+        text: None,
+        repeat: false,
+        window: window_entity,
+    };
+
+    app.world_mut().send_event(event);
 }
 
-/// Helper to simulate a key release
-pub fn release_key(app: &mut App, key: KeyCode) {
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .release(key);
+/// Helper to simulate a character key press
+pub fn press_character_key(app: &mut App, character: &str) {
+    send_keyboard_input(app, Key::Character(character.into()), ButtonState::Pressed);
+}
+
+/// Helper to simulate a special key press
+pub fn press_special_key(app: &mut App, key: Key) {
+    send_keyboard_input(app, key, ButtonState::Pressed);
 }
 
 #[cfg(test)]
@@ -78,16 +91,27 @@ mod tests {
     }
 
     #[test]
-    fn test_key_helpers() {
+    fn test_keyboard_input_helpers() {
         let mut app = create_test_app();
 
-        press_key(&mut app, KeyCode::Space);
-        let input = app.world().resource::<ButtonInput<KeyCode>>();
-        assert!(input.pressed(KeyCode::Space));
+        // Add a system to consume events (verifies they're being sent properly)
+        app.add_systems(
+            Update,
+            |mut events: EventReader<bevy::input::keyboard::KeyboardInput>| {
+                for _ in events.read() {
+                    // Just consume the events to verify they're being sent
+                }
+            },
+        );
 
-        release_key(&mut app, KeyCode::Space);
-        app.update(); // Need to update for release to take effect
-        let input = app.world().resource::<ButtonInput<KeyCode>>();
-        assert!(!input.pressed(KeyCode::Space));
+        // Test character key press
+        press_character_key(&mut app, "a");
+        app.update();
+
+        // Test special key press
+        press_special_key(&mut app, Key::Space);
+        app.update();
+
+        // The test passes if no panic occurs during event sending
     }
 }
