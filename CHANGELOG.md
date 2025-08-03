@@ -9,11 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Trails are now always included as a runtime feature
-    - Removed `trails` feature flag from `Cargo.toml`
-    - Trails can still be toggled on/off with the 'T' key or UI button
-    - Simplified build configuration and reduced code complexity
-    - No longer need to compile with specific features to enable trails
+- Removed all compile-time feature flags
+    - Removed `[features]` section from `Cargo.toml`
+    - All functionality now included by default
+    - No longer need `--all-features` or `--features` build flags
 
 ## [0.0.18] - 2025-08-03
 

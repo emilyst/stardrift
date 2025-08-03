@@ -84,12 +84,6 @@ criterion = { version = "0.7.0", features = ["csv_output", "html_reports"] }
 name = "stardrift"
 path = "src/main.rs"
 
-[features]
-default = ["graphics"]
-graphics = []
-diagnostics = []
-benchmarks = []
-
 [target.wasm32-unknown-unknown.dependencies]
 wasm-bindgen = "0.2"
 web-sys = "0.3"

@@ -74,17 +74,8 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Check all features
-        run: cargo check --all-features
-
-      - name: Check no default features
-        run: cargo check --no-default-features
-
-      - name: Check each feature
-        run: |
-          cargo check --no-default-features --features graphics
-          cargo check --no-default-features --features diagnostics
-          cargo check --no-default-features --features benchmarks
+      - name: Check code
+        run: cargo check
 
   wasm-check:
     name: WASM Check

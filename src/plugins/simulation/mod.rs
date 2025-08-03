@@ -14,7 +14,6 @@ use actions::{
     ScreenshotState, handle_restart_simulation_event, handle_take_screenshot_event,
     handle_toggle_pause_simulation_event, process_screenshot_capture,
 };
-#[cfg(feature = "diagnostics")]
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use physics::{PhysicsSet, apply_gravitation_octree, counteract_barycentric_drift, rebuild_octree};
 
@@ -59,7 +58,6 @@ impl Plugin for SimulationPlugin {
         // New unified command event
         app.add_event::<SimulationCommand>();
 
-        #[cfg(feature = "diagnostics")]
         app.edit_schedule(FixedUpdate, |schedule| {
             schedule.set_build_settings(ScheduleBuildSettings {
                 ambiguity_detection: LogLevel::Warn,

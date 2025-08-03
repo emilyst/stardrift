@@ -19,12 +19,10 @@ use crate::plugins::{
     embedded_assets::EmbeddedAssetsPlugin, simulation::SimulationPlugin,
     visualization::VisualizationPlugin,
 };
-#[cfg(feature = "diagnostics")]
 use crate::plugins::{
     diagnostics_hud::DiagnosticsHudPlugin, simulation_diagnostics::SimulationDiagnosticsPlugin,
 };
 use crate::prelude::*;
-#[cfg(feature = "diagnostics")]
 use bevy::diagnostic::{
     EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin, SystemInformationDiagnosticsPlugin,
 };
@@ -64,17 +62,12 @@ fn main() {
                 },
             }),
         EmbeddedAssetsPlugin,
-        #[cfg(feature = "diagnostics")]
         DiagnosticsHudPlugin,
-        #[cfg(feature = "diagnostics")]
         EntityCountDiagnosticsPlugin,
-        #[cfg(feature = "diagnostics")]
         FrameTimeDiagnosticsPlugin::default(),
         PanOrbitCameraPlugin,
         PhysicsPlugins::default(),
-        #[cfg(feature = "diagnostics")]
         SimulationDiagnosticsPlugin::default(),
-        #[cfg(feature = "diagnostics")]
         SystemInformationDiagnosticsPlugin,
         SimulationPlugin,
         CameraPlugin,

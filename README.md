@@ -62,16 +62,20 @@ interactive camera controls.
 Pre-built packages are available from the [releases page](https://github.com/emilyst/stardrift/releases):
 
 #### Linux
+
 - **Portable**: `.tar.gz` archives for x86_64 and ARM64
 
 #### Windows
+
 - **Portable**: `.zip` archives for x86_64 and ARM64
 
 #### macOS
+
 - **Disk Image**: `.dmg` for Intel and Apple Silicon
 - **Portable**: `.tar.gz` archives for manual installation
 
 #### Web
+
 - **WebAssembly**: Pre-built WASM packages for web deployment
 
 All packages include SHA256 checksums for verification.
@@ -94,14 +98,10 @@ cd stardrift
 
 ```bash
 # Development build (faster compilation)
-cargo run --all-features
+cargo run
 
 # Release build (optimized performance)
-cargo run --release --all-features
-
-# Build with specific features
-cargo run --features dev        # Development features only
-cargo run --no-default-features --features graphics  # Run without diagnostics
+cargo run --release
 ```
 
 ### WebAssembly Build
@@ -120,6 +120,7 @@ trunk build --release
 ```
 
 The built files will be in the `dist/` directory, ready for deployment. Trunk automatically handles:
+
 - WASM compilation and optimization
 - Asset bundling and injection
 - Development server with hot-reloading
@@ -469,37 +470,6 @@ src/
 
 This structure enables extension, testing, and maintenance while providing defined entry points for understanding and
 modifying the simulation behavior.
-
-## Development
-
-### Development Features
-
-Enable development features for additional debugging:
-
-```bash
-cargo run --features dev
-```
-
-Development features include:
-
-- Asset hot-reloading
-- File watching
-- Additional debugging information
-- Dynamic linking for faster compilation
-
-### Available Features
-
-- **`dev`**: Development features for faster iteration
-- **`diagnostics`**: Extended performance diagnostics
-- **`benchmarks`**: Performance benchmarking capabilities
-- **`trails`**: Dynamic trail visualization for celestial bodies
-
-Combine features as needed:
-
-```bash
-cargo run --features dev           # Development features
-cargo run --all-features            # All features enabled
-```
 
 ## Troubleshooting
 
