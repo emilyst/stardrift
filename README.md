@@ -4,6 +4,17 @@ A high-performance 3D gravitational N-body simulation built with Rust, Bevy game
 project simulates the gravitational interactions between multiple celestial bodies with real-time visualization and
 interactive camera controls.
 
+## Project Status
+
+Stardrift is an experimental side project for personal enjoyment and learning. The project explores gravitational
+physics simulation while learning Rust and Bevy. Development happens in spare time without specific goals or timeline.
+
+This project also serves as an exploration of AI capabilities in software development. Its development involves heavy
+use of AI assistance.
+
+**Note**: This is not intended for scientific or research purposes. The project remains experimental and subject to
+significant changes.
+
 ## Features
 
 ### Core Simulation
