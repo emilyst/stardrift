@@ -1,4 +1,6 @@
-/.run
+/.claude
 /.idea
+/.run
 /dist
+/docs
 /target
