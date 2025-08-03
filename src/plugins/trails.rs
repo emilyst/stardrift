@@ -19,8 +19,32 @@ pub enum TrailSet {
 }
 
 #[derive(Component)]
-pub struct TrailRenderer {
-    pub body_entity: Entity,
+pub struct TrailRenderer;
+
+#[derive(Component)]
+pub struct TrackedBody(pub Entity);
+
+#[derive(Bundle)]
+struct TrailBundle {
+    renderer: TrailRenderer,
+    tracked: TrackedBody,
+    trail: Trail,
+    material: MeshMaterial3d<StandardMaterial>,
+    transform: Transform,
+    visibility: Visibility,
+}
+
+impl TrailBundle {
+    fn new(tracked_body: Entity, trail: Trail, material: Handle<StandardMaterial>) -> Self {
+        Self {
+            renderer: TrailRenderer,
+            tracked: TrackedBody(tracked_body),
+            trail,
+            material: MeshMaterial3d(material),
+            transform: Transform::default(),
+            visibility: Visibility::default(),
+        }
+    }
 }
 
 use std::collections::VecDeque;
@@ -31,20 +55,33 @@ pub struct TrailPoint {
     pub age: f32,
 }
 
+pub struct TrailRenderParams<'a> {
+    pub camera_pos: Option<Vec3>,
+    pub base_width: f32,
+    pub width_relative_to_body: bool,
+    pub body_radius: Option<f32>,
+    pub body_size_multiplier: f32,
+    pub enable_tapering: bool,
+    pub taper_curve: &'a crate::config::TaperCurve,
+    pub min_width_ratio: f32,
+}
+
 #[derive(Component, Debug)]
 pub struct Trail {
     pub points: VecDeque<TrailPoint>,
     pub color: Color,
+    pub body_radius: f32,
     pub last_update: f32,
     pub pause_time: Option<f32>,
     pub total_pause_duration: f32,
 }
 
 impl Trail {
-    pub fn new(color: Color) -> Self {
+    pub fn new(color: Color, body_radius: f32) -> Self {
         Self {
             points: VecDeque::new(),
             color,
+            body_radius,
             last_update: 0.0,
             pause_time: None,
             total_pause_duration: 0.0,
@@ -71,7 +108,7 @@ impl Trail {
             self.points.truncate(max_points);
         }
 
-        self.last_update = current_time;
+        // Don't update last_update here - that should only happen when adding new points!
     }
 
     pub fn should_update(&self, current_time: f32, update_interval: f32) -> bool {
@@ -145,18 +182,7 @@ impl Trail {
     }
 
     /// Each trail vertex becomes two vertices forming a strip with configurable width
-    #[allow(clippy::too_many_arguments)]
-    pub fn get_triangle_strip_vertices(
-        &self,
-        camera_pos: Option<Vec3>,
-        base_width: f32,
-        width_relative_to_body: bool,
-        body_radius: Option<f32>,
-        body_size_multiplier: f32,
-        enable_tapering: bool,
-        taper_curve: &crate::config::TaperCurve,
-        min_width_ratio: f32,
-    ) -> Vec<Vec3> {
+    pub fn get_triangle_strip_vertices(&self, params: &TrailRenderParams) -> Vec<Vec3> {
         if self.points.len() < 2 {
             return Vec::new();
         }
@@ -178,7 +204,7 @@ impl Trail {
                 Vec3::X
             };
 
-            let mut perpendicular = if let Some(cam_pos) = camera_pos {
+            let mut perpendicular = if let Some(cam_pos) = params.camera_pos {
                 // Camera-facing width: cross product gives us width perpendicular to both
                 // trail direction and camera-to-point vector
                 let to_camera = (cam_pos - current_pos).normalize_or_zero();
@@ -201,32 +227,32 @@ impl Trail {
             }
 
             // Calculate trail width based on configuration
-            let base_trail_width = if width_relative_to_body {
-                body_radius.unwrap_or(1.0) * body_size_multiplier
+            let base_trail_width = if params.width_relative_to_body {
+                params.body_radius.unwrap_or(1.0) * params.body_size_multiplier
             } else {
-                base_width
+                params.base_width
             };
 
             // Apply tapering if enabled
-            let width = if enable_tapering {
+            let width = if params.enable_tapering {
                 // Calculate position along trail (0.0 at head, 1.0 at tail)
                 let position_ratio = i as f32 / (self.points.len() - 1) as f32;
 
                 // Apply taper curve
-                let taper_factor = match taper_curve {
+                let taper_factor = match params.taper_curve {
                     crate::config::TaperCurve::Linear => {
-                        1.0 - position_ratio * (1.0 - min_width_ratio)
+                        1.0 - position_ratio * (1.0 - params.min_width_ratio)
                     }
                     crate::config::TaperCurve::Exponential => {
                         // Exponential tapering (more aggressive at the end)
                         let t = 1.0 - position_ratio;
-                        min_width_ratio + (1.0 - min_width_ratio) * (t * t)
+                        params.min_width_ratio + (1.0 - params.min_width_ratio) * (t * t)
                     }
                     crate::config::TaperCurve::SmoothStep => {
                         // Smooth step tapering
                         let t = 1.0 - position_ratio;
                         let smooth = 3.0 * t * t - 2.0 * t * t * t;
-                        min_width_ratio + (1.0 - min_width_ratio) * smooth
+                        params.min_width_ratio + (1.0 - params.min_width_ratio) * smooth
                     }
                 };
 
@@ -265,12 +291,17 @@ impl Plugin for TrailsPlugin {
             )
                 .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
         );
+
+        // Trail systems run in Update while physics runs in FixedUpdate.
+        // This is intentional - Bevy ensures Update runs after any pending
+        // FixedUpdate steps, so trails always see the latest physics positions.
     }
 }
 
 impl TrailsPlugin {
     fn update_trails(
-        mut trail_query: Query<(&mut Trail, &Transform)>,
+        mut trail_query: Query<(&mut Trail, &TrackedBody), With<TrailRenderer>>,
+        body_query: Query<&Transform, With<RigidBody>>,
         time: Res<Time>,
         config: Res<SimulationConfig>,
         app_state: Res<State<AppState>>,
@@ -278,7 +309,7 @@ impl TrailsPlugin {
         let current_time = time.elapsed_secs();
         let is_paused = matches!(app_state.get(), AppState::Paused);
 
-        for (mut trail, transform) in trail_query.iter_mut() {
+        for (mut trail, tracked_body) in trail_query.iter_mut() {
             if is_paused {
                 trail.pause(current_time);
                 continue;
@@ -288,15 +319,19 @@ impl TrailsPlugin {
                 trail.unpause(current_time);
             }
 
-            if trail.should_update(current_time, config.trails.update_interval_seconds as f32) {
-                trail.add_point(transform.translation, current_time);
-
-                trail.cleanup_old_points(
-                    current_time,
-                    config.trails.trail_length_seconds as f32,
-                    config.trails.max_points_per_trail,
-                );
+            // Only add new points if we're tracking an active body
+            if let Ok(transform) = body_query.get(tracked_body.0) {
+                if trail.should_update(current_time, config.trails.update_interval_seconds as f32) {
+                    trail.add_point(transform.translation, current_time);
+                }
             }
+
+            // Always cleanup old points, even for orphaned trails
+            trail.cleanup_old_points(
+                current_time,
+                config.trails.trail_length_seconds as f32,
+                config.trails.max_points_per_trail,
+            );
         }
     }
 
@@ -304,12 +339,12 @@ impl TrailsPlugin {
     #[allow(clippy::type_complexity)]
     fn initialize_trails(
         mut commands: Commands,
+        // Only process newly added bodies - eliminates O(n²) check
         query: Query<
-            (Entity, &MeshMaterial3d<StandardMaterial>),
-            (With<RigidBody>, Without<Trail>),
+            (Entity, &MeshMaterial3d<StandardMaterial>, Option<&Collider>),
+            Added<RigidBody>,
         >,
         mut materials: ResMut<Assets<StandardMaterial>>,
-        _meshes: ResMut<Assets<Mesh>>,
         app_state: Res<State<AppState>>,
         time: Res<Time>,
         config: Res<SimulationConfig>,
@@ -317,7 +352,7 @@ impl TrailsPlugin {
         let is_paused = matches!(app_state.get(), AppState::Paused);
         let current_time = time.elapsed_secs();
 
-        for (entity, mesh_material) in query.iter() {
+        for (entity, mesh_material, collider) in query.iter() {
             // Extract color from the body's material
             let color = if let Some(material) = materials.get(&mesh_material.0) {
                 material.base_color
@@ -325,13 +360,19 @@ impl TrailsPlugin {
                 Color::WHITE
             };
 
-            let mut trail = Trail::new(color);
+            // Extract radius from collider if available
+            let body_radius = collider
+                .and_then(|c| {
+                    let shape = c.shape();
+                    shape.as_ball().map(|ball| ball.radius as f32)
+                })
+                .unwrap_or(1.0);
+
+            let mut trail = Trail::new(color, body_radius);
 
             if is_paused {
                 trail.pause(current_time);
             }
-
-            commands.entity(entity).insert(trail);
 
             // Choose blending mode based on configuration
             // Additive: Strong bloom but no transparency
@@ -351,13 +392,7 @@ impl TrailsPlugin {
             });
 
             commands.spawn((
-                TrailRenderer {
-                    body_entity: entity,
-                },
-                MeshMaterial3d(trail_material),
-                Transform::default(),
-                // Add visibility bundle to ensure proper culling behavior
-                Visibility::default(),
+                TrailBundle::new(entity, trail, trail_material),
                 // TEMPORARY: Disable frustum culling for trails
                 // This prevents trails from being culled incorrectly while we debug bounding volume issues
                 // Frustum culling is still having problems with dynamic trail geometry despite AABB computation
@@ -370,8 +405,7 @@ impl TrailsPlugin {
     fn render_trails(
         mut commands: Commands,
         mut trail_meshes: ResMut<Assets<Mesh>>,
-        trail_query: Query<(&Trail, Option<&Collider>)>,
-        mut renderer_query: Query<(Entity, &TrailRenderer, Option<&Mesh3d>)>,
+        mut renderer_query: Query<(Entity, &Trail, Option<&Mesh3d>), With<TrailRenderer>>,
         camera_query: Query<&Transform, With<Camera>>,
         time: Res<Time>,
         config: Res<SimulationConfig>,
@@ -384,46 +418,37 @@ impl TrailsPlugin {
 
         let current_time = time.elapsed_secs();
 
-        for (renderer_entity, renderer, mesh_handle) in renderer_query.iter_mut() {
-            if let Ok((trail, collider)) = trail_query.get(renderer.body_entity) {
-                if !trail.points.is_empty() {
-                    // Extract body radius from collider if available
-                    let body_radius = collider
-                        .and_then(|c| {
-                            // Get the underlying shape from the collider
-                            let shape = c.shape();
+        for (renderer_entity, trail, mesh_handle) in renderer_query.iter_mut() {
+            if trail.points.len() >= 2 {
+                let body_radius = Some(trail.body_radius);
 
-                            // Try to downcast to a Ball shape and get its radius
-                            shape.as_ball().map(|ball| ball.radius as f32)
-                        })
-                        .or(Some(1.0)); // Default radius if we can't extract it
-
-                    match mesh_handle {
-                        Some(mesh_handle) => {
-                            // Update existing mesh
-                            if let Some(mesh) = trail_meshes.get_mut(&mesh_handle.0) {
-                                Self::update_trail_mesh(
-                                    mesh,
-                                    trail,
-                                    camera_pos,
-                                    current_time,
-                                    &config.trails,
-                                    body_radius,
-                                );
-                            }
-                        }
-                        None => {
-                            // Create new mesh and add it to the entity
-                            let trail_mesh = Self::create_trail_mesh_with_data(
-                                &mut trail_meshes,
+                match mesh_handle {
+                    Some(mesh_handle) => {
+                        // Update existing mesh
+                        if let Some(mesh) = trail_meshes.get_mut(&mesh_handle.0) {
+                            Self::update_trail_mesh(
+                                mesh,
                                 trail,
                                 camera_pos,
                                 current_time,
                                 &config.trails,
-                                body_radius,
+                                Some(trail.body_radius),
                             );
-                            commands.entity(renderer_entity).insert(Mesh3d(trail_mesh));
+                        } else {
+                            warn!("Trail mesh handle exists but mesh not found in assets!");
                         }
+                    }
+                    None => {
+                        // Create new mesh and add it to the entity
+                        let trail_mesh = Self::create_trail_mesh_with_data(
+                            &mut trail_meshes,
+                            trail,
+                            camera_pos,
+                            current_time,
+                            &config.trails,
+                            body_radius,
+                        );
+                        commands.entity(renderer_entity).insert(Mesh3d(trail_mesh));
                     }
                 }
             }
@@ -461,16 +486,17 @@ impl TrailsPlugin {
         trail_config: &crate::config::TrailConfig,
         body_radius: Option<f32>,
     ) {
-        let strip_vertices = trail.get_triangle_strip_vertices(
+        let params = TrailRenderParams {
             camera_pos,
-            trail_config.base_width as f32,
-            trail_config.width_relative_to_body,
+            base_width: trail_config.base_width as f32,
+            width_relative_to_body: trail_config.width_relative_to_body,
             body_radius,
-            trail_config.body_size_multiplier as f32,
-            trail_config.enable_tapering,
-            &trail_config.taper_curve,
-            trail_config.min_width_ratio as f32,
-        );
+            body_size_multiplier: trail_config.body_size_multiplier as f32,
+            enable_tapering: trail_config.enable_tapering,
+            taper_curve: &trail_config.taper_curve,
+            min_width_ratio: trail_config.min_width_ratio as f32,
+        };
+        let strip_vertices = trail.get_triangle_strip_vertices(&params);
 
         if strip_vertices.is_empty() {
             // Create a minimal degenerate triangle strip to avoid empty buffer issues in WebGL
@@ -548,6 +574,7 @@ impl TrailsPlugin {
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+        mesh.remove_indices();
 
         // IMPORTANT: Compute bounds to prevent incorrect frustum culling
         // Without proper bounds, trails may be culled too aggressively
@@ -569,7 +596,7 @@ mod tests {
         app.add_plugins(AssetPlugin::default());
         app.init_resource::<Assets<Mesh>>();
 
-        let mut trail = Trail::new(Color::WHITE);
+        let mut trail = Trail::new(Color::WHITE, 1.0);
         trail.add_point(Vec3::new(0.0, 0.0, 0.0), 0.0);
         trail.add_point(Vec3::new(1.0, 0.0, 0.0), 1.0);
 
@@ -594,7 +621,7 @@ mod tests {
             PrimitiveTopology::TriangleStrip,
             RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
         );
-        let trail = Trail::new(Color::WHITE);
+        let trail = Trail::new(Color::WHITE, 1.0);
         let trail_config = crate::config::TrailConfig::default();
 
         // Empty trail should create a minimal degenerate triangle strip to avoid empty buffer issues
@@ -631,7 +658,7 @@ mod tests {
             PrimitiveTopology::TriangleStrip,
             RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
         );
-        let mut trail = Trail::new(Color::WHITE);
+        let mut trail = Trail::new(Color::WHITE, 1.0);
         let trail_config = crate::config::TrailConfig::default();
 
         // Add some trail points
@@ -667,10 +694,11 @@ mod tests {
     #[test]
     fn test_trail_creation() {
         let color = Color::srgb(1.0, 0.0, 0.0);
-        let trail = Trail::new(color);
+        let trail = Trail::new(color, 1.0);
 
         assert_eq!(trail.points.len(), 0);
         assert_eq!(trail.color, color);
+        assert_eq!(trail.body_radius, 1.0);
         assert_eq!(trail.last_update, 0.0);
         assert_eq!(trail.pause_time, None);
         assert_eq!(trail.total_pause_duration, 0.0);
@@ -678,7 +706,7 @@ mod tests {
 
     #[test]
     fn test_trail_add_point() {
-        let mut trail = Trail::new(Color::WHITE);
+        let mut trail = Trail::new(Color::WHITE, 1.0);
         let pos1 = Vec3::new(0.0, 0.0, 0.0);
         let pos2 = Vec3::new(1.0, 0.0, 0.0);
 
@@ -694,7 +722,7 @@ mod tests {
 
     #[test]
     fn test_trail_cleanup_old_points() {
-        let mut trail = Trail::new(Color::WHITE);
+        let mut trail = Trail::new(Color::WHITE, 1.0);
 
         // Add points at different times
         trail.add_point(Vec3::new(0.0, 0.0, 0.0), 1.0);
@@ -715,7 +743,7 @@ mod tests {
 
     #[test]
     fn test_trail_max_points_limit() {
-        let mut trail = Trail::new(Color::WHITE);
+        let mut trail = Trail::new(Color::WHITE, 1.0);
 
         // Add more points than our limit
         for i in 0..10 {
@@ -730,7 +758,7 @@ mod tests {
 
     #[test]
     fn test_alpha_calculation() {
-        let trail = Trail::new(Color::WHITE);
+        let trail = Trail::new(Color::WHITE, 1.0);
         let config = crate::config::TrailConfig {
             trail_length_seconds: 10.0,
             min_alpha: 0.0,
@@ -762,7 +790,7 @@ mod tests {
 
     #[test]
     fn test_alpha_calculation_disabled() {
-        let trail = Trail::new(Color::WHITE);
+        let trail = Trail::new(Color::WHITE, 1.0);
         let config = crate::config::TrailConfig {
             enable_fading: false,
             max_alpha: 0.8,
@@ -781,7 +809,7 @@ mod tests {
 
     #[test]
     fn test_should_update() {
-        let mut trail = Trail::new(Color::WHITE);
+        let mut trail = Trail::new(Color::WHITE, 1.0);
         trail.last_update = 5.0;
 
         assert!(!trail.should_update(5.5, 1.0)); // Too soon
@@ -791,7 +819,7 @@ mod tests {
 
     #[test]
     fn test_pause_unpause() {
-        let mut trail = Trail::new(Color::WHITE);
+        let mut trail = Trail::new(Color::WHITE, 1.0);
 
         assert!(!trail.is_paused());
         assert_eq!(trail.pause_time, None);
@@ -819,7 +847,7 @@ mod tests {
 
     #[test]
     fn test_effective_time() {
-        let mut trail = Trail::new(Color::WHITE);
+        let mut trail = Trail::new(Color::WHITE, 1.0);
 
         // No pause, effective time equals current time
         assert_eq!(trail.effective_time(10.0), 10.0);
@@ -839,55 +867,28 @@ mod tests {
 
     #[test]
     fn test_triangle_strip_vertices() {
-        let mut trail = Trail::new(Color::WHITE);
+        let mut trail = Trail::new(Color::WHITE, 1.0);
 
         // Empty trail should return no vertices
-        assert_eq!(
-            trail
-                .get_triangle_strip_vertices(
-                    None,
-                    1.0,
-                    false,
-                    None,
-                    1.0,
-                    false,
-                    &crate::config::TaperCurve::Linear,
-                    0.1
-                )
-                .len(),
-            0
-        );
+        let params = TrailRenderParams {
+            camera_pos: None,
+            base_width: 1.0,
+            width_relative_to_body: false,
+            body_radius: None,
+            body_size_multiplier: 1.0,
+            enable_tapering: false,
+            taper_curve: &crate::config::TaperCurve::Linear,
+            min_width_ratio: 0.1,
+        };
+        assert_eq!(trail.get_triangle_strip_vertices(&params).len(), 0);
 
         // Single point should return no vertices (need at least 2 for direction)
         trail.add_point(Vec3::ZERO, 0.0);
-        assert_eq!(
-            trail
-                .get_triangle_strip_vertices(
-                    None,
-                    1.0,
-                    false,
-                    None,
-                    1.0,
-                    false,
-                    &crate::config::TaperCurve::Linear,
-                    0.1
-                )
-                .len(),
-            0
-        );
+        assert_eq!(trail.get_triangle_strip_vertices(&params).len(), 0);
 
         // Two points should return 4 vertices (2 per point)
         trail.add_point(Vec3::new(1.0, 0.0, 0.0), 1.0);
-        let vertices = trail.get_triangle_strip_vertices(
-            None,
-            1.0,
-            false,
-            None,
-            1.0,
-            false,
-            &crate::config::TaperCurve::Linear,
-            0.1,
-        );
+        let vertices = trail.get_triangle_strip_vertices(&params);
         assert_eq!(vertices.len(), 4);
 
         // Vertices should form a strip
@@ -897,31 +898,25 @@ mod tests {
 
     #[test]
     fn test_configurable_width() {
-        let mut trail = Trail::new(Color::WHITE);
+        let mut trail = Trail::new(Color::WHITE, 1.0);
         trail.add_point(Vec3::new(0.0, 0.0, 0.0), 0.0);
         trail.add_point(Vec3::new(1.0, 0.0, 0.0), 1.0);
 
         // Test absolute width
-        let vertices_narrow = trail.get_triangle_strip_vertices(
-            None,
-            0.5,
-            false,
-            None,
-            1.0,
-            false,
-            &crate::config::TaperCurve::Linear,
-            0.1,
-        );
-        let vertices_wide = trail.get_triangle_strip_vertices(
-            None,
-            2.0,
-            false,
-            None,
-            1.0,
-            false,
-            &crate::config::TaperCurve::Linear,
-            0.1,
-        );
+        let mut params = TrailRenderParams {
+            camera_pos: None,
+            base_width: 0.5,
+            width_relative_to_body: false,
+            body_radius: None,
+            body_size_multiplier: 1.0,
+            enable_tapering: false,
+            taper_curve: &crate::config::TaperCurve::Linear,
+            min_width_ratio: 0.1,
+        };
+        let vertices_narrow = trail.get_triangle_strip_vertices(&params);
+
+        params.base_width = 2.0;
+        let vertices_wide = trail.get_triangle_strip_vertices(&params);
 
         // Calculate widths by measuring distance between left and right vertices
         let width_narrow = (vertices_narrow[0] - vertices_narrow[1]).length();
@@ -931,16 +926,11 @@ mod tests {
         assert!((width_wide - 2.0).abs() < 0.01);
 
         // Test relative width to body
-        let vertices_relative = trail.get_triangle_strip_vertices(
-            None,
-            1.0,
-            true,
-            Some(3.0),
-            2.0,
-            false,
-            &crate::config::TaperCurve::Linear,
-            0.1,
-        );
+        params.base_width = 1.0;
+        params.width_relative_to_body = true;
+        params.body_radius = Some(3.0);
+        params.body_size_multiplier = 2.0;
+        let vertices_relative = trail.get_triangle_strip_vertices(&params);
         let width_relative = (vertices_relative[0] - vertices_relative[1]).length();
 
         // Should be body_radius (3.0) * multiplier (2.0) = 6.0
@@ -948,8 +938,69 @@ mod tests {
     }
 
     #[test]
+    fn test_trail_persistence_on_body_despawn() {
+        // Test that trails persist as "ghosts" when their tracked body is despawned
+        use bevy::state::app::StatesPlugin;
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default(), StatesPlugin));
+        app.init_resource::<Assets<Mesh>>();
+        app.init_resource::<Assets<StandardMaterial>>();
+        app.init_resource::<SimulationConfig>();
+        app.init_state::<AppState>();
+        app.add_systems(Update, TrailsPlugin::update_trails);
+
+        // Create a body entity with Transform component
+        let body_entity = app
+            .world_mut()
+            .spawn((
+                Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+                RigidBody::Dynamic,
+            ))
+            .id();
+
+        // Create a trail tracking this body
+        let mut trail = Trail::new(Color::WHITE, 1.0);
+        trail.add_point(Vec3::new(0.0, 0.0, 0.0), 0.0);
+        trail.add_point(Vec3::new(1.0, 0.0, 0.0), 1.0);
+
+        // Create a material for the trail
+        let mut materials = app.world_mut().resource_mut::<Assets<StandardMaterial>>();
+        let trail_material = materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            ..default()
+        });
+
+        let trail_entity = app
+            .world_mut()
+            .spawn(TrailBundle::new(body_entity, trail, trail_material))
+            .id();
+
+        // Verify trail is tracking the body
+        let tracked = app.world().get::<TrackedBody>(trail_entity).unwrap();
+        assert_eq!(tracked.0, body_entity);
+
+        // Despawn the body
+        app.world_mut().entity_mut(body_entity).despawn();
+
+        // Run update to detect the missing body
+        app.update();
+
+        // Trail entity should still exist
+        assert!(app.world().get_entity(trail_entity).is_ok());
+
+        // Trail should still have its data
+        let trail_data = app.world().get::<Trail>(trail_entity).unwrap();
+        assert_eq!(trail_data.points.len(), 2);
+
+        // TrackedBody should still reference the despawned entity
+        let tracked_after = app.world().get::<TrackedBody>(trail_entity).unwrap();
+        assert_eq!(tracked_after.0, body_entity);
+    }
+
+    #[test]
     fn test_width_tapering() {
-        let mut trail = Trail::new(Color::WHITE);
+        let mut trail = Trail::new(Color::WHITE, 1.0);
 
         // Create a trail with multiple points to test tapering
         for i in 0..5 {
@@ -957,16 +1008,17 @@ mod tests {
         }
 
         // Test linear tapering
-        let vertices_linear = trail.get_triangle_strip_vertices(
-            None,
-            2.0,
-            false,
-            None,
-            1.0,
-            true,
-            &crate::config::TaperCurve::Linear,
-            0.2,
-        );
+        let mut params = TrailRenderParams {
+            camera_pos: None,
+            base_width: 2.0,
+            width_relative_to_body: false,
+            body_radius: None,
+            body_size_multiplier: 1.0,
+            enable_tapering: true,
+            taper_curve: &crate::config::TaperCurve::Linear,
+            min_width_ratio: 0.2,
+        };
+        let vertices_linear = trail.get_triangle_strip_vertices(&params);
 
         // Check that width decreases linearly from head to tail
         let width_head = (vertices_linear[0] - vertices_linear[1]).length();
@@ -979,16 +1031,8 @@ mod tests {
         );
 
         // Test exponential tapering
-        let vertices_exp = trail.get_triangle_strip_vertices(
-            None,
-            2.0,
-            false,
-            None,
-            1.0,
-            true,
-            &crate::config::TaperCurve::Exponential,
-            0.2,
-        );
+        params.taper_curve = &crate::config::TaperCurve::Exponential;
+        let vertices_exp = trail.get_triangle_strip_vertices(&params);
 
         let width_exp_head = (vertices_exp[0] - vertices_exp[1]).length();
         let width_exp_tail = (vertices_exp[8] - vertices_exp[9]).length();
@@ -1003,16 +1047,9 @@ mod tests {
         );
 
         // Test disabled tapering
-        let vertices_no_taper = trail.get_triangle_strip_vertices(
-            None,
-            2.0,
-            false,
-            None,
-            1.0,
-            false,
-            &crate::config::TaperCurve::Linear,
-            0.2,
-        );
+        params.enable_tapering = false;
+        params.taper_curve = &crate::config::TaperCurve::Linear;
+        let vertices_no_taper = trail.get_triangle_strip_vertices(&params);
 
         let width_no_taper_head = (vertices_no_taper[0] - vertices_no_taper[1]).length();
         let width_no_taper_tail = (vertices_no_taper[8] - vertices_no_taper[9]).length();

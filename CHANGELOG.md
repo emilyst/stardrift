@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Trail rendering system architecture
+    - Decoupled trails from body lifecycle events
+    - Introduced `TrailRenderParams` for centralized rendering configuration
+    - Added `TrailBundle` for cleaner entity spawning and better ECS patterns
+    - Simplified trail initialization process
+    - Removed unused system parameters
+    - Consolidated trail-specific components into a single, type-safe bundle
+    - Eliminated explicit `NoFrustumCulling` component assignment
+    - Improved type safety and code organization for trail entity creation
+
+### Fixed
+
+- Trails now render continuously throughout the simulation
+- Trails persist when bodies are despawned, preparing for future collision/merging features
+
 ## [0.0.17] - 2025-08-02
 
 ### Changed
@@ -237,6 +254,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Platform-specific configuration paths (XDG compliant)
 
 [Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.17...HEAD
+
 [0.0.17]: https://github.com/emilyst/stardrift/compare/v0.0.16...v0.0.17
 
 [0.0.16]: https://github.com/emilyst/stardrift/compare/v0.0.15...v0.0.16
