@@ -69,15 +69,15 @@ impl DiagnosticsHudPlugin {
         let regular_font_asset_path =
             AssetPath::parse("fonts/Saira-Regular").with_source(embedded_asset_source);
         let regular_font = asset_server.load(regular_font_asset_path);
-        let regular_text_font = TextFont::from_font(regular_font).with_font_size(12.0);
+        let regular_text_font = TextFont::from_font(regular_font).with_font_size(10.0);
 
-        let bold_font_asset_path =
-            AssetPath::parse("fonts/Saira-Regular").with_source(embedded_asset_source);
-        let bold_font = asset_server.load(bold_font_asset_path);
-        let bold_text_font = TextFont::from_font(bold_font).with_font_size(12.0);
+        let extra_bold_font_asset_path =
+            AssetPath::parse("fonts/Saira-ExtraBold").with_source(embedded_asset_source);
+        let extra_bold_font = asset_server.load(extra_bold_font_asset_path);
+        let extra_bold_text_font = TextFont::from_font(extra_bold_font).with_font_size(10.0);
 
         let border_radius = BorderRadius::all(Val::Px(5.0));
-        let background_color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.7));
+        let background_color = BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.01));
         let hud_node = Node {
             position_type: PositionType::Absolute,
             top: Val::Px(5.0),
@@ -117,7 +117,7 @@ impl DiagnosticsHudPlugin {
                             },
                             TextLayout::new_with_justify(JustifyText::Right),
                             Text::new("-"),
-                            bold_text_font.clone(),
+                            extra_bold_text_font.clone(),
                         ),
                     ],
                 ),
@@ -133,7 +133,7 @@ impl DiagnosticsHudPlugin {
                             },
                             TextLayout::new_with_justify(JustifyText::Right),
                             Text::new("-"),
-                            bold_text_font.clone(),
+                            extra_bold_text_font.clone(),
                         ),
                     ],
                 ),
@@ -148,7 +148,7 @@ impl DiagnosticsHudPlugin {
                                 ..default()
                             },
                             TextLayout::new_with_justify(JustifyText::Right),
-                            bold_text_font.clone(),
+                            extra_bold_text_font.clone(),
                         ),
                     ],
                 ),
