@@ -13,7 +13,6 @@ mod utils;
 #[cfg(test)]
 mod test_utils;
 
-#[cfg(feature = "trails")]
 use crate::plugins::trails::TrailsPlugin;
 use crate::plugins::{
     attribution::AttributionPlugin, camera::CameraPlugin, controls::ControlsPlugin,
@@ -82,7 +81,6 @@ fn main() {
         ControlsPlugin,
         VisualizationPlugin,
         AttributionPlugin,
-        #[cfg(feature = "trails")]
         TrailsPlugin,
     ));
 

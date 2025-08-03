@@ -85,11 +85,10 @@ name = "stardrift"
 path = "src/main.rs"
 
 [features]
-default = ["graphics", "trails"]
+default = ["graphics"]
 graphics = []
 diagnostics = []
 benchmarks = []
-trails = []
 
 [target.wasm32-unknown-unknown.dependencies]
 wasm-bindgen = "0.2"

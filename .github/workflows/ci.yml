@@ -85,7 +85,6 @@ jobs:
           cargo check --no-default-features --features graphics
           cargo check --no-default-features --features diagnostics
           cargo check --no-default-features --features benchmarks
-          cargo check --no-default-features --features trails
 
   wasm-check:
     name: WASM Check

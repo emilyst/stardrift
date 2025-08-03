@@ -101,7 +101,7 @@ cargo run --release --all-features
 
 # Build with specific features
 cargo run --features dev        # Development features only
-cargo run --no-default-features --features graphics  # Run without trails
+cargo run --no-default-features --features graphics  # Run without diagnostics
 ```
 
 ### WebAssembly Build

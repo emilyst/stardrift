@@ -226,7 +226,6 @@ impl PartialEq for TrailsVisualizationSettings {
     }
 }
 
-#[cfg(feature = "trails")]
 fn update_trail_visibility(
     trails_settings: Res<TrailsVisualizationSettings>,
     mut trail_query: Query<&mut Visibility, With<crate::plugins::trails::TrailRenderer>>,
@@ -243,7 +242,3 @@ fn update_trail_visibility(
         };
     }
 }
-
-/// Stub function when trails feature is disabled
-#[cfg(not(feature = "trails"))]
-fn update_trail_visibility() {}
