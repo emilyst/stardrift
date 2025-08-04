@@ -24,39 +24,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Deploy to GitHub Pages
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Pages
+      - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Install system dependencies
+      - name: Download WebAssembly release
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pkg-config libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+          echo "Downloading WebAssembly build for version ${{ inputs.version }}"
+          curl -L -o stardrift-wasm.tar.gz \
+            "https://github.com/${{ github.repository }}/releases/download/v${{ inputs.version }}/stardrift-${{ inputs.version }}-wasm.tar.gz"
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install trunk
-        uses: taiki-e/install-action@v2
-        with:
-          tool: trunk
-
-      - name: Build WASM
+      - name: Extract WebAssembly build
         run: |
-          trunk build --release --public-url /
+          mkdir -p dist
+          tar -xzf stardrift-wasm.tar.gz -C dist/
+          ls -la dist/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

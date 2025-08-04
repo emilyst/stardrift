@@ -1,4 +1,4 @@
-name: Manual Release
+name: Manual release
 
 on:
   workflow_dispatch:
@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   release:
-    name: Create Release with cargo-release
+    name: Create release with cargo-release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

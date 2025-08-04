@@ -1,4 +1,4 @@
-name: Build Binaries
+name: Build
 
 on:
   workflow_call:
@@ -24,7 +24,7 @@ env:
 
 jobs:
   build:
-    name: Build - ${{ matrix.platform.name }}
+    name: "Build ${{ matrix.platform.name }}"
     runs-on: ${{ matrix.platform.os }}
     permissions:
       contents: read
@@ -78,14 +78,10 @@ jobs:
         with:
           key: ${{ matrix.platform.target }}
 
-
-
-
-      - name: Build binary
+      - name: Build release
         run: |
           cargo build --release --target ${{ matrix.platform.target }} --all-features
         shell: bash
-
 
       - name: Create app bundle and DMG (macOS)
         if: runner.os == 'macOS'
@@ -133,10 +129,9 @@ jobs:
           
           # Create DMG from app bundle
           hdiutil create -volname "Stardrift" -srcfolder "$BUNDLE_DIR" -ov -format UDZO stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
+          
           # Ad-hoc sign the DMG
           codesign --force --sign - stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
-
-
 
       - name: Package binary (Unix)
         if: runner.os != 'Windows'
@@ -182,7 +177,7 @@ jobs:
             stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
 
   build-wasm:
-    name: Build WASM
+    name: Build WebAssembly
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -214,11 +209,11 @@ jobs:
         with:
           tool: trunk
 
-      - name: Build WASM
+      - name: Build WebAssembly
         run: |
           trunk build --release
 
-      - name: Package WASM
+      - name: Package WebAssembly
         run: |
           cd dist
           tar czf ../stardrift-${{ steps.get_version.outputs.version }}-wasm.tar.gz *
@@ -235,7 +230,7 @@ jobs:
           if-no-files-found: error
           retention-days: ${{ inputs.retention-days }}
 
-      - name: Attest WASM build provenance
+      - name: Attest WebAssembly build provenance
         if: inputs.upload-artifacts && inputs.artifact-prefix == 'stardrift'
         uses: actions/attest-build-provenance@v2
         with:

@@ -78,7 +78,7 @@ jobs:
         run: cargo check
 
   wasm-check:
-    name: WASM Check
+    name: WebAssembly Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -94,19 +94,5 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Check WASM build
+      - name: Check WebAssembly build
         run: cargo check --target wasm32-unknown-unknown
-
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-      checks: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}

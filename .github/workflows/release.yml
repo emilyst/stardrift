@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   ci:
+    name: CI
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
@@ -20,6 +21,7 @@ jobs:
       checks: write
 
   build:
+    name: Build release
     needs: ci
     uses: ./.github/workflows/build.yml
     permissions:
@@ -28,7 +30,7 @@ jobs:
       attestations: write
 
   release:
-    name: Create Release
+    name: Create release
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -102,10 +104,10 @@ jobs:
             
             See below for full changelog.
 
-  deploy-pages:
+  deploy:
     name: Deploy to GitHub Pages
     needs: release
-    uses: ./.github/workflows/deploy-pages.yml
+    uses: ./.github/workflows/deploy.yml
     permissions:
       contents: read
       pages: write
