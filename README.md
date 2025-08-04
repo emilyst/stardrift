@@ -48,6 +48,18 @@ significant changes.
 - **Interactive visualization controls**: Toggle octree display, barycenter gizmos, and adjust visualization depth
   levels
 
+## Planned Features
+
+The following features are planned for future development:
+
+1. **Enhanced Diagnostics** - Comprehensive physics accuracy monitoring including energy conservation (Hamiltonian),
+   angular momentum tracking, virial ratio, collision statistics, and performance profiling
+2. **Configurable Symplectic Integrators** - Support for multiple integration schemes (Verlet, PEFRL, etc.) beyond the
+   current semi-implicit Euler method
+3. **Collision System** - Bodies will merge when collision energy exceeds threshold, conserving mass and momentum
+4. **Configurable Simulation Speed** - Time scaling controls for faster or slower simulation playback
+5. **UI rework** - Replacing the current provisional UI with something more friendly and comprehensive
+
 ### User Interface
 
 - **Real-time diagnostics HUD**: On-screen display showing:
