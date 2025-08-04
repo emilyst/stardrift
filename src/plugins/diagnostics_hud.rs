@@ -33,7 +33,7 @@ pub struct DiagnosticsHudSettings {
 impl Default for DiagnosticsHudSettings {
     fn default() -> Self {
         Self {
-            enabled: true,
+            enabled: false,
             refresh_interval: Duration::from_secs_f64(1.0 / 6.0),
         }
     }

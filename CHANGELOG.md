@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Attribution text cursor feedback and font update
     - Attribution text now displays pointer cursor when hovered
     - Changed font from Saira-Regular to Saira-Light
+- Diagnostics HUD is now hidden by default
+    - Can be toggled on with the 'D' key or UI button
 
 ## [0.0.22] - 2025-08-04
 
