@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.23] - 2025-08-04
+
 ### Changed
 
 - Attribution text cursor feedback and font update
@@ -296,7 +298,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple build profiles (dev, release, distribution, wasm)
 - Platform-specific configuration paths (XDG compliant)
 
-[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.22...HEAD
+[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.23...HEAD
+[0.0.23]: https://github.com/emilyst/stardrift/compare/v0.0.22...v0.0.23
 
 [0.0.22]: https://github.com/emilyst/stardrift/compare/v0.0.21...v0.0.22
 
