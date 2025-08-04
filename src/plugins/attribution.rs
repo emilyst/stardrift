@@ -6,6 +6,8 @@
 
 use crate::prelude::*;
 use bevy::asset::{AssetPath, io::AssetSourceId};
+use bevy::window::SystemCursorIcon;
+use bevy::winit::cursor::CursorIcon;
 
 #[derive(Component)]
 pub struct AttributionText;
@@ -22,10 +24,9 @@ impl Plugin for AttributionPlugin {
 fn setup_attribution(mut commands: Commands, asset_server: Res<AssetServer>) {
     let embedded_asset_source = &AssetSourceId::from("embedded");
 
-    let regular_font_asset_path =
-        AssetPath::parse("fonts/Saira-Regular").with_source(embedded_asset_source);
-    let regular_font = asset_server.load(regular_font_asset_path);
-    let attribution_text_font = TextFont::from_font(regular_font).with_font_size(10.0);
+    let font_asset_path = AssetPath::parse("fonts/Saira-Light").with_source(embedded_asset_source);
+    let font = asset_server.load(font_asset_path);
+    let attribution_text_font = TextFont::from_font(font).with_font_size(10.0);
 
     // Attribution with version in bottom right corner (visible in screenshots)
     // Now interactive - clicking opens the repository
@@ -53,6 +54,8 @@ fn setup_attribution(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn handle_attribution_interaction(
+    mut commands: Commands,
+    window: Single<Entity, With<Window>>,
     mut interaction_query: Query<
         (&Interaction, &mut TextColor),
         (Changed<Interaction>, With<AttributionText>),
@@ -61,6 +64,10 @@ fn handle_attribution_interaction(
     for (interaction, mut text_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
+                commands
+                    .entity(*window)
+                    .insert(CursorIcon::System(SystemCursorIcon::Pointer));
+
                 // Open the repository URL from package metadata
                 if let Some(repo_url) = option_env!("CARGO_PKG_REPOSITORY") {
                     if let Err(e) = webbrowser::open(repo_url) {
@@ -69,12 +76,21 @@ fn handle_attribution_interaction(
                 } else {
                     warn!("Repository URL not found in package metadata");
                 }
+
                 text_color.0 = Color::srgba(1.0, 1.0, 1.0, 0.5);
             }
             Interaction::Hovered => {
+                commands
+                    .entity(*window)
+                    .insert(CursorIcon::System(SystemCursorIcon::Pointer));
+
                 text_color.0 = Color::srgba(1.0, 1.0, 1.0, 0.5);
             }
             Interaction::None => {
+                commands
+                    .entity(*window)
+                    .insert(CursorIcon::System(SystemCursorIcon::Default));
+
                 text_color.0 = Color::srgba(1.0, 1.0, 1.0, 0.3);
             }
         }
