@@ -4,6 +4,7 @@
 //! them into SimulationCommand events. It provides a unified interface for
 //! controlling the simulation, regardless of input method.
 
+use crate::plugins::diagnostics_hud::DiagnosticsHudSettings;
 use crate::prelude::*;
 use bevy::asset::{AssetPath, io::AssetSourceId};
 use bevy::input::keyboard::{Key, KeyboardInput};
@@ -38,6 +39,7 @@ impl Plugin for ControlsPlugin {
                 button_interaction_handler::<PauseButton>,
                 button_interaction_handler::<ScreenshotButton>,
                 button_interaction_handler::<TrailsToggleButton>,
+                button_interaction_handler::<DiagnosticsHudToggleButton>,
                 #[cfg(not(target_arch = "wasm32"))]
                 quit_button_handler,
                 #[cfg(not(target_arch = "wasm32"))]
@@ -50,6 +52,7 @@ impl Plugin for ControlsPlugin {
         app.add_event::<UpdateButtonTextEvent<BarycenterGizmoToggleButton>>();
         app.add_event::<UpdateButtonTextEvent<PauseButton>>();
         app.add_event::<UpdateButtonTextEvent<TrailsToggleButton>>();
+        app.add_event::<UpdateButtonTextEvent<DiagnosticsHudToggleButton>>();
 
         app.add_systems(
             Update,
@@ -57,10 +60,12 @@ impl Plugin for ControlsPlugin {
                 emit_octree_button_update,
                 emit_barycenter_button_update,
                 emit_trails_button_update,
+                emit_diagnostics_hud_button_update,
                 update_button_text::<OctreeToggleButton>,
                 update_button_text::<BarycenterGizmoToggleButton>,
                 update_button_text::<PauseButton>,
                 update_button_text::<TrailsToggleButton>,
+                update_button_text::<DiagnosticsHudToggleButton>,
             ),
         );
 
@@ -102,6 +107,9 @@ fn keyboard_input_handler(
                     }
                     "t" => {
                         commands.write(SimulationCommand::ToggleTrailsVisualization);
+                    }
+                    "d" => {
+                        commands.write(SimulationCommand::ToggleDiagnosticsHud);
                     }
                     "0" => {
                         commands.write(SimulationCommand::SetOctreeMaxDepth(None));
@@ -234,6 +242,9 @@ pub struct ScreenshotButton;
 #[derive(Component)]
 pub struct TrailsToggleButton;
 
+#[derive(Component)]
+pub struct DiagnosticsHudToggleButton;
+
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Component)]
 pub struct QuitButton;
@@ -323,6 +334,16 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ));
                 });
 
+            parent
+                .spawn((create_button_bundle(), DiagnosticsHudToggleButton))
+                .with_children(|parent| {
+                    parent.spawn((
+                        Text::new("Hide Diagnostics (D)"),
+                        text_font.clone(),
+                        TextColor(Color::WHITE),
+                    ));
+                });
+
             // Second group: pause and screenshot
             parent
                 .spawn((create_button_bundle(), PauseButton))
@@ -399,6 +420,20 @@ fn emit_trails_button_update(
     }
 }
 
+fn emit_diagnostics_hud_button_update(
+    settings: Res<DiagnosticsHudSettings>,
+    mut events: EventWriter<UpdateButtonTextEvent<DiagnosticsHudToggleButton>>,
+) {
+    if settings.is_changed() {
+        let text = if settings.enabled {
+            "Hide Diagnostics (D)"
+        } else {
+            "Show Diagnostics (D)"
+        };
+        events.write(UpdateButtonTextEvent::new(text));
+    }
+}
+
 fn emit_pause_button_update(
     state: Res<State<AppState>>,
     mut events: EventWriter<UpdateButtonTextEvent<PauseButton>>,
@@ -469,6 +504,12 @@ impl CommandButton for ScreenshotButton {
 impl CommandButton for TrailsToggleButton {
     fn get_command() -> SimulationCommand {
         SimulationCommand::ToggleTrailsVisualization
+    }
+}
+
+impl CommandButton for DiagnosticsHudToggleButton {
+    fn get_command() -> SimulationCommand {
+        SimulationCommand::ToggleDiagnosticsHud
     }
 }
 

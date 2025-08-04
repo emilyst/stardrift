@@ -187,6 +187,21 @@ impl DiagnosticsHudPlugin {
             }
         }
     }
+
+    fn update_diagnostics_hud_visibility(
+        settings: Res<DiagnosticsHudSettings>,
+        mut root_query: Query<&mut Node, With<DiagnosticsHudRoot>>,
+    ) {
+        if settings.is_changed() {
+            for mut node in &mut root_query {
+                node.display = if settings.enabled {
+                    Display::Flex
+                } else {
+                    Display::None
+                };
+            }
+        }
+    }
 }
 
 impl Plugin for DiagnosticsHudPlugin {
@@ -200,6 +215,7 @@ impl Plugin for DiagnosticsHudPlugin {
                 Self::advance_refresh_timer,
                 Self::update_frame_count_text,
                 Self::update_fps_text,
+                Self::update_diagnostics_hud_visibility,
             ),
         );
     }

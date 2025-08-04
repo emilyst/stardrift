@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Diagnostics HUD visibility toggle functionality
+    - New keyboard shortcut 'D' to show/hide diagnostics HUD during simulation
+    - UI button that dynamically updates between "Show Diagnostics (D)" and "Hide Diagnostics (D)"
+    - HUD continues to collect performance data even when hidden
+    - Efficient implementation using Bevy's built-in Visibility component
+
 ## [0.0.19] - 2025-08-04
 
 ### Changed

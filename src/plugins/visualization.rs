@@ -5,6 +5,7 @@
 //! events to toggle visualization states.
 
 use crate::physics::aabb3d::Aabb3d;
+use crate::plugins::diagnostics_hud::DiagnosticsHudSettings;
 use crate::prelude::*;
 use bevy::color::palettes::css;
 use bevy::gizmos::config::{DefaultGizmoConfigGroup, GizmoConfigStore};
@@ -56,6 +57,7 @@ fn handle_visualization_commands(
     mut octree_settings: ResMut<OctreeVisualizationSettings>,
     mut barycenter_visibility: ResMut<BarycenterGizmoVisibility>,
     mut trails_settings: ResMut<TrailsVisualizationSettings>,
+    mut diagnostics_hud_settings: ResMut<DiagnosticsHudSettings>,
 ) {
     for command in commands.read() {
         match command {
@@ -97,6 +99,17 @@ fn handle_visualization_commands(
                 info!(
                     "Octree max depth set to {}",
                     depth.map_or("all".to_string(), |d| d.to_string())
+                );
+            }
+            SimulationCommand::ToggleDiagnosticsHud => {
+                diagnostics_hud_settings.enabled = !diagnostics_hud_settings.enabled;
+                info!(
+                    "Diagnostics HUD {}",
+                    if diagnostics_hud_settings.enabled {
+                        "enabled"
+                    } else {
+                        "disabled"
+                    }
                 );
             }
             _ => {} // Ignore other commands

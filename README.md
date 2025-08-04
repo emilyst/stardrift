@@ -58,6 +58,8 @@ significant changes.
 - **Interactive UI buttons**:
     - **Octree toggle button**: Show/hide octree visualization
     - **Barycenter gizmo toggle button**: Show/hide barycenter cross-hair indicator
+    - **Trails toggle button**: Show/hide celestial body trails
+    - **Diagnostics HUD toggle button**: Show/hide the FPS and frame count display
     - **Restart simulation button**: Generate new random bodies and restart the simulation
     - **Screenshot button**: Capture the current view without UI elements
 
@@ -150,6 +152,7 @@ The built files will be in the `dist/` directory, ready for deployment. Trunk au
 | **O**           | Toggle octree visualization on/off              |
 | **C**           | Toggle barycenter gizmo visibility on/off       |
 | **T**           | Toggle trail visibility on/off                  |
+| **D**           | Toggle diagnostics HUD visibility on/off        |
 | **S**           | Take screenshot (hides UI and HUD)              |
 | **0-9**         | Set octree visualization depth (0 = all levels) |
 | **Escape**      | Quit application                                |

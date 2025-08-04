@@ -19,6 +19,7 @@ pub enum SimulationCommand {
     ToggleOctreeVisualization,
     ToggleBarycenterGizmo,
     ToggleTrailsVisualization,
+    ToggleDiagnosticsHud,
     TakeScreenshot,
     Quit,
     SetOctreeMaxDepth(Option<u8>),
