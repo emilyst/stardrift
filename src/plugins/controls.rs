@@ -8,6 +8,8 @@ use crate::plugins::diagnostics_hud::DiagnosticsHudSettings;
 use crate::prelude::*;
 use bevy::asset::{AssetPath, io::AssetSourceId};
 use bevy::input::keyboard::{Key, KeyboardInput};
+use bevy::window::SystemCursorIcon;
+use bevy::winit::cursor::CursorIcon;
 
 const BUTTON_FONT_FACE: &str = "fonts/Saira-Medium";
 const BUTTON_BORDER_RADIUS_PX: f32 = 5.0;
@@ -155,6 +157,8 @@ fn keyboard_input_handler(
 /// Generic button interaction handler that emits SimulationCommand
 #[allow(clippy::type_complexity)]
 fn button_interaction_handler<T: Component + CommandButton>(
+    mut commands: Commands,
+    window: Single<Entity, With<Window>>,
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<T>),
@@ -164,13 +168,25 @@ fn button_interaction_handler<T: Component + CommandButton>(
     for (interaction, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
+                commands
+                    .entity(*window)
+                    .insert(CursorIcon::System(SystemCursorIcon::Pointer));
+
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
                 command_writer.write(T::get_command());
             }
             Interaction::Hovered => {
+                commands
+                    .entity(*window)
+                    .insert(CursorIcon::System(SystemCursorIcon::Pointer));
+
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);
             }
             Interaction::None => {
+                commands
+                    .entity(*window)
+                    .insert(CursorIcon::System(SystemCursorIcon::Default));
+
                 *color = BackgroundColor(BUTTON_COLOR_NORMAL);
             }
         }
@@ -180,6 +196,8 @@ fn button_interaction_handler<T: Component + CommandButton>(
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(clippy::type_complexity)]
 fn quit_button_handler(
+    mut commands: Commands,
+    window: Single<Entity, With<Window>>,
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<QuitButton>),
@@ -189,13 +207,25 @@ fn quit_button_handler(
     for (interaction, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
+                commands
+                    .entity(*window)
+                    .insert(CursorIcon::System(SystemCursorIcon::Pointer));
+
                 *color = BackgroundColor(BUTTON_COLOR_PRESSED);
                 exit.write_default();
             }
             Interaction::Hovered => {
+                commands
+                    .entity(*window)
+                    .insert(CursorIcon::System(SystemCursorIcon::Pointer));
+
                 *color = BackgroundColor(BUTTON_COLOR_HOVERED);
             }
             Interaction::None => {
+                commands
+                    .entity(*window)
+                    .insert(CursorIcon::System(SystemCursorIcon::Default));
+
                 *color = BackgroundColor(BUTTON_COLOR_NORMAL);
             }
         }

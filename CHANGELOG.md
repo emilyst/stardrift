@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Use pointer cursor (hand) uniformly for all controls
+
 ## [0.0.23] - 2025-08-04
 
 ### Changed
@@ -299,6 +301,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Platform-specific configuration paths (XDG compliant)
 
 [Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.23...HEAD
+
 [0.0.23]: https://github.com/emilyst/stardrift/compare/v0.0.22...v0.0.23
 
 [0.0.22]: https://github.com/emilyst/stardrift/compare/v0.0.21...v0.0.22
