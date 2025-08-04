@@ -36,6 +36,7 @@ pub fn create_test_app() -> App {
     app.init_resource::<BarycenterGizmoVisibility>();
     app.init_resource::<OctreeVisualizationSettings>();
     app.init_resource::<TrailsVisualizationSettings>();
+    app.init_resource::<crate::plugins::diagnostics_hud::DiagnosticsHudSettings>();
 
     // Add events used by plugins
     app.add_event::<SimulationCommand>();
@@ -43,6 +44,7 @@ pub fn create_test_app() -> App {
     app.add_event::<UpdateButtonTextEvent<crate::plugins::controls::OctreeToggleButton>>();
     app.add_event::<UpdateButtonTextEvent<crate::plugins::controls::BarycenterGizmoToggleButton>>();
     app.add_event::<UpdateButtonTextEvent<crate::plugins::controls::TrailsToggleButton>>();
+    app.add_event::<UpdateButtonTextEvent<crate::plugins::controls::DiagnosticsHudToggleButton>>();
 
     // Add states
     app.init_state::<AppState>();
