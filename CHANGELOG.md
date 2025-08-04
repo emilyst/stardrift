@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.19] - 2025-08-04
+
 ### Changed
 
 - Removed all compile-time feature flags
@@ -272,7 +274,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple build profiles (dev, release, distribution, wasm)
 - Platform-specific configuration paths (XDG compliant)
 
-[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.18...HEAD
+[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.19...HEAD
+[0.0.19]: https://github.com/emilyst/stardrift/compare/v0.0.18...v0.0.19
 [0.0.18]: https://github.com/emilyst/stardrift/compare/v0.0.17...v0.0.18
 
 [0.0.17]: https://github.com/emilyst/stardrift/compare/v0.0.16...v0.0.17
