@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.25] - 2025-08-05
+
 ### Changed
 
 - Significantly lower max force
@@ -307,7 +309,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple build profiles (dev, release, distribution, wasm)
 - Platform-specific configuration paths (XDG compliant)
 
-[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.24...HEAD
+[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.25...HEAD
+[0.0.25]: https://github.com/emilyst/stardrift/compare/v0.0.24...v0.0.25
 
 [0.0.24]: https://github.com/emilyst/stardrift/compare/v0.0.23...v0.0.24
 
