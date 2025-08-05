@@ -85,7 +85,7 @@ impl Default for PhysicsConfig {
             min_body_radius: 1.0,
             max_body_radius: 2.0,
             force_calculation_min_distance: 2.0,
-            force_calculation_max_force: 1e5,
+            force_calculation_max_force: 1e2,
             initial_seed: None,
             collision_restitution: 0.8,
             collision_friction: 0.5,
