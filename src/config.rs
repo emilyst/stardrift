@@ -75,7 +75,7 @@ impl Default for PhysicsConfig {
     fn default() -> Self {
         Self {
             gravitational_constant: 500.0,
-            body_count: 30,
+            body_count: 100,
             octree_theta: 0.5,
             octree_leaf_threshold: 2,
             body_distribution_sphere_radius_multiplier: 100.0,
@@ -83,7 +83,7 @@ impl Default for PhysicsConfig {
             min_body_radius: 1.0,
             max_body_radius: 2.0,
             force_calculation_min_distance: 2.0,
-            force_calculation_max_force: 1e2,
+            force_calculation_max_force: 1e4,
             initial_seed: None,
             initial_velocity: InitialVelocityConfig::default(),
         }
