@@ -1,7 +1,16 @@
-use crate::prelude::*;
-use avian3d::math;
+use crate::resources::SharedRng;
+use rand::Rng;
 
-pub(crate) fn min_sphere_radius_for_surface_distribution(
+/// Scalar type for physics calculations (f64 for precision)
+pub type Scalar = f64;
+
+/// 3D vector type for positions, velocities, and forces
+pub type Vector = bevy::math::DVec3;
+
+/// Re-export commonly used math constants
+pub use std::f64::consts::PI;
+
+pub fn min_sphere_radius_for_surface_distribution(
     n: usize,
     min_distance: Scalar,
     tolerance: Scalar,
@@ -9,8 +18,8 @@ pub(crate) fn min_sphere_radius_for_surface_distribution(
     let minimum_radius = min_distance * libm::sqrt(n as Scalar / 4.0);
     let spherical_correction = if n > 4 {
         // Tammes problem approximation
-        let solid_angle_per_point = 4.0 * math::PI / n as Scalar;
-        let half_angle = solid_angle_per_point / libm::sqrt(2.0 * math::PI);
+        let solid_angle_per_point = 4.0 * PI / n as Scalar;
+        let half_angle = solid_angle_per_point / libm::sqrt(2.0 * PI);
         min_distance / (2.0 * libm::sin(half_angle))
     } else {
         // For small N, use exact solutions
@@ -28,7 +37,7 @@ pub(crate) fn min_sphere_radius_for_surface_distribution(
     for _ in 0..10 {
         let cap_radius = min_distance / 2.0;
         let cap_area = 2.0
-            * math::PI
+            * PI
             * corrected_minimum_radius
             * corrected_minimum_radius
             * libm::pow(
@@ -36,7 +45,7 @@ pub(crate) fn min_sphere_radius_for_surface_distribution(
                 2.0,
             );
         let total_cap_area = n as Scalar * cap_area;
-        let sphere_area = 4.0 * math::PI * corrected_minimum_radius * corrected_minimum_radius;
+        let sphere_area = 4.0 * PI * corrected_minimum_radius * corrected_minimum_radius;
 
         if total_cap_area > sphere_area {
             corrected_minimum_radius *= 1.1;
@@ -50,8 +59,8 @@ pub(crate) fn min_sphere_radius_for_surface_distribution(
     corrected_minimum_radius
 }
 
-pub(crate) fn random_unit_vector(rng: &mut SharedRng) -> Vector {
-    let theta = rng.random_range(0.0..=2.0 * math::PI);
+pub fn random_unit_vector(rng: &mut SharedRng) -> Vector {
+    let theta = rng.random_range(0.0..=2.0 * PI);
     let phi = libm::acos(rng.random_range(-1.0..=1.0));
     let r = 1.0;
 

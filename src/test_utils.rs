@@ -20,8 +20,8 @@ pub fn create_test_app() -> App {
         bevy::diagnostic::DiagnosticsPlugin,
     ));
 
-    // Add Avian physics time resource
-    app.insert_resource(Time::<Physics>::default());
+    // Add physics time resource
+    app.insert_resource(crate::physics::resources::PhysicsTime::default());
 
     // Initialize assets needed by various plugins
     app.init_asset::<Font>();

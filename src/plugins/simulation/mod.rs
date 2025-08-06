@@ -15,7 +15,10 @@ use actions::{
     handle_toggle_pause_simulation_event, process_screenshot_capture,
 };
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
-use physics::{PhysicsSet, apply_gravitation_octree, counteract_barycentric_drift, rebuild_octree};
+use physics::{
+    PhysicsSet, calculate_accelerations, counteract_barycentric_drift, integrate_motions,
+    rebuild_octree, sync_transform_from_position,
+};
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SimulationSet {
@@ -54,6 +57,8 @@ impl Plugin for SimulationPlugin {
             .with_leaf_threshold(config.physics.octree_leaf_threshold),
         ));
         app.init_resource::<ScreenshotState>();
+        app.init_resource::<crate::physics::resources::ActiveSymplecticIntegrator>();
+        app.init_resource::<crate::physics::resources::PhysicsTime>();
 
         // New unified command event
         app.add_event::<SimulationCommand>();
@@ -67,7 +72,14 @@ impl Plugin for SimulationPlugin {
 
         app.configure_sets(
             FixedUpdate,
-            (PhysicsSet::BuildOctree, PhysicsSet::ApplyForces).chain(),
+            (
+                PhysicsSet::BuildOctree,
+                PhysicsSet::CalculateAccelerations,
+                PhysicsSet::IntegrateMotions,
+                PhysicsSet::SyncTransforms,
+                PhysicsSet::CorrectBarycentricDrift,
+            )
+                .chain(),
         );
 
         app.configure_sets(
@@ -103,12 +115,17 @@ impl Plugin for SimulationPlugin {
             FixedUpdate,
             (
                 rebuild_octree.in_set(PhysicsSet::BuildOctree),
-                apply_gravitation_octree
-                    .in_set(PhysicsSet::ApplyForces)
+                calculate_accelerations
+                    .in_set(PhysicsSet::CalculateAccelerations)
                     .run_if(in_state(AppState::Running)),
-                counteract_barycentric_drift,
-            )
-                .chain(),
+                integrate_motions
+                    .in_set(PhysicsSet::IntegrateMotions)
+                    .run_if(in_state(AppState::Running)),
+                sync_transform_from_position
+                    .in_set(PhysicsSet::SyncTransforms)
+                    .run_if(in_state(AppState::Running)),
+                counteract_barycentric_drift.in_set(PhysicsSet::CorrectBarycentricDrift),
+            ),
         );
         app.add_systems(
             Update,

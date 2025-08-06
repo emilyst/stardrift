@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Complete physics system overhaul
+    - Migrated from Avian3D physics engine to custom symplectic integrator implementation
+    - Introduced high-precision `Position` and `Velocity` components using `f64` internally
+    - Added `PhysicsBody` marker component for cleaner entity queries
+    - Decoupled physics calculations from rendering transforms for better numerical stability
+    - Split physics update into distinct phases: BuildOctree, CalculateAccelerations, IntegrateMotions, SyncTransforms, CorrectBarycentricDrift
+    - Physics now uses acceleration-based approach rather than direct force application
+
+### Added
+
+- Custom symplectic integrator system with pluggable implementations
+    - Semi-implicit Euler integrator for energy conservation
+    - `ActiveSymplecticIntegrator` resource for runtime integrator selection
+- Independent `PhysicsTime` resource for frame-rate independent physics updates
+- Dedicated math module with high-precision vector operations
+- New `PhysicsBodyBundle` for spawning physics-enabled entities
+
+### Removed
+
+- Dependency on Avian3D physics engine (removed from Cargo.toml)
+- Collision handling temporarily disabled pending physics system redesign
+- `stars.rs` module containing unused stellar simulation code
+- `utils/math.rs` module (functionality moved to `physics/math.rs`)
+
 ## [0.0.25] - 2025-08-05
 
 ### Changed

@@ -1,4 +1,4 @@
-use avian3d::math::Vector;
+use crate::physics::math::Vector;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Aabb3d {

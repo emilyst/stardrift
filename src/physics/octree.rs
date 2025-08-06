@@ -1,6 +1,5 @@
 use crate::physics::aabb3d::Aabb3d;
-use avian3d::math::{Scalar, Vector};
-use bevy::prelude::*;
+use crate::physics::math::{Scalar, Vector};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Debug, Clone, Copy)]

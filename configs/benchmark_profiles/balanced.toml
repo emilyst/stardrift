@@ -1,7 +1,7 @@
 # Balanced configuration - good accuracy with reasonable performance
 # Target: 60fps with ~100 bodies, suitable for most use cases
 
-version = 5
+version = 6
 
 [physics]
 gravitational_constant = 10.0
@@ -14,8 +14,6 @@ min_body_radius = 1.0
 max_body_radius = 5.0
 force_calculation_min_distance = 10.0
 force_calculation_max_force = 10000.0
-collision_restitution = 0.8
-collision_friction = 0.1
 
 [physics.initial_velocity]
 enabled = true

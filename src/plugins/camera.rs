@@ -5,8 +5,8 @@
 //! camera itself is conceptually separate from the physics simulation.
 
 use crate::config::SimulationConfig;
+use crate::physics::math::min_sphere_radius_for_surface_distribution;
 use crate::prelude::*;
-use crate::utils::math::min_sphere_radius_for_surface_distribution;
 use bevy::core_pipeline::bloom::Bloom;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::pbr::ClusterConfig;

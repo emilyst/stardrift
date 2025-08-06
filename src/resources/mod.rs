@@ -62,6 +62,7 @@ impl GravitationalOctree {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::Rng;
 
     #[test]
     fn test_shared_rng_deterministic_with_seed() {

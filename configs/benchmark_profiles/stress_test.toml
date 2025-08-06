@@ -1,7 +1,7 @@
 # Stress test configuration for extreme scenarios
 # Target: Test limits with many bodies
 
-version = 5
+version = 6
 
 [physics]
 gravitational_constant = 10.0
@@ -14,8 +14,6 @@ min_body_radius = 0.5
 max_body_radius = 3.0
 force_calculation_min_distance = 5.0
 force_calculation_max_force = 50000.0
-collision_restitution = 0.8
-collision_friction = 0.1
 
 [physics.initial_velocity]
 enabled = true

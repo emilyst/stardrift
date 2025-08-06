@@ -17,7 +17,7 @@ pub struct SimulationConfig {
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
-            version: 5,
+            version: 6,
             physics: PhysicsConfig::default(),
             rendering: RenderingConfig::default(),
             trails: TrailConfig::default(),
@@ -39,8 +39,6 @@ pub struct PhysicsConfig {
     pub force_calculation_min_distance: Scalar,
     pub force_calculation_max_force: Scalar,
     pub initial_seed: Option<u64>,
-    pub collision_restitution: Scalar,
-    pub collision_friction: Scalar,
     pub initial_velocity: InitialVelocityConfig,
 }
 
@@ -87,8 +85,6 @@ impl Default for PhysicsConfig {
             force_calculation_min_distance: 2.0,
             force_calculation_max_force: 1e2,
             initial_seed: None,
-            collision_restitution: 0.8,
-            collision_friction: 0.5,
             initial_velocity: InitialVelocityConfig::default(),
         }
     }
@@ -375,7 +371,7 @@ mod tests {
         use std::fs;
 
         let mut config = SimulationConfig {
-            version: 5,
+            version: 6,
             ..Default::default()
         };
         config.physics.gravitational_constant = 42.0;
@@ -387,7 +383,7 @@ mod tests {
 
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
-        assert_eq!(loaded_config.version, 5);
+        assert_eq!(loaded_config.version, 6);
         assert_eq!(loaded_config.physics.gravitational_constant, 42.0);
         assert_eq!(loaded_config.physics.body_count, 123);
         assert_eq!(loaded_config.rendering.bloom_intensity, 999.0);
@@ -437,7 +433,7 @@ bloom_intensity = 888.0
     fn test_config_with_version_loaded() {
         use std::fs;
 
-        // Create a config file with outdated version (4 < 5)
+        // Create a config file with outdated version (4 < 6)
         let config_content = r#"version = 4
 
 [physics]
@@ -496,7 +492,7 @@ camera_radius_multiplier = 3.0
     fn test_config_with_version_less_than_default_ignored() {
         use std::fs;
 
-        // Create a config file with version 0 (less than default 1)
+        // Create a config file with version 0 (less than default 6)
         let config_content = r#"version = 0
 
 [physics]

@@ -72,11 +72,6 @@ features = [
     "png",
 ]
 
-[dependencies.avian3d]
-version = "0.3.1"
-default-features = false
-features = ["3d", "enhanced-determinism", "f64", "parallel", "parry-f64"]
-
 [dev-dependencies]
 criterion = { version = "0.7.0", features = ["csv_output", "html_reports"] }
 
@@ -107,6 +102,9 @@ pre-release-replacements = [
 name = "octree_benchmarks"
 harness = false
 
+[[bench]]
+name = "integrator_benchmarks"
+harness = false
 
 [lints.clippy]
 type_complexity = "allow"

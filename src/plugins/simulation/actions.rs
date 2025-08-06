@@ -4,6 +4,8 @@
 //! restart, pause/resume, and screenshot functionality.
 
 use super::physics::spawn_simulation_bodies;
+use crate::physics::components::PhysicsBody;
+use crate::physics::resources::PhysicsTime;
 use crate::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 use bevy_panorbit_camera::PanOrbitCamera;
@@ -20,7 +22,7 @@ pub struct ScreenshotState {
 pub fn handle_restart_simulation_event(
     mut commands_reader: EventReader<SimulationCommand>,
     mut commands: Commands,
-    simulation_bodies: Query<Entity, With<RigidBody>>,
+    simulation_bodies: Query<Entity, With<PhysicsBody>>,
     trail_renderers: Query<Entity, With<crate::plugins::trails::TrailRenderer>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -69,7 +71,7 @@ pub fn handle_toggle_pause_simulation_event(
     mut commands_reader: EventReader<SimulationCommand>,
     current_state: Res<State<AppState>>,
     mut next_state: ResMut<NextState<AppState>>,
-    mut time: ResMut<Time<Physics>>,
+    mut physics_time: ResMut<PhysicsTime>,
 ) {
     for command in commands_reader.read() {
         if !matches!(command, SimulationCommand::TogglePause) {
@@ -78,11 +80,11 @@ pub fn handle_toggle_pause_simulation_event(
         match current_state.get() {
             AppState::Running => {
                 next_state.set(AppState::Paused);
-                time.pause();
+                physics_time.pause();
             }
             AppState::Paused => {
                 next_state.set(AppState::Running);
-                time.unpause();
+                physics_time.unpause();
             }
         }
     }
@@ -198,7 +200,6 @@ pub fn process_screenshot_capture(
 mod tests {
     use super::*;
     use crate::test_utils::create_test_app;
-    use avian3d::prelude::*;
 
     #[test]
     fn test_pause_toggle_physics_time() {
@@ -211,7 +212,7 @@ mod tests {
         app.update();
 
         // Verify physics time is not paused initially
-        let physics_time = app.world().resource::<Time<Physics>>();
+        let physics_time = app.world().resource::<PhysicsTime>();
         assert!(!physics_time.is_paused());
 
         // Send pause command
@@ -219,7 +220,7 @@ mod tests {
         app.update();
 
         // Verify physics time is now paused
-        let physics_time = app.world().resource::<Time<Physics>>();
+        let physics_time = app.world().resource::<PhysicsTime>();
         assert!(physics_time.is_paused());
 
         // Toggle again
@@ -227,7 +228,7 @@ mod tests {
         app.update();
 
         // Verify physics time is unpaused
-        let physics_time = app.world().resource::<Time<Physics>>();
+        let physics_time = app.world().resource::<PhysicsTime>();
         assert!(!physics_time.is_paused());
     }
 

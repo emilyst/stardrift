@@ -1,6 +1,6 @@
 # Stardrift
 
-A high-performance 3D gravitational N-body simulation built with Rust, Bevy game engine, and Avian3D physics. This
+A high-performance 3D gravitational N-body simulation built with Rust and Bevy game engine. This
 project simulates the gravitational interactions between multiple celestial bodies with real-time visualization and
 interactive camera controls.
 
@@ -22,7 +22,8 @@ significant changes.
 - **N-body gravitational physics**: Accurate gravitational force calculations between all bodies
 - **Barnes-Hut octree algorithm**: Efficient O(N log N) gravitational force calculations using spatial partitioning
 - **High precision**: Uses f64 floating-point precision for increased accuracy
-- **Deterministic simulation**: Physics use deterministic behavior for reproducible results
+- **Custom physics engine**: Purpose-built component-based physics system optimized for n-body simulation
+- **Symplectic integration**: Semi-implicit Euler integration with support for future integrator methods
 - **Parallel processing**: Multi-threaded physics calculations for performance optimization
 - **Dynamic barycenter tracking**: Real-time calculation and visualization of the system's center of mass
 
@@ -73,10 +74,10 @@ significant changes.
 The following features are planned for future development:
 
 1. **Enhanced Diagnostics** - Comprehensive physics accuracy monitoring including energy conservation (Hamiltonian),
-   angular momentum tracking, virial ratio, collision statistics, and performance profiling
-2. **Configurable Symplectic Integrators** - Support for multiple integration schemes (Verlet, PEFRL, etc.) beyond the
+   angular momentum tracking, virial ratio, and performance profiling
+2. **Additional Symplectic Integrators** - Support for multiple integration schemes (Verlet, PEFRL, etc.) beyond the
    current semi-implicit Euler method
-3. **Collision System** - Bodies will merge when collision energy exceeds threshold, conserving mass and momentum
+3. **Collision Detection** - Implement collision detection and response between bodies with configurable restitution
 4. **Configurable Simulation Speed** - Time scaling controls for faster or slower simulation playback
 5. **UI rework** - Replacing the current provisional UI with something more friendly and comprehensive
 
@@ -184,7 +185,7 @@ reference of all available configuration options.
 #### Configuration File Format
 
 ```toml
-version = 5  # Configuration format version (required)
+version = 6  # Configuration format version (required)
 
 [physics]
 # Physics simulation parameters
@@ -225,8 +226,6 @@ version = 5  # Configuration format version (required)
 | `force_calculation_min_distance`             | `f64`         | `2.0`      | Minimum distance for force calculations (prevents singularities)       |
 | `force_calculation_max_force`                | `f64`         | `100000.0` | Maximum force magnitude to prevent instabilities                       |
 | `initial_seed`                               | `Option<u64>` | `None`     | Random seed for deterministic generation. None = random                |
-| `collision_restitution`                      | `f64`         | `0.8`      | Bounciness of collisions (0.0 = inelastic, 1.0 = perfectly elastic)    |
-| `collision_friction`                         | `f64`         | `0.5`      | Friction coefficient for collisions                                    |
 
 ##### Initial Velocity Configuration (`[physics.initial_velocity]`)
 
@@ -315,7 +314,7 @@ If no configuration file exists, the application uses default values.
 Here's a complete example configuration file with all default values:
 
 ```toml
-version = 5
+version = 6
 
 [physics]
 gravitational_constant = 200.0
@@ -329,8 +328,6 @@ max_body_radius = 2.0
 force_calculation_min_distance = 2.0
 force_calculation_max_force = 100000.0
 # initial_seed = 12345  # Uncomment to use a specific seed for deterministic generation
-collision_restitution = 0.8
-collision_friction = 0.5
 
 [physics.initial_velocity]
 enabled = true
@@ -376,7 +373,7 @@ hide_ui_frame_delay = 2
 ### Architecture
 
 - **Engine**: Bevy 0.16.1 (Entity Component System game engine)
-- **Physics**: Avian3D with f64 precision and parallel processing
+- **Physics**: Custom ECS-based physics with f64 precision and parallel processing
 - **Spatial Optimization**: Barnes-Hut octree algorithm with configurable theta parameter for accuracy/performance
   balance
 - **Rendering**: Bevy's PBR (Physically Based Rendering) pipeline with real-time octree wireframe visualization
@@ -399,7 +396,6 @@ hide_ui_frame_delay = 2
 #### Core Dependencies
 
 - **bevy**: Game engine and rendering framework
-- **avian3d**: 3D physics engine with gravitational simulation support
 - **bevy_panorbit_camera**: Camera controls with touch support
 - **libm**: Mathematical functions for no-std environments
 - **rand**: Random number generation
@@ -440,9 +436,9 @@ src/
 │   ├── mod.rs
 │   ├── simulation/               # Core simulation plugin with submodules
 │   │   ├── mod.rs                # Plugin definition and system coordination
-│   │   ├── physics.rs            # Physics calculations and body management
+│   │   ├── physics.rs            # Physics system orchestration and integration
 │   │   ├── actions.rs            # Simulation control and action handling
-│   │   └── components.rs         # BodyBundle and celestial body factory functions
+│   │   └── components.rs         # PhysicsBodyBundle and component definitions
 │   ├── controls.rs               # Complete input handling and UI structure
 │   ├── camera.rs                 # Camera setup and positioning logic
 │   ├── visualization.rs          # Debug rendering (octree wireframe, barycenter gizmo)
@@ -455,11 +451,16 @@ src/
 │   └── mod.rs                    # Shared resources like RNG, constants, and octree
 ├── utils/                        # Utility modules
 │   ├── mod.rs
-│   ├── math.rs                   # Mathematical functions and algorithms
 │   └── color.rs                  # Color and material utilities
 └── physics/                      # Physics-specific modules
     ├── mod.rs
-    ├── stars.rs                  # Stellar physics and realistic body generation
+    ├── components.rs             # Physics components (Mass, Velocity, Acceleration)
+    ├── resources.rs              # Physics resources (GravitationalConstant, PhysicsTime)
+    ├── math.rs                   # Mathematical functions and physics calculations
+    ├── integrators/              # Numerical integration methods
+    │   ├── mod.rs                # Integrator trait and exports
+    │   └── semi_implicit_euler.rs # Semi-implicit Euler integrator
+    ├── aabb3d.rs                 # Axis-aligned bounding box implementation
     └── octree.rs                 # Barnes-Hut octree implementation
 ```
 
@@ -478,8 +479,9 @@ src/
 
 - **`plugins/simulation/`**: Self-contained physics simulation with internal submodules
     - `mod.rs`: Plugin definition and system coordination
-    - `physics.rs`: Core physics calculations including octree rebuilding and force application
+    - `physics.rs`: Physics system orchestration and ECS integration
     - `actions.rs`: Simulation control and action handlers (restart, pause, screenshot)
+    - `components.rs`: Physics component bundles and entity creation
 - **`plugins/controls.rs`**: Complete input handling and UI structure (keyboard, mouse, buttons)
 - **`plugins/camera.rs`**: Camera setup and positioning logic
 - **`plugins/visualization.rs`**: Debug rendering for octree wireframe and barycenter gizmo
@@ -489,10 +491,14 @@ src/
 - **`plugins/embedded_assets.rs`**: Embedded asset management for web deployment
 - **`events.rs`**: Centralized event definitions with `SimulationCommand` enum for inter-plugin communication
 - **`resources/mod.rs`**: Shared state including RNG, gravitational constants, and octree data
-- **`utils/math.rs`**: Mathematical utilities for sphere distribution and random vector generation
+- **`physics/math.rs`**: Mathematical utilities for sphere distribution and physics calculations
+- **`physics/components.rs`**: Core physics components (Mass, Velocity, Acceleration)
+- **`physics/resources.rs`**: Physics resources and runtime configuration
+- **`physics/integrators/`**: Numerical integration methods with symplectic integrator support
 - **`config.rs`**: Centralized configuration management with serialization support
 - **`states.rs`**: Application state management and transitions
 - **`physics/octree.rs`**: High-performance Barnes-Hut spatial partitioning implementation
+- **`physics/aabb3d.rs`**: Axis-aligned bounding box for spatial calculations
 
 This structure enables extension, testing, and maintenance while providing defined entry points for understanding and
 modifying the simulation behavior.
@@ -612,5 +618,4 @@ Release behavior is configured in `Cargo.toml` under `[package.metadata.release]
 ## Acknowledgments
 
 - Built with [Bevy](https://bevyengine.org/) game engine
-- Physics simulation powered by [Avian3D](https://github.com/Jondolf/avian)
 - Camera controls provided by [bevy_panorbit_camera](https://github.com/johanhelsing/bevy_panorbit_camera)

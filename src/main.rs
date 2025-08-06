@@ -66,7 +66,6 @@ fn main() {
         EntityCountDiagnosticsPlugin,
         FrameTimeDiagnosticsPlugin::default(),
         PanOrbitCameraPlugin,
-        PhysicsPlugins::default(),
         SimulationDiagnosticsPlugin::default(),
         SystemInformationDiagnosticsPlugin,
         SimulationPlugin,

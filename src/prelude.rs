@@ -4,10 +4,10 @@
 //! across the Stardrift application to reduce import boilerplate.
 
 // External crate re-exports
-pub use avian3d::math::{Scalar, Vector};
-pub use avian3d::prelude::*;
 pub use bevy::prelude::*;
-pub use rand::Rng;
+
+// Physics math types
+pub use crate::physics::math::{Scalar, Vector};
 
 // Internal re-exports - Config
 pub use crate::config::SimulationConfig;
@@ -26,7 +26,7 @@ pub use crate::plugins::visualization::{
 };
 
 // Internal re-exports - Physics
-pub use crate::physics::octree::{Octree, OctreeBody};
+pub use crate::physics::octree::Octree;
 
 // Internal re-exports - Events
 pub use crate::events::{SimulationCommand, UpdateButtonTextEvent};

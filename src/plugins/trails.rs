@@ -5,6 +5,7 @@
 //! for independent, feature-gated functionality that can be completely removed
 //! without affecting the core simulation.
 
+use crate::physics::components::{PhysicsBody, Radius};
 use crate::prelude::*;
 use crate::states::AppState;
 use bevy::render::mesh::{MeshAabb, PrimitiveTopology};
@@ -301,7 +302,7 @@ impl Plugin for TrailsPlugin {
 impl TrailsPlugin {
     fn update_trails(
         mut trail_query: Query<(&mut Trail, &TrackedBody), With<TrailRenderer>>,
-        body_query: Query<&Transform, With<RigidBody>>,
+        body_query: Query<&Transform, With<PhysicsBody>>,
         time: Res<Time>,
         config: Res<SimulationConfig>,
         app_state: Res<State<AppState>>,
@@ -341,8 +342,8 @@ impl TrailsPlugin {
         mut commands: Commands,
         // Only process newly added bodies - eliminates O(n²) check
         query: Query<
-            (Entity, &MeshMaterial3d<StandardMaterial>, Option<&Collider>),
-            Added<RigidBody>,
+            (Entity, &MeshMaterial3d<StandardMaterial>, Option<&Radius>),
+            Added<PhysicsBody>,
         >,
         mut materials: ResMut<Assets<StandardMaterial>>,
         app_state: Res<State<AppState>>,
@@ -352,7 +353,7 @@ impl TrailsPlugin {
         let is_paused = matches!(app_state.get(), AppState::Paused);
         let current_time = time.elapsed_secs();
 
-        for (entity, mesh_material, collider) in query.iter() {
+        for (entity, mesh_material, radius) in query.iter() {
             // Extract color from the body's material
             let color = if let Some(material) = materials.get(&mesh_material.0) {
                 material.base_color
@@ -360,13 +361,8 @@ impl TrailsPlugin {
                 Color::WHITE
             };
 
-            // Extract radius from collider if available
-            let body_radius = collider
-                .and_then(|c| {
-                    let shape = c.shape();
-                    shape.as_ball().map(|ball| ball.radius as f32)
-                })
-                .unwrap_or(1.0);
+            // Use Radius component if available, otherwise default
+            let body_radius = radius.map(|r| r.value() as f32).unwrap_or(1.0);
 
             let mut trail = Trail::new(color, body_radius);
 
@@ -955,7 +951,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-                RigidBody::Dynamic,
+                PhysicsBody,
             ))
             .id();
 
