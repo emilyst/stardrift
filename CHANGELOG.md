@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.27] - 2025-08-06
+
 ### Changed
 
 - Implement new simulation configuration defaults
@@ -342,7 +344,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple build profiles (dev, release, distribution, wasm)
 - Platform-specific configuration paths (XDG compliant)
 
-[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.26...HEAD
+[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.27...HEAD
+[0.0.27]: https://github.com/emilyst/stardrift/compare/v0.0.26...v0.0.27
 
 [0.0.26]: https://github.com/emilyst/stardrift/compare/v0.0.25...v0.0.26
 
