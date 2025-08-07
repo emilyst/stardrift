@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Refactored several types' names to make it clear that integrators can be non-symplectic as well
+    - Clarified some documentation as well
+
 ## [0.0.27] - 2025-08-06
 
 ### Changed
@@ -18,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Complete physics system overhaul
-    - Migrated from Avian3D physics engine to custom symplectic integrator implementation
+    - Migrated from Avian3D physics engine to custom integrator implementation
     - Introduced high-precision `Position` and `Velocity` components using `f64` internally
     - Added `PhysicsBody` marker component for cleaner entity queries
     - Decoupled physics calculations from rendering transforms for better numerical stability
@@ -345,6 +350,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Platform-specific configuration paths (XDG compliant)
 
 [Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.27...HEAD
+
 [0.0.27]: https://github.com/emilyst/stardrift/compare/v0.0.26...v0.0.27
 
 [0.0.26]: https://github.com/emilyst/stardrift/compare/v0.0.25...v0.0.26

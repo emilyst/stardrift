@@ -3,7 +3,7 @@ use crate::physics::math::{Scalar, Vector};
 use crate::physics::{
     components::{Acceleration, Mass, PhysicsBody, PhysicsBodyBundle, Position, Velocity},
     octree::{Octree, OctreeBody},
-    resources::{ActiveSymplecticIntegrator, PhysicsTime},
+    resources::{CurrentIntegrator, PhysicsTime},
 };
 use crate::resources::{Barycenter, GravitationalConstant, GravitationalOctree, SharedRng};
 use bevy::pbr::MeshMaterial3d;
@@ -62,7 +62,7 @@ pub fn calculate_accelerations(
 /// Integrate positions and velocities using the currently active integrator
 pub fn integrate_motions(
     mut query: Query<(&mut Position, &mut Velocity, &Acceleration), With<PhysicsBody>>,
-    integrator: Res<ActiveSymplecticIntegrator>,
+    integrator: Res<CurrentIntegrator>,
     physics_time: Res<PhysicsTime>,
 ) {
     if physics_time.is_paused() {
@@ -193,7 +193,7 @@ mod tests {
         app.add_plugins(MinimalPlugins);
 
         // Add resources
-        app.insert_resource(ActiveSymplecticIntegrator(Box::new(SemiImplicitEuler)));
+        app.insert_resource(CurrentIntegrator(Box::new(SemiImplicitEuler)));
         app.insert_resource(PhysicsTime::default());
 
         // Create a test body

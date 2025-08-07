@@ -11,8 +11,8 @@ up or slow down the gravitational N-body simulation in real-time.
 
 ## Core Technology
 
-Since Stardrift will implement custom symplectic integrators, we cannot rely on Avian3D's `PhysicsTime` trait. Instead,
-we'll implement our own time scaling system that works with any integrator:
+Since Stardrift will implement custom integrators, we cannot rely on Avian3D's `PhysicsTime` trait. Instead, we'll
+implement our own time scaling system that works with any integrator:
 
 - Custom `SimulationTimeScale` resource for time multiplier
 - Applied directly in physics integration systems
@@ -191,8 +191,8 @@ pub fn update_positions_with_time_scale(
     }
 }
 
-// For future symplectic integrators
-pub trait SymplecticIntegrator {
+// For future integrators
+pub trait Integrator {
     fn step(
         &self,
         bodies: &mut Query<(&mut Transform, &mut LinearVelocity, &ComputedMass)>,

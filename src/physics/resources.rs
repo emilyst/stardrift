@@ -1,14 +1,14 @@
 //! Physics resources for simulation
 
-use super::integrators::SymplecticIntegrator;
+use super::integrators::Integrator;
 use crate::physics::math::Scalar;
 use bevy::prelude::*;
 
 /// Resource holding the currently active integrator
 #[derive(Resource)]
-pub struct ActiveSymplecticIntegrator(pub Box<dyn SymplecticIntegrator + Send + Sync>);
+pub struct CurrentIntegrator(pub Box<dyn Integrator + Send + Sync>);
 
-impl Default for ActiveSymplecticIntegrator {
+impl Default for CurrentIntegrator {
     fn default() -> Self {
         Self(Box::new(super::integrators::SemiImplicitEuler))
     }

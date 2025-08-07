@@ -57,7 +57,7 @@ impl Plugin for SimulationPlugin {
             .with_leaf_threshold(config.physics.octree_leaf_threshold),
         ));
         app.init_resource::<ScreenshotState>();
-        app.init_resource::<crate::physics::resources::ActiveSymplecticIntegrator>();
+        app.init_resource::<crate::physics::resources::CurrentIntegrator>();
         app.init_resource::<crate::physics::resources::PhysicsTime>();
 
         // New unified command event

@@ -6,7 +6,7 @@ pub mod semi_implicit_euler;
 
 pub use semi_implicit_euler::SemiImplicitEuler;
 
-pub trait SymplecticIntegrator: Send + Sync {
+pub trait Integrator: Send + Sync {
     /// Integrate a single body's state
     ///
     /// Updates the position and velocity of a body based on its current

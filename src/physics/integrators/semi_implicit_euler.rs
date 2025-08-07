@@ -1,6 +1,6 @@
 //! Semi-implicit Euler integration method (symplectic Euler)
 
-use super::SymplecticIntegrator;
+use super::Integrator;
 use crate::physics::math::{Scalar, Vector};
 
 /// Semi-implicit Euler integrator (also known as symplectic Euler)
@@ -10,7 +10,7 @@ use crate::physics::math::{Scalar, Vector};
 #[derive(Debug, Clone, Default)]
 pub struct SemiImplicitEuler;
 
-impl SymplecticIntegrator for SemiImplicitEuler {
+impl Integrator for SemiImplicitEuler {
     fn integrate_single(
         &self,
         position: &mut Vector,

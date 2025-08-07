@@ -3,7 +3,7 @@ use std::hint::black_box;
 
 // Import from the crate being benchmarked
 extern crate stardrift;
-use stardrift::physics::integrators::{SemiImplicitEuler, SymplecticIntegrator};
+use stardrift::physics::integrators::{Integrator, SemiImplicitEuler};
 use stardrift::physics::math::{Scalar, Vector};
 
 /// Test body data for benchmarking
