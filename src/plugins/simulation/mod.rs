@@ -54,6 +54,7 @@ impl Plugin for SimulationPlugin {
                 config.physics.force_calculation_min_distance,
                 config.physics.force_calculation_max_force,
             )
+            .with_softening(config.physics.force_calculation_softening)
             .with_leaf_threshold(config.physics.octree_leaf_threshold),
         ));
         app.init_resource::<ScreenshotState>();

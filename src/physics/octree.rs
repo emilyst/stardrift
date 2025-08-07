@@ -102,24 +102,35 @@ pub struct Octree {
     pub theta: Scalar,                  // Barnes-Hut approximation parameter
     pub min_distance: Scalar,           // Minimum distance for force calculation
     pub max_force: Scalar,              // Maximum force magnitude
+    pub softening: Scalar,              // Softening parameter for smooth force transitions
     pub leaf_threshold: usize,          // Maximum bodies per leaf node
     min_distance_squared: Scalar,       // Cached value to avoid repeated multiplication
+    softening_squared: Scalar,          // Cached softening squared value
     node_pool: OctreeNodePool,          // Pool for reusing node allocations
     force_calculation_count: AtomicU64, // Counter for force calculations performed
 }
 
 impl Octree {
     pub fn new(theta: Scalar, min_distance: Scalar, max_force: Scalar) -> Self {
+        let softening = 0.5; // Default softening value
         Self {
             root: None,
             theta,
             min_distance,
             max_force,
+            softening,
             leaf_threshold: 4,
             min_distance_squared: min_distance * min_distance,
+            softening_squared: softening * softening,
             node_pool: OctreeNodePool::new(),
             force_calculation_count: AtomicU64::new(0),
         }
+    }
+
+    pub fn with_softening(mut self, softening: Scalar) -> Self {
+        self.softening = softening;
+        self.softening_squared = softening * softening;
+        self
     }
 
     pub fn with_leaf_threshold(mut self, leaf_threshold: usize) -> Self {
@@ -134,13 +145,16 @@ impl Octree {
         internal_capacity: usize,
         external_capacity: usize,
     ) -> Self {
+        let softening = 0.5; // Default softening value
         Self {
             root: None,
             theta,
             min_distance,
             max_force,
+            softening,
             leaf_threshold: 4,
             min_distance_squared: min_distance * min_distance,
+            softening_squared: softening * softening,
             node_pool: OctreeNodePool::with_capacity(internal_capacity, external_capacity),
             force_calculation_count: AtomicU64::new(0),
         }
@@ -384,9 +398,13 @@ impl Octree {
 
         self.force_calculation_count.fetch_add(1, Ordering::Relaxed);
 
+        // Apply softening to prevent singularities and provide smooth transitions
+        // The softening parameter prevents infinite forces at very close distances
+        // by adding a small constant to the denominator: F = GMm/(r² + ε²)
+        let softened_distance_squared = distance_squared + self.softening_squared;
         let distance = distance_squared.sqrt();
         let direction_normalized = direction / distance;
-        let force_magnitude = g * body.mass * point_mass / distance_squared;
+        let force_magnitude = g * body.mass * point_mass / softened_distance_squared;
         let force_magnitude = force_magnitude.min(self.max_force);
 
         direction_normalized * force_magnitude
@@ -524,6 +542,98 @@ mod tests {
             force.x > 0.0,
             "Force should point towards body2 (positive x direction)"
         );
+    }
+
+    #[test]
+    fn test_softening_effect() {
+        // Test that softening prevents singularities at close distances
+        let mut octree_with_softening = Octree::new(0.5, 0.1, 1e10).with_softening(1.0);
+        let mut octree_without_softening = Octree::new(0.5, 0.1, 1e10).with_softening(0.0);
+
+        let body1 = OctreeBody {
+            position: Vector::new(0.0, 0.0, 0.0),
+            mass: 1000.0,
+        };
+
+        // Very close body - would cause near-singularity without softening
+        let body2 = OctreeBody {
+            position: Vector::new(0.2, 0.0, 0.0), // Just above min_distance
+            mass: 1000.0,
+        };
+
+        octree_with_softening.build(vec![body1, body2]);
+        octree_without_softening.build(vec![body1, body2]);
+
+        let force_with_softening =
+            octree_with_softening.calculate_force(&body1, octree_with_softening.root.as_ref(), 1.0);
+        let force_without_softening = octree_without_softening.calculate_force(
+            &body1,
+            octree_without_softening.root.as_ref(),
+            1.0,
+        );
+
+        // Force with softening should be smaller (less extreme) at close distances
+        assert!(
+            force_with_softening.length() < force_without_softening.length(),
+            "Softening should reduce force magnitude at close distances"
+        );
+
+        // Both forces should still be finite
+        assert!(
+            force_with_softening.is_finite(),
+            "Force with softening should be finite"
+        );
+        assert!(
+            force_without_softening.is_finite(),
+            "Force without softening should be finite"
+        );
+    }
+
+    #[test]
+    fn test_softening_smooth_transition() {
+        // Test that softening provides smooth force transitions
+        let softening = 0.5;
+        let mut octree = Octree::new(0.5, 0.1, 1e10).with_softening(softening);
+
+        let central_body = OctreeBody {
+            position: Vector::new(0.0, 0.0, 0.0),
+            mass: 1000.0,
+        };
+
+        // Test forces at various distances
+        let test_distances = vec![0.15, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0];
+        let mut previous_force_magnitude = f64::INFINITY;
+
+        for distance in test_distances {
+            let test_body = OctreeBody {
+                position: Vector::new(distance, 0.0, 0.0),
+                mass: 1.0,
+            };
+
+            octree.build(vec![central_body]);
+            let force = octree.calculate_force_from_point(
+                &test_body,
+                central_body.position,
+                central_body.mass,
+                1.0,
+            );
+
+            let force_magnitude = force.length();
+
+            // Force should decrease with distance (inverse square law with softening)
+            assert!(
+                force_magnitude < previous_force_magnitude,
+                "Force should decrease with distance: {force_magnitude} at distance {distance}",
+            );
+
+            // Force should always be finite
+            assert!(
+                force_magnitude.is_finite(),
+                "Force should be finite at distance {distance}"
+            );
+
+            previous_force_magnitude = force_magnitude;
+        }
     }
 
     #[test]

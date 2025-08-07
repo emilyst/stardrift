@@ -38,6 +38,12 @@ pub struct PhysicsConfig {
     pub max_body_radius: Scalar,
     pub force_calculation_min_distance: Scalar,
     pub force_calculation_max_force: Scalar,
+    /// Softening parameter to prevent force singularities at close distances.
+    /// This adds a small constant to the distance calculation: F = GMm/(r² + ε²)
+    /// where ε is the softening parameter. This ensures smooth force transitions
+    /// and prevents numerical instabilities during close encounters between bodies.
+    /// Typical values: 0.1 to 1.0 times the minimum body radius.
+    pub force_calculation_softening: Scalar,
     pub initial_seed: Option<u64>,
     pub initial_velocity: InitialVelocityConfig,
 }
@@ -84,6 +90,7 @@ impl Default for PhysicsConfig {
             max_body_radius: 2.0,
             force_calculation_min_distance: 2.0,
             force_calculation_max_force: 1e4,
+            force_calculation_softening: 0.5,
             initial_seed: None,
             initial_velocity: InitialVelocityConfig::default(),
         }

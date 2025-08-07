@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Gravitational softening parameter for improved numerical stability
+    - Added `force_calculation_softening` configuration parameter (default: 0.5)
+    - Prevents force singularities during close gravitational encounters by modifying force calculation from F = GMm/r²
+      to F = GMm/(r² + ε²)
+    - Provides smoother force transitions and eliminates numerical instabilities when bodies approach each other closely
+    - Configurable via physics section in config.toml with typical values between 0.1-1.0 times minimum body radius
+
 ### Changed
 
 - Refactored several types' names to make it clear that integrators can be non-symplectic as well

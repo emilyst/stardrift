@@ -225,6 +225,7 @@ version = 6  # Configuration format version (required)
 | `max_body_radius`                            | `f64`         | `2.0`      | Maximum radius for generated bodies                                    |
 | `force_calculation_min_distance`             | `f64`         | `2.0`      | Minimum distance for force calculations (prevents singularities)       |
 | `force_calculation_max_force`                | `f64`         | `100000.0` | Maximum force magnitude to prevent instabilities                       |
+| `force_calculation_softening`                | `f64`         | `0.5`      | Softening parameter for smooth force transitions (prevents singularities at close distances) |
 | `initial_seed`                               | `Option<u64>` | `None`     | Random seed for deterministic generation. None = random                |
 
 ##### Initial Velocity Configuration (`[physics.initial_velocity]`)
@@ -327,6 +328,7 @@ min_body_radius = 1.0
 max_body_radius = 2.0
 force_calculation_min_distance = 2.0
 force_calculation_max_force = 100000.0
+force_calculation_softening = 0.5
 # initial_seed = 12345  # Uncomment to use a specific seed for deterministic generation
 
 [physics.initial_velocity]
