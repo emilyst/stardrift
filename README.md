@@ -209,14 +209,14 @@ version = 6  # Configuration format version (required)
 
 | Field     | Type  | Default | Description                                                              |
 |-----------|-------|---------|--------------------------------------------------------------------------|
-| `version` | `u32` | `5`     | Configuration format version. Configs with outdated versions are ignored |
+| `version` | `u32` | `6`     | Configuration format version. Configs with outdated versions are ignored |
 
 ##### Physics Configuration (`[physics]`)
 
 | Field                                        | Type          | Default    | Description                                                            |
 |----------------------------------------------|---------------|------------|------------------------------------------------------------------------|
-| `gravitational_constant`                     | `f64`         | `200.0`    | Strength of gravitational attraction between bodies                    |
-| `body_count`                                 | `usize`       | `30`       | Number of celestial bodies to simulate                                 |
+| `gravitational_constant`                     | `f64`         | `500.0`    | Strength of gravitational attraction between bodies                    |
+| `body_count`                                 | `usize`       | `100`      | Number of celestial bodies to simulate                                 |
 | `octree_theta`                               | `f64`         | `0.5`      | Barnes-Hut accuracy parameter (0.0-2.0). Lower = more accurate, slower |
 | `octree_leaf_threshold`                      | `usize`       | `2`        | Maximum bodies per octree leaf before subdivision                      |
 | `body_distribution_sphere_radius_multiplier` | `f64`         | `100.0`    | Multiplier for initial body distribution radius                        |
@@ -224,7 +224,7 @@ version = 6  # Configuration format version (required)
 | `min_body_radius`                            | `f64`         | `1.0`      | Minimum radius for generated bodies                                    |
 | `max_body_radius`                            | `f64`         | `2.0`      | Maximum radius for generated bodies                                    |
 | `force_calculation_min_distance`             | `f64`         | `2.0`      | Minimum distance for force calculations (prevents singularities)       |
-| `force_calculation_max_force`                | `f64`         | `100000.0` | Maximum force magnitude to prevent instabilities                       |
+| `force_calculation_max_force`                | `f64`         | `10000.0`  | Maximum force magnitude to prevent instabilities                       |
 | `force_calculation_softening`                | `f64`         | `0.5`      | Softening parameter for smooth force transitions (prevents singularities at close distances) |
 | `initial_seed`                               | `Option<u64>` | `None`     | Random seed for deterministic generation. None = random                |
 | `integrator`                                 | `string`      | `"SemiImplicitEuler"` | Numerical integration method for physics calculations |
