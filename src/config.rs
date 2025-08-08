@@ -46,6 +46,7 @@ pub struct PhysicsConfig {
     pub force_calculation_softening: Scalar,
     pub initial_seed: Option<u64>,
     pub initial_velocity: InitialVelocityConfig,
+    pub integrator: IntegratorType,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -77,6 +78,11 @@ pub enum VelocityMode {
     Radial,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum IntegratorType {
+    SemiImplicitEuler,
+}
+
 impl Default for PhysicsConfig {
     fn default() -> Self {
         Self {
@@ -93,6 +99,7 @@ impl Default for PhysicsConfig {
             force_calculation_softening: 0.5,
             initial_seed: None,
             initial_velocity: InitialVelocityConfig::default(),
+            integrator: IntegratorType::SemiImplicitEuler,
         }
     }
 }

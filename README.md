@@ -227,6 +227,7 @@ version = 6  # Configuration format version (required)
 | `force_calculation_max_force`                | `f64`         | `100000.0` | Maximum force magnitude to prevent instabilities                       |
 | `force_calculation_softening`                | `f64`         | `0.5`      | Softening parameter for smooth force transitions (prevents singularities at close distances) |
 | `initial_seed`                               | `Option<u64>` | `None`     | Random seed for deterministic generation. None = random                |
+| `integrator`                                 | `string`      | `"SemiImplicitEuler"` | Numerical integration method for physics calculations |
 
 ##### Initial Velocity Configuration (`[physics.initial_velocity]`)
 

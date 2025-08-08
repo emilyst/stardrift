@@ -58,7 +58,17 @@ impl Plugin for SimulationPlugin {
             .with_leaf_threshold(config.physics.octree_leaf_threshold),
         ));
         app.init_resource::<ScreenshotState>();
-        app.init_resource::<crate::physics::resources::CurrentIntegrator>();
+
+        // Set up integrator based on configuration
+        use crate::config::IntegratorType;
+        use crate::physics::integrators::SemiImplicitEuler;
+        use crate::physics::resources::CurrentIntegrator;
+
+        let integrator = match config.physics.integrator {
+            IntegratorType::SemiImplicitEuler => Box::new(SemiImplicitEuler),
+        };
+        app.insert_resource(CurrentIntegrator(integrator));
+
         app.init_resource::<crate::physics::resources::PhysicsTime>();
 
         // New unified command event

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Configurable integrator selection in physics configuration
+    - Added `integrator` field to `PhysicsConfig` with `IntegratorType` enum
+    - Currently supports `SemiImplicitEuler` integrator (default)
+    - Integrator is now selected at startup based on configuration
+    - Foundation for adding additional integrator types in the future
+
 ## [0.0.28] - 2025-08-07
 
 ### Added
