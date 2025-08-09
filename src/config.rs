@@ -83,6 +83,7 @@ pub enum VelocityMode {
 #[serde(rename_all = "snake_case")]
 pub enum IntegratorType {
     SymplecticEuler,
+    VelocityVerlet,
 }
 
 impl Default for PhysicsConfig {
@@ -101,7 +102,7 @@ impl Default for PhysicsConfig {
             force_calculation_softening: 0.5,
             initial_seed: None,
             initial_velocity: InitialVelocityConfig::default(),
-            integrator: IntegratorType::SymplecticEuler,
+            integrator: IntegratorType::VelocityVerlet,
         }
     }
 }

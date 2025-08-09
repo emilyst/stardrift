@@ -109,26 +109,47 @@ pub fn integrate_motions_with_history(
 
     let dt = physics_time.dt;
 
-    // For now, all integrators just use the simple step method
-    // When we add multi-step integrators, we'll need to check the type
-    // and call step_with_history if available
+    // Check if the integrator supports multi-step integration
+    use crate::physics::integrators::{MultiStepIntegrator, VelocityVerlet};
+
     query
         .par_iter_mut()
         .for_each(|(mut position, mut velocity, acceleration, mut history)| {
-            // Use simple integration for now
-            integrator.0.step(
-                position.value_mut(),
-                velocity.value_mut(),
-                acceleration.value(),
-                dt,
-            );
+            // Store current state before integration
+            let pre_integration_state =
+                KinematicState::from_components(&position, &velocity, acceleration);
 
-            // Update history with new state for future multi-step integrators
-            history.push(KinematicState::from_components(
-                &position,
-                &velocity,
-                acceleration,
-            ));
+            // Try to use multi-step integration if available and we have enough history
+            if let Some(multi_step) = integrator.0.as_any().downcast_ref::<VelocityVerlet>() {
+                if history.is_ready(multi_step.required_history_size()) {
+                    multi_step.step_with_history(
+                        position.value_mut(),
+                        velocity.value_mut(),
+                        acceleration.value(),
+                        dt,
+                        &history,
+                    );
+                } else {
+                    // Not enough history yet, use simple step
+                    integrator.0.step(
+                        position.value_mut(),
+                        velocity.value_mut(),
+                        acceleration.value(),
+                        dt,
+                    );
+                }
+            } else {
+                // Simple integrator
+                integrator.0.step(
+                    position.value_mut(),
+                    velocity.value_mut(),
+                    acceleration.value(),
+                    dt,
+                );
+            }
+
+            // Update history with the state before integration for next frame
+            history.push(pre_integration_state);
         });
 }
 

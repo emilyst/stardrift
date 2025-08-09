@@ -5,8 +5,10 @@ use crate::physics::math::{Scalar, Vector};
 use std::any::Any;
 
 pub mod symplectic_euler;
+pub mod velocity_verlet;
 
 pub use symplectic_euler::SymplecticEuler;
+pub use velocity_verlet::VelocityVerlet;
 
 /// Base trait for all integrators
 pub trait Integrator: Send + Sync {

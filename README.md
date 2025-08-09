@@ -23,7 +23,7 @@ significant changes.
 - **Barnes-Hut octree algorithm**: Efficient O(N log N) gravitational force calculations using spatial partitioning
 - **High precision**: Uses f64 floating-point precision for increased accuracy
 - **Custom physics engine**: Purpose-built component-based physics system optimized for n-body simulation
-- **Custom motion integration**: Symplectic Euler integration with support for future integrator methods
+- **Custom motion integration**: Multiple integration methods (Symplectic Euler, Velocity Verlet) with multi-step support
 - **Parallel processing**: Multi-threaded physics calculations for performance optimization
 - **Dynamic barycenter tracking**: Real-time calculation and visualization of the system's center of mass
 
@@ -75,7 +75,7 @@ The following features are planned for future development:
 
 1. **Enhanced Diagnostics** - Comprehensive physics accuracy monitoring including energy conservation (Hamiltonian),
    angular momentum tracking, virial ratio, and performance profiling
-2. **Additional Integrators** - Support for multiple integration schemes (Verlet, PEFRL, etc.) beyond the current
+2. **Additional Integrators** - Support for more integration schemes (PEFRL, Yoshida, etc.) beyond the current
    symplectic Euler method
 3. **Collision Detection** - Implement collision detection and response between bodies with configurable restitution
 4. **Configurable Simulation Speed** - Time scaling controls for faster or slower simulation playback
@@ -205,7 +205,7 @@ The simulation uses a TOML-based configuration file.
 | `force_calculation_max_force`                | `f64`         | `10000.0`            | Maximum force magnitude to prevent instabilities                                             |
 | `force_calculation_softening`                | `f64`         | `0.5`                | Softening parameter for smooth force transitions (prevents singularities at close distances) |
 | `initial_seed`                               | `Option<u64>` | `None`               | Random seed for deterministic generation. None = random                                      |
-| `integrator`                                 | `string`      | `"symplectic_euler"` | Numerical integration method for physics calculations                                        |
+| `integrator`                                 | `string`      | `"velocity_verlet"`  | Numerical integration method (`"symplectic_euler"`, `"velocity_verlet"`)                     |
 
 ##### Initial Velocity Configuration (`[physics.initial_velocity]`)
 
@@ -379,8 +379,9 @@ src/
     ├── resources.rs              # Physics resources (GravitationalConstant, PhysicsTime)
     ├── math.rs                   # Mathematical functions and physics calculations
     ├── integrators/              # Numerical integration methods
-    │   ├── mod.rs                # Integrator trait and exports
-    │   └── symplectic_euler.rs # Symplectic Euler integrator
+    │   ├── mod.rs                # Integrator traits and exports
+    │   ├── symplectic_euler.rs  # Symplectic Euler integrator
+    │   └── velocity_verlet.rs   # Velocity Verlet integrator (2nd order, symplectic)
     ├── aabb3d.rs                 # Axis-aligned bounding box implementation
     └── octree.rs                 # Barnes-Hut octree implementation
 ```
@@ -415,7 +416,7 @@ src/
 - **`physics/math.rs`**: Mathematical utilities for sphere distribution and physics calculations
 - **`physics/components.rs`**: Core physics components (Mass, Velocity, Acceleration)
 - **`physics/resources.rs`**: Physics resources and runtime configuration
-- **`physics/integrators/`**: Numerical integration methods with custom integrator support
+- **`physics/integrators/`**: Numerical integration methods with multi-step integrator support
 - **`config.rs`**: Centralized configuration management with serialization support
 - **`states.rs`**: Application state management and transitions
 - **`physics/octree.rs`**: High-performance Barnes-Hut spatial partitioning implementation

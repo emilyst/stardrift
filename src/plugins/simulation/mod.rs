@@ -61,12 +61,14 @@ impl Plugin for SimulationPlugin {
 
         // Set up integrator based on configuration
         use crate::config::IntegratorType;
-        use crate::physics::integrators::SymplecticEuler;
+        use crate::physics::integrators::{SymplecticEuler, VelocityVerlet};
         use crate::physics::resources::CurrentIntegrator;
 
-        let integrator = match config.physics.integrator {
-            IntegratorType::SymplecticEuler => Box::new(SymplecticEuler),
-        };
+        let integrator: Box<dyn crate::physics::integrators::Integrator + Send + Sync> =
+            match config.physics.integrator {
+                IntegratorType::SymplecticEuler => Box::new(SymplecticEuler),
+                IntegratorType::VelocityVerlet => Box::new(VelocityVerlet),
+            };
         app.insert_resource(CurrentIntegrator(integrator));
 
         app.init_resource::<crate::physics::resources::PhysicsTime>();

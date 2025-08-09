@@ -11,9 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Configurable integrator selection in physics configuration
     - Added `integrator` field to `PhysicsConfig` with `IntegratorType` enum
-    - Currently supports `SymplecticEuler` integrator (default)
+    - Currently supports `SymplecticEuler` integrator (default) and `VelocityVerlet`
     - Integrator is now selected at startup based on configuration
     - Foundation for adding additional integrator types in the future
+
+- Velocity Verlet integrator implementation
+    - Second-order symplectic integrator with excellent energy conservation
+    - Implements both `Integrator` and `MultiStepIntegrator` traits
+    - Uses acceleration history when available for improved accuracy
+    - Falls back to position-Verlet method when history unavailable
+    - Particularly suited for high-precision gravitational n-body simulations
 
 - Support for kinematic history in integrators
     - Added `KinematicHistory` component with fixed size of 8 states (sufficient for most methods)
