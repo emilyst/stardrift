@@ -12,13 +12,7 @@ use crate::physics::math::{Scalar, Vector};
 pub struct SymplecticEuler;
 
 impl Integrator for SymplecticEuler {
-    fn integrate(
-        &self,
-        position: &mut Vector,
-        velocity: &mut Vector,
-        acceleration: Vector,
-        dt: Scalar,
-    ) {
+    fn step(&self, position: &mut Vector, velocity: &mut Vector, acceleration: Vector, dt: Scalar) {
         // Update velocity first: v(t+dt) = v(t) + a(t) * dt
         *velocity += acceleration * dt;
 
@@ -49,7 +43,7 @@ mod tests {
         let acceleration = Vector::new(0.0, 0.0, -9.81);
         let dt = 0.01;
 
-        integrator.integrate(&mut position, &mut velocity, acceleration, dt);
+        integrator.step(&mut position, &mut velocity, acceleration, dt);
 
         // Velocity should be updated first
         assert_eq!(velocity, Vector::new(0.0, 1.0, -0.0981));

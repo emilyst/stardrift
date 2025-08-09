@@ -74,7 +74,7 @@ pub fn integrate_motions(
     query
         .par_iter_mut()
         .for_each(|(mut position, mut velocity, acceleration)| {
-            integrator.0.integrate_single(
+            integrator.0.step(
                 position.value_mut(),
                 velocity.value_mut(),
                 acceleration.value(),

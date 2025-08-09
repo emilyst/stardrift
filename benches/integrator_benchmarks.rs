@@ -63,7 +63,7 @@ fn benchmark_integrators(c: &mut Criterion) {
 
                 b.iter(|| {
                     for body in bodies.iter_mut() {
-                        integrator.integrate_single(
+                        integrator.step(
                             &mut body.position,
                             &mut body.velocity,
                             body.acceleration,
