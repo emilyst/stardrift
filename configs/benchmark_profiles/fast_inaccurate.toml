@@ -1,8 +1,6 @@
 # Fast but less accurate configuration for performance testing
 # Target: Maximum FPS with acceptable visual quality
 
-version = 6
-
 [physics]
 gravitational_constant = 10.0
 body_count = 100

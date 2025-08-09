@@ -1,8 +1,6 @@
 # Balanced configuration - good accuracy with reasonable performance
 # Target: 60fps with ~100 bodies, suitable for most use cases
 
-version = 6
-
 [physics]
 gravitational_constant = 10.0
 body_count = 100

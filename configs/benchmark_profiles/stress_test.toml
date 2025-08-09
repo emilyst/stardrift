@@ -1,8 +1,6 @@
 # Stress test configuration for extreme scenarios
 # Target: Test limits with many bodies
 
-version = 6
-
 [physics]
 gravitational_constant = 10.0
 body_count = 10000                    # High body count for stress testing

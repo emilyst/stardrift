@@ -183,12 +183,6 @@ The simulation uses a TOML-based configuration file.
 
 #### Complete Configuration Reference
 
-##### Root Settings
-
-| Field     | Type  | Default | Description                                                              |
-|-----------|-------|---------|--------------------------------------------------------------------------|
-| `version` | `u32` | `7`     | Configuration format version. Configs with outdated versions are ignored |
-
 ##### Physics Configuration (`[physics]`)
 
 | Field                                        | Type          | Default              | Description                                                                                  |

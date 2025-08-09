@@ -5,25 +5,12 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Resource, Serialize, Deserialize, Clone, Debug)]
+#[derive(Resource, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct SimulationConfig {
-    pub version: u32,
     pub physics: PhysicsConfig,
     pub rendering: RenderingConfig,
     pub trails: TrailConfig,
     pub screenshots: ScreenshotConfig,
-}
-
-impl Default for SimulationConfig {
-    fn default() -> Self {
-        Self {
-            version: 7,
-            physics: PhysicsConfig::default(),
-            rendering: RenderingConfig::default(),
-            trails: TrailConfig::default(),
-            screenshots: ScreenshotConfig::default(),
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -253,17 +240,8 @@ impl SimulationConfig {
         match config_result {
             Ok(config) => match config.try_deserialize::<Self>() {
                 Ok(sim_config) => {
-                    if sim_config.version < Self::default().version {
-                        warn!(
-                            "Config version {} is outdated. Using defaults.",
-                            sim_config.version
-                        );
-                        warn!("Using default configuration due to outdated version");
-                        Self::default()
-                    } else {
-                        info!("Configuration loaded successfully");
-                        sim_config
-                    }
+                    info!("Configuration loaded successfully");
+                    sim_config
                 }
                 Err(e) => {
                     warn!("Failed to deserialize config: {}. Using defaults.", e);
@@ -300,14 +278,7 @@ impl SimulationConfig {
             Ok(content) => {
                 info!("Configuration file exists and was read successfully");
                 match toml::from_str::<toml::Value>(&content) {
-                    Ok(value) => {
-                        if value.get("version").is_none() {
-                            warn!("Config file {path} missing version field. Using defaults.");
-                            Self::default()
-                        } else {
-                            Self::load_config_with_source(File::with_name(path).required(false))
-                        }
-                    }
+                    Ok(_) => Self::load_config_with_source(File::with_name(path).required(false)),
                     Err(e) => {
                         warn!("Failed to parse config file {path}: {e}. Using defaults.",);
                         Self::default()
@@ -389,10 +360,7 @@ mod tests {
     fn test_save_and_load_config() {
         use std::fs;
 
-        let mut config = SimulationConfig {
-            version: 7,
-            ..Default::default()
-        };
+        let mut config = SimulationConfig::default();
         config.physics.gravitational_constant = 42.0;
         config.physics.body_count = 123;
         config.rendering.bloom_intensity = 999.0;
@@ -402,7 +370,6 @@ mod tests {
 
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
-        assert_eq!(loaded_config.version, 7);
         assert_eq!(loaded_config.physics.gravitational_constant, 42.0);
         assert_eq!(loaded_config.physics.body_count, 123);
         assert_eq!(loaded_config.rendering.bloom_intensity, 999.0);
@@ -411,10 +378,10 @@ mod tests {
     }
 
     #[test]
-    fn test_config_without_version_ignored() {
+    fn test_config_without_version_loads_correctly() {
         use std::fs;
 
-        // Create a config file without version field
+        // Create a config file without version field (should load correctly now)
         let config_content = r#"
 [physics]
 gravitational_constant = 99.0
@@ -429,30 +396,19 @@ bloom_intensity = 888.0
 
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
-        // Should use defaults since version is missing
-        let default_config = SimulationConfig::default();
-        assert_eq!(loaded_config.version, default_config.version);
-        assert_eq!(
-            loaded_config.physics.gravitational_constant,
-            default_config.physics.gravitational_constant
-        );
-        assert_eq!(
-            loaded_config.physics.body_count,
-            default_config.physics.body_count
-        );
-        assert_eq!(
-            loaded_config.rendering.bloom_intensity,
-            default_config.rendering.bloom_intensity
-        );
+        // Should load the custom values now
+        assert_eq!(loaded_config.physics.gravitational_constant, 99.0);
+        assert_eq!(loaded_config.physics.body_count, 999);
+        assert_eq!(loaded_config.rendering.bloom_intensity, 888.0);
 
         let _ = fs::remove_file(temp_path);
     }
 
     #[test]
-    fn test_config_with_version_loaded() {
+    fn test_config_with_legacy_version_field() {
         use std::fs;
 
-        // Create a config file with outdated version (4 < 6)
+        // Create a config file with legacy version field (should be ignored but still load)
         let config_content = r#"version = 4
 
 [physics]
@@ -480,68 +436,12 @@ camera_radius_multiplier = 3.0
 
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
-        // Should use defaults since version 4 is less than current version 5
-        let default_config = SimulationConfig::default();
-        assert_eq!(loaded_config.version, default_config.version);
-        assert_eq!(
-            loaded_config.physics.gravitational_constant,
-            default_config.physics.gravitational_constant
-        );
-        assert_eq!(
-            loaded_config.physics.body_count,
-            default_config.physics.body_count
-        );
-        assert_eq!(
-            loaded_config.physics.octree_theta,
-            default_config.physics.octree_theta
-        );
-        assert_eq!(
-            loaded_config.physics.octree_leaf_threshold,
-            default_config.physics.octree_leaf_threshold
-        );
-        assert_eq!(
-            loaded_config.rendering.bloom_intensity,
-            default_config.rendering.bloom_intensity
-        );
-
-        let _ = fs::remove_file(temp_path);
-    }
-
-    #[test]
-    fn test_config_with_version_less_than_default_ignored() {
-        use std::fs;
-
-        // Create a config file with version 0 (less than default 6)
-        let config_content = r#"version = 0
-
-[physics]
-gravitational_constant = 99.0
-body_count = 999
-
-[rendering]
-bloom_intensity = 888.0
-"#;
-
-        let temp_path = "test_config_version_zero.toml";
-        fs::write(temp_path, config_content).expect("Failed to write test config");
-
-        let loaded_config = SimulationConfig::load_or_default(temp_path);
-
-        // Should use defaults since version is less than 1
-        let default_config = SimulationConfig::default();
-        assert_eq!(loaded_config.version, default_config.version);
-        assert_eq!(
-            loaded_config.physics.gravitational_constant,
-            default_config.physics.gravitational_constant
-        );
-        assert_eq!(
-            loaded_config.physics.body_count,
-            default_config.physics.body_count
-        );
-        assert_eq!(
-            loaded_config.rendering.bloom_intensity,
-            default_config.rendering.bloom_intensity
-        );
+        // Should load the custom values even with legacy version field
+        assert_eq!(loaded_config.physics.gravitational_constant, 99.0);
+        assert_eq!(loaded_config.physics.body_count, 999);
+        assert_eq!(loaded_config.physics.octree_theta, 0.7);
+        assert_eq!(loaded_config.physics.octree_leaf_threshold, 8);
+        assert_eq!(loaded_config.rendering.bloom_intensity, 888.0);
 
         let _ = fs::remove_file(temp_path);
     }
@@ -579,7 +479,7 @@ bloom_intensity = 888.0
         use std::fs;
 
         // Test that snake_case values work for all enums
-        let config_content = r#"version = 7
+        let config_content = r#"
 
 [physics]
 gravitational_constant = 500.0
@@ -639,7 +539,6 @@ hide_ui_frame_delay = 2
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
         // Verify the config loaded correctly with snake_case values
-        assert_eq!(loaded_config.version, 7);
         assert!(matches!(
             loaded_config.physics.integrator,
             IntegratorType::SymplecticEuler

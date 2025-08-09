@@ -1,8 +1,6 @@
 # High accuracy configuration for scientific/precise simulations
 # Target: Maximum accuracy, performance secondary
 
-version = 6
-
 [physics]
 gravitational_constant = 10.0
 body_count = 100
