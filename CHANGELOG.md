@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Configuration enums now use snake_case format in TOML files
+    - Version bumped to 7 to ensure compatibility
+    - Affected enums: `VelocityMode`, `FadeCurve`, `TaperCurve`, `IntegratorType`
+    - Example: `velocity_mode = "tangential"` instead of `"Tangential"`
+    - Makes configuration files more consistent with TOML conventions
+
 - Renamed `SemiImplicitEuler` integrator to `SymplecticEuler`
     - Better emphasizes the method's key property of preserving symplectic structure
     - More commonly recognized name in scientific computing literature

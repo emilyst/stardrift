@@ -179,29 +179,7 @@ The built files will be in the `dist/` directory, ready for deployment. Trunk au
 
 ### Configuration
 
-The simulation uses a TOML-based configuration system with support for XDG config directories. Below is a complete
-reference of all available configuration options.
-
-#### Configuration File Format
-
-```toml
-version = 6  # Configuration format version (required)
-
-[physics]
-# Physics simulation parameters
-
-[physics.initial_velocity]
-# Initial velocity settings for bodies
-
-[rendering]
-# Visual rendering settings
-
-[trails]
-# Trail visualization settings
-
-[screenshots]
-# Screenshot capture settings
-```
+The simulation uses a TOML-based configuration file.
 
 #### Complete Configuration Reference
 
@@ -209,7 +187,7 @@ version = 6  # Configuration format version (required)
 
 | Field     | Type  | Default | Description                                                              |
 |-----------|-------|---------|--------------------------------------------------------------------------|
-| `version` | `u32` | `6`     | Configuration format version. Configs with outdated versions are ignored |
+| `version` | `u32` | `7`     | Configuration format version. Configs with outdated versions are ignored |
 
 ##### Physics Configuration (`[physics]`)
 
@@ -236,15 +214,15 @@ version = 6  # Configuration format version (required)
 | `enabled`         | `bool`   | `true`     | Whether bodies spawn with initial velocities                   |
 | `min_speed`       | `f64`    | `5.0`      | Minimum initial speed                                          |
 | `max_speed`       | `f64`    | `20.0`     | Maximum initial speed                                          |
-| `velocity_mode`   | `string` | `"Random"` | Velocity distribution mode (see below)                         |
+| `velocity_mode`   | `string` | `"random"` | Velocity distribution mode (see below)                         |
 | `tangential_bias` | `f64`    | `0.7`      | Bias toward tangential motion (0.0-1.0) when using Random mode |
 
-**Velocity Modes:**
+**Velocity Modes:** (use snake_case in config, e.g. `"random"`, `"orbital"`)
 
-- `"Random"` - Random velocity vectors with optional tangential bias
-- `"Orbital"` - Circular orbital velocities around barycenter
-- `"Tangential"` - Pure tangential motion perpendicular to radius
-- `"Radial"` - Pure radial motion toward/away from barycenter
+- `"random"` - Random velocity vectors with optional tangential bias
+- `"orbital"` - Circular orbital velocities around barycenter
+- `"tangential"` - Pure tangential motion perpendicular to radius
+- `"radial"` - Pure radial motion toward/away from barycenter
 
 ##### Rendering Configuration (`[rendering]`)
 
@@ -269,27 +247,27 @@ Trail visualization configuration options.
 | `width_relative_to_body`  | `bool`   | `false`         | Scale trail width relative to body size         |
 | `body_size_multiplier`    | `f32`    | `2.0`           | Trail width multiplier when relative to body    |
 | `enable_fading`           | `bool`   | `true`          | Enable trail fade-out effect                    |
-| `fade_curve`              | `string` | `"Exponential"` | Fade curve type (see below)                     |
+| `fade_curve`              | `string` | `"exponential"` | Fade curve type (see below)                     |
 | `min_alpha`               | `f32`    | `0.0`           | Minimum trail transparency (0.0-1.0)            |
 | `max_alpha`               | `f32`    | `0.3333`        | Maximum trail transparency (0.0-1.0)            |
 | `enable_tapering`         | `bool`   | `true`          | Enable trail width tapering                     |
-| `taper_curve`             | `string` | `"Linear"`      | Taper curve type (see below)                    |
+| `taper_curve`             | `string` | `"linear"`      | Taper curve type (see below)                    |
 | `min_width_ratio`         | `f32`    | `0.2`           | Minimum width ratio at trail end                |
 | `bloom_factor`            | `f32`    | `1.0`           | Trail bloom intensity multiplier                |
 | `use_additive_blending`   | `bool`   | `true`          | Use additive blending for trails                |
 
-**Fade Curves:**
+**Fade Curves:** (use snake_case in config)
 
-- `"Linear"` - Linear fade from head to tail
-- `"Exponential"` - Exponential fade (aggressive)
-- `"SmoothStep"` - Smooth interpolation curve
-- `"EaseInOut"` - Ease in and out curve
+- `"linear"` - Linear fade from head to tail
+- `"exponential"` - Exponential fade (aggressive)
+- `"smooth_step"` - Smooth interpolation curve
+- `"ease_in_out"` - Ease in and out curve
 
-**Taper Curves:**
+**Taper Curves:** (use snake_case in config)
 
-- `"Linear"` - Linear width reduction
-- `"Exponential"` - Exponential width reduction
-- `"SmoothStep"` - Smooth width transition
+- `"linear"` - Linear width reduction
+- `"exponential"` - Exponential width reduction
+- `"smooth_step"` - Smooth width transition
 
 ##### Screenshot Configuration (`[screenshots]`)
 
@@ -310,66 +288,6 @@ The configuration is automatically loaded from the platform-specific config dire
 - **Windows**: `%APPDATA%\Stardrift\config.toml`
 
 If no configuration file exists, the application uses default values.
-
-#### Example Configuration
-
-Here's a complete example configuration file with all default values:
-
-```toml
-version = 6
-
-[physics]
-gravitational_constant = 200.0
-body_count = 30
-octree_theta = 0.5
-octree_leaf_threshold = 2
-body_distribution_sphere_radius_multiplier = 100.0
-body_distribution_min_distance = 0.001
-min_body_radius = 1.0
-max_body_radius = 2.0
-force_calculation_min_distance = 2.0
-force_calculation_max_force = 100000.0
-force_calculation_softening = 0.5
-# initial_seed = 12345  # Uncomment to use a specific seed for deterministic generation
-
-[physics.initial_velocity]
-enabled = true
-min_speed = 5.0
-max_speed = 20.0
-velocity_mode = "Random"  # Options: "Random", "Orbital", "Tangential", "Radial"
-tangential_bias = 0.7
-
-[rendering]
-min_temperature = 3000.0
-max_temperature = 15000.0
-bloom_intensity = 250.0
-saturation_intensity = 3.0
-camera_radius_multiplier = 4.0
-
-[trails]
-trail_length_seconds = 10.0
-update_interval_seconds = 0.03333333333333333
-max_points_per_trail = 10000
-base_width = 1.0
-width_relative_to_body = false
-body_size_multiplier = 2.0
-enable_fading = true
-fade_curve = "Exponential"  # Options: "Linear", "Exponential", "SmoothStep", "EaseInOut"
-min_alpha = 0.0
-max_alpha = 0.3333
-enable_tapering = true
-taper_curve = "Linear"  # Options: "Linear", "Exponential", "SmoothStep"
-min_width_ratio = 0.2
-bloom_factor = 1.0
-use_additive_blending = true
-
-[screenshots]
-# directory = "screenshots"  # Uncomment to set a custom screenshot directory
-filename_prefix = "stardrift_screenshot"
-include_timestamp = true
-notification_enabled = true
-hide_ui_frame_delay = 2
-```
 
 ## Technical Details
 

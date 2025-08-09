@@ -17,7 +17,7 @@ pub struct SimulationConfig {
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
-            version: 6,
+            version: 7,
             physics: PhysicsConfig::default(),
             rendering: RenderingConfig::default(),
             trails: TrailConfig::default(),
@@ -71,6 +71,7 @@ impl Default for InitialVelocityConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
 pub enum VelocityMode {
     Random,
     Orbital,
@@ -177,6 +178,7 @@ impl Default for TrailConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
 pub enum FadeCurve {
     Linear,
     Exponential,
@@ -185,6 +187,7 @@ pub enum FadeCurve {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
 pub enum TaperCurve {
     Linear,
     Exponential,
@@ -386,7 +389,7 @@ mod tests {
         use std::fs;
 
         let mut config = SimulationConfig {
-            version: 6,
+            version: 7,
             ..Default::default()
         };
         config.physics.gravitational_constant = 42.0;
@@ -398,7 +401,7 @@ mod tests {
 
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
-        assert_eq!(loaded_config.version, 6);
+        assert_eq!(loaded_config.version, 7);
         assert_eq!(loaded_config.physics.gravitational_constant, 42.0);
         assert_eq!(loaded_config.physics.body_count, 123);
         assert_eq!(loaded_config.rendering.bloom_intensity, 999.0);
@@ -565,6 +568,92 @@ bloom_intensity = 888.0
         assert!(matches!(
             loaded_config.trails.fade_curve,
             FadeCurve::Exponential
+        ));
+
+        let _ = fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_snake_case_enum_parsing() {
+        use std::fs;
+
+        // Test that snake_case values work for all enums
+        let config_content = r#"version = 7
+
+[physics]
+gravitational_constant = 500.0
+body_count = 100
+octree_theta = 0.5
+octree_leaf_threshold = 2
+body_distribution_sphere_radius_multiplier = 100.0
+body_distribution_min_distance = 0.001
+min_body_radius = 1.0
+max_body_radius = 2.0
+force_calculation_min_distance = 2.0
+force_calculation_max_force = 10000.0
+force_calculation_softening = 0.5
+integrator = "symplectic_euler"
+
+[physics.initial_velocity]
+enabled = true
+min_speed = 5.0
+max_speed = 20.0
+velocity_mode = "tangential"
+tangential_bias = 0.7
+
+[rendering]
+min_temperature = 3000.0
+max_temperature = 15000.0
+bloom_intensity = 250.0
+saturation_intensity = 3.0
+camera_radius_multiplier = 4.0
+
+[trails]
+trail_length_seconds = 10.0
+update_interval_seconds = 0.033333333
+max_points_per_trail = 10000
+base_width = 1.0
+width_relative_to_body = true
+body_size_multiplier = 2.0
+enable_fading = true
+fade_curve = "smooth_step"
+min_alpha = 0.0
+max_alpha = 0.3333
+enable_tapering = true
+taper_curve = "exponential"
+min_width_ratio = 0.2
+bloom_factor = 1.0
+use_additive_blending = true
+
+[screenshots]
+filename_prefix = "stardrift_screenshot"
+include_timestamp = true
+notification_enabled = true
+hide_ui_frame_delay = 2
+"#;
+
+        let temp_path = "test_snake_case_enums.toml";
+        fs::write(temp_path, config_content).expect("Failed to write test config");
+
+        let loaded_config = SimulationConfig::load_or_default(temp_path);
+
+        // Verify the config loaded correctly with snake_case values
+        assert_eq!(loaded_config.version, 7);
+        assert!(matches!(
+            loaded_config.physics.integrator,
+            IntegratorType::SymplecticEuler
+        ));
+        assert!(matches!(
+            loaded_config.physics.initial_velocity.velocity_mode,
+            VelocityMode::Tangential
+        ));
+        assert!(matches!(
+            loaded_config.trails.fade_curve,
+            FadeCurve::SmoothStep
+        ));
+        assert!(matches!(
+            loaded_config.trails.taper_curve,
+            TaperCurve::Exponential
         ));
 
         let _ = fs::remove_file(temp_path);
