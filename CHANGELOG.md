@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.29] - 2025-08-09
+
 ### Added
 
 - Configurable integrator selection in physics configuration
@@ -397,7 +399,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple build profiles (dev, release, distribution, wasm)
 - Platform-specific configuration paths (XDG compliant)
 
-[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.28...HEAD
+[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.29...HEAD
+[0.0.29]: https://github.com/emilyst/stardrift/compare/v0.0.28...v0.0.29
 
 [0.0.28]: https://github.com/emilyst/stardrift/compare/v0.0.27...v0.0.28
 
