@@ -32,10 +32,10 @@ pub struct PhysicsConfig {
     pub body_count: usize,
     pub octree_theta: Scalar,
     pub octree_leaf_threshold: usize,
-    pub body_distribution_sphere_radius_multiplier: Scalar,
-    pub body_distribution_min_distance: Scalar,
-    pub min_body_radius: Scalar,
-    pub max_body_radius: Scalar,
+    pub body_distribution_sphere_radius_multiplier: f32,
+    pub body_distribution_min_distance: f32,
+    pub min_body_radius: f32,
+    pub max_body_radius: f32,
     pub force_calculation_min_distance: Scalar,
     pub force_calculation_max_force: Scalar,
     /// Softening parameter to prevent force singularities at close distances.
@@ -106,11 +106,11 @@ impl Default for PhysicsConfig {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RenderingConfig {
-    pub min_temperature: Scalar,
-    pub max_temperature: Scalar,
-    pub bloom_intensity: Scalar,
-    pub saturation_intensity: Scalar,
-    pub camera_radius_multiplier: Scalar,
+    pub min_temperature: f32,
+    pub max_temperature: f32,
+    pub bloom_intensity: f32,
+    pub saturation_intensity: f32,
+    pub camera_radius_multiplier: f32,
 }
 
 impl Default for RenderingConfig {
@@ -128,28 +128,28 @@ impl Default for RenderingConfig {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TrailConfig {
     // Length & Timing
-    pub trail_length_seconds: Scalar,
-    pub update_interval_seconds: Scalar,
+    pub trail_length_seconds: f32,
+    pub update_interval_seconds: f32,
     pub max_points_per_trail: usize,
 
     // Visual Appearance
-    pub base_width: Scalar,
+    pub base_width: f32,
     pub width_relative_to_body: bool,
-    pub body_size_multiplier: Scalar,
+    pub body_size_multiplier: f32,
 
     // Fading & Transparency
     pub enable_fading: bool,
     pub fade_curve: FadeCurve,
-    pub min_alpha: Scalar,
-    pub max_alpha: Scalar,
+    pub min_alpha: f32,
+    pub max_alpha: f32,
 
     // Width Tapering
     pub enable_tapering: bool,
     pub taper_curve: TaperCurve,
-    pub min_width_ratio: Scalar,
+    pub min_width_ratio: f32,
 
     // Bloom Effect
-    pub bloom_factor: Scalar,
+    pub bloom_factor: f32,
     pub use_additive_blending: bool,
 }
 

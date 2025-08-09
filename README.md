@@ -219,10 +219,10 @@ version = 6  # Configuration format version (required)
 | `body_count`                                 | `usize`       | `100`      | Number of celestial bodies to simulate                                 |
 | `octree_theta`                               | `f64`         | `0.5`      | Barnes-Hut accuracy parameter (0.0-2.0). Lower = more accurate, slower |
 | `octree_leaf_threshold`                      | `usize`       | `2`        | Maximum bodies per octree leaf before subdivision                      |
-| `body_distribution_sphere_radius_multiplier` | `f64`         | `100.0`    | Multiplier for initial body distribution radius                        |
-| `body_distribution_min_distance`             | `f64`         | `0.001`    | Minimum distance between bodies at spawn                               |
-| `min_body_radius`                            | `f64`         | `1.0`      | Minimum radius for generated bodies                                    |
-| `max_body_radius`                            | `f64`         | `2.0`      | Maximum radius for generated bodies                                    |
+| `body_distribution_sphere_radius_multiplier` | `f32`         | `100.0`    | Multiplier for initial body distribution radius                        |
+| `body_distribution_min_distance`             | `f32`         | `0.001`    | Minimum distance between bodies at spawn                               |
+| `min_body_radius`                            | `f32`         | `1.0`      | Minimum radius for generated bodies                                    |
+| `max_body_radius`                            | `f32`         | `2.0`      | Maximum radius for generated bodies                                    |
 | `force_calculation_min_distance`             | `f64`         | `2.0`      | Minimum distance for force calculations (prevents singularities)       |
 | `force_calculation_max_force`                | `f64`         | `10000.0`  | Maximum force magnitude to prevent instabilities                       |
 | `force_calculation_softening`                | `f64`         | `0.5`      | Softening parameter for smooth force transitions (prevents singularities at close distances) |
@@ -250,11 +250,11 @@ version = 6  # Configuration format version (required)
 
 | Field                      | Type  | Default   | Description                                           |
 |----------------------------|-------|-----------|-------------------------------------------------------|
-| `min_temperature`          | `f64` | `3000.0`  | Minimum stellar temperature in Kelvin (affects color) |
-| `max_temperature`          | `f64` | `15000.0` | Maximum stellar temperature in Kelvin (affects color) |
-| `bloom_intensity`          | `f64` | `250.0`   | Intensity of bloom visual effect                      |
-| `saturation_intensity`     | `f64` | `3.0`     | Color saturation multiplier                           |
-| `camera_radius_multiplier` | `f64` | `4.0`     | Camera distance multiplier relative to system size    |
+| `min_temperature`          | `f32` | `3000.0`  | Minimum stellar temperature in Kelvin (affects color) |
+| `max_temperature`          | `f32` | `15000.0` | Maximum stellar temperature in Kelvin (affects color) |
+| `bloom_intensity`          | `f32` | `250.0`   | Intensity of bloom visual effect                      |
+| `saturation_intensity`     | `f32` | `3.0`     | Color saturation multiplier                           |
+| `camera_radius_multiplier` | `f32` | `4.0`     | Camera distance multiplier relative to system size    |
 
 ##### Trail Configuration (`[trails]`)
 
@@ -262,20 +262,20 @@ Trail visualization configuration options.
 
 | Field                     | Type     | Default         | Description                                     |
 |---------------------------|----------|-----------------|-------------------------------------------------|
-| `trail_length_seconds`    | `f64`    | `10.0`          | How long trails persist in seconds              |
-| `update_interval_seconds` | `f64`    | `0.03333`       | How often to add trail points (default: 30 FPS) |
+| `trail_length_seconds`    | `f32`    | `10.0`          | How long trails persist in seconds              |
+| `update_interval_seconds` | `f32`    | `0.03333`       | How often to add trail points (default: 30 FPS) |
 | `max_points_per_trail`    | `usize`  | `10000`         | Maximum trail points per body                   |
-| `base_width`              | `f64`    | `1.0`           | Base trail width                                |
+| `base_width`              | `f32`    | `1.0`           | Base trail width                                |
 | `width_relative_to_body`  | `bool`   | `false`         | Scale trail width relative to body size         |
-| `body_size_multiplier`    | `f64`    | `2.0`           | Trail width multiplier when relative to body    |
+| `body_size_multiplier`    | `f32`    | `2.0`           | Trail width multiplier when relative to body    |
 | `enable_fading`           | `bool`   | `true`          | Enable trail fade-out effect                    |
 | `fade_curve`              | `string` | `"Exponential"` | Fade curve type (see below)                     |
-| `min_alpha`               | `f64`    | `0.0`           | Minimum trail transparency (0.0-1.0)            |
-| `max_alpha`               | `f64`    | `0.3333`        | Maximum trail transparency (0.0-1.0)            |
+| `min_alpha`               | `f32`    | `0.0`           | Minimum trail transparency (0.0-1.0)            |
+| `max_alpha`               | `f32`    | `0.3333`        | Maximum trail transparency (0.0-1.0)            |
 | `enable_tapering`         | `bool`   | `true`          | Enable trail width tapering                     |
 | `taper_curve`             | `string` | `"Linear"`      | Taper curve type (see below)                    |
-| `min_width_ratio`         | `f64`    | `0.2`           | Minimum width ratio at trail end                |
-| `bloom_factor`            | `f64`    | `1.0`           | Trail bloom intensity multiplier                |
+| `min_width_ratio`         | `f32`    | `0.2`           | Minimum width ratio at trail end                |
+| `bloom_factor`            | `f32`    | `1.0`           | Trail bloom intensity multiplier                |
 | `use_additive_blending`   | `bool`   | `true`          | Use additive blending for trails                |
 
 **Fade Curves:**

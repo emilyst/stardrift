@@ -21,17 +21,16 @@ pub mod factory {
             config.physics.body_distribution_sphere_radius_multiplier,
             config.physics.body_distribution_min_distance,
         );
-        let position = random_unit_vector(rng) * body_distribution_sphere_radius;
-        position.as_vec3()
+        random_unit_vector(rng) * body_distribution_sphere_radius
     }
 
     /// Generates a random radius for a celestial body within configured bounds.
-    pub fn random_radius(rng: &mut SharedRng, config: &SimulationConfig) -> f64 {
+    pub fn random_radius(rng: &mut SharedRng, config: &SimulationConfig) -> f32 {
         rng.random_range(config.physics.min_body_radius..=config.physics.max_body_radius)
     }
 
     /// Calculates temperature based on radius using inverse relationship.
-    pub fn calculate_temperature(radius: f64, config: &SimulationConfig) -> f64 {
+    pub fn calculate_temperature(radius: f32, config: &SimulationConfig) -> f32 {
         let min_temp = config.rendering.min_temperature;
         let max_temp = config.rendering.max_temperature;
         let min_radius = config.physics.min_body_radius;
@@ -55,7 +54,7 @@ pub mod factory {
         let velocity_dir = match config.physics.initial_velocity.velocity_mode {
             VelocityMode::Random => {
                 // Pure random direction
-                random_unit_vector(rng).as_vec3()
+                random_unit_vector(rng)
             }
             VelocityMode::Orbital => {
                 // Perpendicular to position vector (circular orbit tendency)
@@ -70,7 +69,7 @@ pub mod factory {
             }
             VelocityMode::Tangential => {
                 // Mix of random and orbital
-                let random_dir = random_unit_vector(rng).as_vec3();
+                let random_dir = random_unit_vector(rng);
                 let up = Vec3::Y;
                 let tangent = position.cross(up).normalize();
                 let tangent = if tangent.is_finite() {
@@ -96,9 +95,9 @@ pub mod factory {
     }
 
     /// Creates a detailed mesh for a celestial body with high-quality subdivisions.
-    pub fn create_detailed_mesh(meshes: &mut Assets<Mesh>, radius: f64) -> Handle<Mesh> {
+    pub fn create_detailed_mesh(meshes: &mut Assets<Mesh>, radius: f32) -> Handle<Mesh> {
         meshes.add(
-            Sphere::new(radius as f32)
+            Sphere::new(radius)
                 .mesh()
                 .kind(SphereKind::Ico {
                     subdivisions: if cfg!(target_arch = "wasm32") { 1 } else { 4 },

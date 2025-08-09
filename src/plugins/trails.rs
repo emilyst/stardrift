@@ -148,15 +148,15 @@ impl Trail {
         fade_config: &crate::config::TrailConfig,
     ) -> f32 {
         if !fade_config.enable_fading {
-            return fade_config.max_alpha as f32;
+            return fade_config.max_alpha;
         }
 
         let effective_time = self.effective_time(current_time);
         let age = effective_time - point.age;
-        let max_age = fade_config.trail_length_seconds as f32;
+        let max_age = fade_config.trail_length_seconds;
 
         if age <= 0.0 || max_age <= 0.0 {
-            return fade_config.max_alpha as f32;
+            return fade_config.max_alpha;
         }
 
         let fade_ratio = (age / max_age).clamp(0.0, 1.0);
@@ -176,8 +176,8 @@ impl Trail {
             }
         };
 
-        let min_alpha = fade_config.min_alpha as f32;
-        let max_alpha = fade_config.max_alpha as f32;
+        let min_alpha = fade_config.min_alpha;
+        let max_alpha = fade_config.max_alpha;
 
         max_alpha - curved_fade * (max_alpha - min_alpha)
     }
@@ -322,7 +322,7 @@ impl TrailsPlugin {
 
             // Only add new points if we're tracking an active body
             if let Ok(transform) = body_query.get(tracked_body.0) {
-                if trail.should_update(current_time, config.trails.update_interval_seconds as f32) {
+                if trail.should_update(current_time, config.trails.update_interval_seconds) {
                     trail.add_point(transform.translation, current_time);
                 }
             }
@@ -330,7 +330,7 @@ impl TrailsPlugin {
             // Always cleanup old points, even for orphaned trails
             trail.cleanup_old_points(
                 current_time,
-                config.trails.trail_length_seconds as f32,
+                config.trails.trail_length_seconds,
                 config.trails.max_points_per_trail,
             );
         }
@@ -484,13 +484,13 @@ impl TrailsPlugin {
     ) {
         let params = TrailRenderParams {
             camera_pos,
-            base_width: trail_config.base_width as f32,
+            base_width: trail_config.base_width,
             width_relative_to_body: trail_config.width_relative_to_body,
             body_radius,
-            body_size_multiplier: trail_config.body_size_multiplier as f32,
+            body_size_multiplier: trail_config.body_size_multiplier,
             enable_tapering: trail_config.enable_tapering,
             taper_curve: &trail_config.taper_curve,
-            min_width_ratio: trail_config.min_width_ratio as f32,
+            min_width_ratio: trail_config.min_width_ratio,
         };
         let strip_vertices = trail.get_triangle_strip_vertices(&params);
 
@@ -540,7 +540,7 @@ impl TrailsPlugin {
 
                 // Calculate luminance using ITU-R BT.601 formula
                 let luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-                let scale_factor = bloom_intensity as f32 * luminance + 1.0;
+                let scale_factor = bloom_intensity * luminance + 1.0;
 
                 // For premultiplied alpha, we need to handle colors differently
                 // The bloom buffer sees: color * alpha, so we boost the color to compensate

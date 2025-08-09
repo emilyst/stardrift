@@ -172,10 +172,15 @@ pub fn spawn_simulation_bodies(
 
         // Mass proportional to volume (r³) with default density
         let density = 1.0; // Default density, could be made configurable
-        let mass = density * 4.0 / 3.0 * std::f64::consts::PI * radius.powi(3);
+        let mass = density * 4.0 / 3.0 * std::f32::consts::PI * radius.powi(3);
 
         commands.spawn((
-            PhysicsBodyBundle::new(Vector::from(position), mass, radius, Vector::from(velocity)),
+            PhysicsBodyBundle::new(
+                Vector::from(position),
+                mass.into(),
+                radius,
+                Vector::from(velocity),
+            ),
             MeshMaterial3d(material),
             Mesh3d(mesh),
         ));

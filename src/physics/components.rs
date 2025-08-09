@@ -125,15 +125,15 @@ pub struct PhysicsBodyBundle {
 }
 
 impl PhysicsBodyBundle {
-    pub fn new(position: Vector, mass: Scalar, radius: Scalar, velocity: Vector) -> Self {
+    pub fn new(position: Vector, mass: f32, radius: f32, velocity: Vector) -> Self {
         Self {
             transform: Transform::from_translation(position.as_vec3()),
             global_transform: GlobalTransform::default(),
             position: Position::new(position),
-            mass: Mass::new(mass),
+            mass: Mass::new(mass.into()),
             velocity: Velocity::new(velocity),
             acceleration: Acceleration::default(),
-            radius: Radius::new(radius),
+            radius: Radius::new(radius.into()),
             physics_body: PhysicsBody,
             visibility: Visibility::default(),
             inherited_visibility: InheritedVisibility::default(),

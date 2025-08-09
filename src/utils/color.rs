@@ -55,24 +55,24 @@
 
 use bevy::prelude::*;
 
-const MIN_TEMPERATURE: f64 = 1000.0;
-const MAX_TEMPERATURE: f64 = 40000.0;
-const DAYLIGHT_TEMP_THRESHOLD: f64 = 6600.0;
-const BLUE_TEMP_THRESHOLD: f64 = 1900.0;
-const MAX_COLOR_VALUE: f64 = 255.0;
+const MIN_TEMPERATURE: f32 = 1000.0;
+const MAX_TEMPERATURE: f32 = 40000.0;
+const DAYLIGHT_TEMP_THRESHOLD: f32 = 6600.0;
+const BLUE_TEMP_THRESHOLD: f32 = 1900.0;
+const MAX_COLOR_VALUE: f32 = 255.0;
 
-const RED_COEFFICIENT: f64 = 329.698_727_446;
-const RED_OFFSET: f64 = 60.0;
-const RED_EXPONENT: f64 = -0.133_204_759_2;
+const RED_COEFFICIENT: f32 = 329.698_73;
+const RED_OFFSET: f32 = 60.0;
+const RED_EXPONENT: f32 = -0.133_204_76;
 
-const GREEN_WARM_COEFFICIENT: f64 = 99.470_802_586_1;
-const GREEN_WARM_OFFSET: f64 = -161.119_568_166_1;
-const GREEN_COOL_COEFFICIENT: f64 = 288.122_169_528_3;
-const GREEN_COOL_EXPONENT: f64 = -0.075_514_849_2;
+const GREEN_WARM_COEFFICIENT: f32 = 99.470_8;
+const GREEN_WARM_OFFSET: f32 = -161.119_57;
+const GREEN_COOL_COEFFICIENT: f32 = 288.122_17;
+const GREEN_COOL_EXPONENT: f32 = -0.075_514_85;
 
-const BLUE_COEFFICIENT: f64 = 138.517_731_223_1;
-const BLUE_OFFSET: f64 = -305.044_792_730_7;
-const BLUE_LOG_OFFSET: f64 = 10.0;
+const BLUE_COEFFICIENT: f32 = 138.517_73;
+const BLUE_OFFSET: f32 = -305.044_8;
+const BLUE_LOG_OFFSET: f32 = 10.0;
 
 /// Creates a Bevy `StandardMaterial` with temperature-based colors and bloom effects.
 ///
@@ -121,21 +121,21 @@ const BLUE_LOG_OFFSET: f64 = 10.0;
 /// ```
 pub fn emissive_material_for_temp(
     materials: &mut ResMut<Assets<StandardMaterial>>,
-    temperature: f64,
-    bloom_intensity: f64,
-    saturation_intensity: f64,
+    temperature: f32,
+    bloom_intensity: f32,
+    saturation_intensity: f32,
 ) -> Handle<StandardMaterial> {
     let base_rgb = rgb_for_temp(temperature);
     let saturated_rgb = enhance_saturation(base_rgb, saturation_intensity);
 
     let bloom_color = {
         let (r, g, b) = intensify_for_bloom(saturated_rgb, bloom_intensity);
-        Color::LinearRgba(LinearRgba::rgb(r as f32, g as f32, b as f32))
+        Color::LinearRgba(LinearRgba::rgb(r, g, b))
     };
 
     let base_color = {
         let (r, g, b) = saturated_rgb;
-        Color::LinearRgba(LinearRgba::rgb(r as f32, g as f32, b as f32))
+        Color::LinearRgba(LinearRgba::rgb(r, g, b))
     };
 
     materials.add(StandardMaterial {
@@ -169,7 +169,7 @@ pub fn emissive_material_for_temp(
 /// // Returns more vivid orange with increased color separation from gray
 /// ```
 #[must_use]
-fn enhance_saturation(rgb: (f64, f64, f64), saturation_factor: f64) -> (f64, f64, f64) {
+fn enhance_saturation(rgb: (f32, f32, f32), saturation_factor: f32) -> (f32, f32, f32) {
     let (r, g, b) = rgb;
 
     // Calculate grayscale using ITU-R BT.601 luminance formula
@@ -224,7 +224,7 @@ fn enhance_saturation(rgb: (f64, f64, f64), saturation_factor: f64) -> (f64, f64
 /// assert!(enhanced.0 < 1.0); // Dim colors receive less enhancement
 /// ```
 #[must_use]
-pub fn intensify_for_bloom(rgb: (f64, f64, f64), intensity: f64) -> (f64, f64, f64) {
+pub fn intensify_for_bloom(rgb: (f32, f32, f32), intensity: f32) -> (f32, f32, f32) {
     let (r, g, b) = rgb;
 
     // Scale using ITU-R BT.601 luminance formula
@@ -297,7 +297,7 @@ pub fn intensify_for_bloom(rgb: (f64, f64, f64), intensity: f64) -> (f64, f64, f
 ///
 /// See <https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html>.
 #[must_use]
-pub fn rgb_for_temp(temperature: f64) -> (f64, f64, f64) {
+pub fn rgb_for_temp(temperature: f32) -> (f32, f32, f32) {
     let temp = temperature.clamp(MIN_TEMPERATURE, MAX_TEMPERATURE);
 
     let red = red_channel_for_temp(temp);
@@ -315,11 +315,11 @@ pub fn rgb_for_temp(temperature: f64) -> (f64, f64, f64) {
 ///
 /// Returns 255.0 for temperatures at or below 6600K (warm colors),
 /// and uses a power function for cooler temperatures.
-fn red_channel_for_temp(temp: f64) -> f64 {
+fn red_channel_for_temp(temp: f32) -> f32 {
     if temp <= DAYLIGHT_TEMP_THRESHOLD {
         MAX_COLOR_VALUE
     } else {
-        RED_COEFFICIENT * libm::pow(temp / 100.0 - RED_OFFSET, RED_EXPONENT)
+        RED_COEFFICIENT * libm::powf(temp / 100.0 - RED_OFFSET, RED_EXPONENT)
     }
 }
 
@@ -327,11 +327,11 @@ fn red_channel_for_temp(temp: f64) -> f64 {
 ///
 /// Uses logarithmic calculation for warm temperatures (≤6600K)
 /// and power function for cool temperatures.
-fn green_channel_for_temp(temp: f64) -> f64 {
+fn green_channel_for_temp(temp: f32) -> f32 {
     if temp <= DAYLIGHT_TEMP_THRESHOLD {
-        GREEN_WARM_COEFFICIENT * libm::log(temp / 100.0) + GREEN_WARM_OFFSET
+        GREEN_WARM_COEFFICIENT * libm::logf(temp / 100.0) + GREEN_WARM_OFFSET
     } else {
-        GREEN_COOL_COEFFICIENT * libm::pow(temp / 100.0 - RED_OFFSET, GREEN_COOL_EXPONENT)
+        GREEN_COOL_COEFFICIENT * libm::powf(temp / 100.0 - RED_OFFSET, GREEN_COOL_EXPONENT)
     }
 }
 
@@ -339,13 +339,13 @@ fn green_channel_for_temp(temp: f64) -> f64 {
 ///
 /// Returns 255.0 for cool temperatures (≥6600K), 0.0 for very warm
 /// temperatures (<1900K), and uses logarithmic calculation in between.
-fn blue_channel_for_temp(temp: f64) -> f64 {
+fn blue_channel_for_temp(temp: f32) -> f32 {
     if temp >= DAYLIGHT_TEMP_THRESHOLD {
         MAX_COLOR_VALUE
     } else if temp < BLUE_TEMP_THRESHOLD {
         0.0
     } else {
-        BLUE_COEFFICIENT * libm::log(temp / 100.0 - BLUE_LOG_OFFSET) + BLUE_OFFSET
+        BLUE_COEFFICIENT * libm::logf(temp / 100.0 - BLUE_LOG_OFFSET) + BLUE_OFFSET
     }
 }
 
@@ -389,7 +389,7 @@ mod color_tests {
     #[test]
     fn test_rgb_range() {
         for temp in (1000..=40000).step_by(500) {
-            let (r, g, b) = rgb_for_temp(temp as f64);
+            let (r, g, b) = rgb_for_temp(temp as f32);
 
             assert!((0.0..=1.0).contains(&r), "R out of range at {temp}K: {r}");
             assert!((0.0..=1.0).contains(&g), "G out of range at {temp}K: {g}",);

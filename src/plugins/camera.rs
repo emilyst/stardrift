@@ -49,8 +49,7 @@ fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>, config: Res<
             focus: Vec3::ZERO,
             pan_smoothness: 0.0,
             radius: Some(
-                (body_distribution_sphere_radius * config.rendering.camera_radius_multiplier)
-                    as f32,
+                body_distribution_sphere_radius * config.rendering.camera_radius_multiplier,
             ),
             touch_enabled: true,
             touch_controls: TouchControls::OneFingerOrbit,
