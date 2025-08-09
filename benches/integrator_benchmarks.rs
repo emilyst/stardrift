@@ -3,7 +3,7 @@ use std::hint::black_box;
 
 // Import from the crate being benchmarked
 extern crate stardrift;
-use stardrift::physics::integrators::{Integrator, SemiImplicitEuler};
+use stardrift::physics::integrators::{Integrator, SymplecticEuler};
 use stardrift::physics::math::{Scalar, Vector};
 
 /// Test body data for benchmarking
@@ -54,10 +54,10 @@ fn benchmark_integrators(c: &mut Criterion) {
         group.throughput(Throughput::Elements(body_count as u64));
 
         group.bench_with_input(
-            BenchmarkId::new("semi_implicit_euler", body_count),
+            BenchmarkId::new("symplectic_euler", body_count),
             &body_count,
             |b, &count| {
-                let integrator = SemiImplicitEuler;
+                let integrator = SymplecticEuler;
                 let mut bodies = generate_test_bodies(count);
                 let dt = 0.01;
 

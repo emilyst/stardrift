@@ -11,9 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Configurable integrator selection in physics configuration
     - Added `integrator` field to `PhysicsConfig` with `IntegratorType` enum
-    - Currently supports `SemiImplicitEuler` integrator (default)
+    - Currently supports `SymplecticEuler` integrator (default)
     - Integrator is now selected at startup based on configuration
     - Foundation for adding additional integrator types in the future
+
+### Changed
+
+- Renamed `SemiImplicitEuler` integrator to `SymplecticEuler`
+    - Better emphasizes the method's key property of preserving symplectic structure
+    - More commonly recognized name in scientific computing literature
+    - File renamed from `semi_implicit_euler.rs` to `symplectic_euler.rs`
+    - All references updated throughout codebase including configuration
 
 ## [0.0.28] - 2025-08-07
 

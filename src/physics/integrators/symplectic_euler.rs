@@ -1,17 +1,18 @@
-//! Semi-implicit Euler integration method (symplectic Euler)
+//! Symplectic Euler integration method
 
 use super::Integrator;
 use crate::physics::math::{Scalar, Vector};
 
-/// Semi-implicit Euler integrator (also known as symplectic Euler)
+/// Symplectic Euler integrator (also known as semi-implicit Euler)
 ///
 /// This is a first-order symplectic integrator that updates velocities
-/// before positions, providing better energy conservation than explicit Euler.
+/// before positions, preserving the symplectic structure of Hamiltonian systems
+/// and providing better energy conservation than explicit Euler.
 #[derive(Debug, Clone, Default)]
-pub struct SemiImplicitEuler;
+pub struct SymplecticEuler;
 
-impl Integrator for SemiImplicitEuler {
-    fn integrate_single(
+impl Integrator for SymplecticEuler {
+    fn integrate(
         &self,
         position: &mut Vector,
         velocity: &mut Vector,
@@ -26,7 +27,7 @@ impl Integrator for SemiImplicitEuler {
     }
 
     fn name(&self) -> &str {
-        "Semi-implicit Euler"
+        "Symplectic Euler"
     }
 
     fn order(&self) -> usize {
@@ -40,15 +41,15 @@ mod tests {
     use crate::physics::math::Vector;
 
     #[test]
-    fn test_semi_implicit_euler_integrate_single() {
-        let integrator = SemiImplicitEuler;
+    fn test_symplectic_euler_integrate_single() {
+        let integrator = SymplecticEuler;
 
         let mut position = Vector::new(1.0, 0.0, 0.0);
         let mut velocity = Vector::new(0.0, 1.0, 0.0);
         let acceleration = Vector::new(0.0, 0.0, -9.81);
         let dt = 0.01;
 
-        integrator.integrate_single(&mut position, &mut velocity, acceleration, dt);
+        integrator.integrate(&mut position, &mut velocity, acceleration, dt);
 
         // Velocity should be updated first
         assert_eq!(velocity, Vector::new(0.0, 1.0, -0.0981));
@@ -60,8 +61,8 @@ mod tests {
 
     #[test]
     fn test_properties() {
-        let integrator = SemiImplicitEuler;
-        assert_eq!(integrator.name(), "Semi-implicit Euler");
+        let integrator = SymplecticEuler;
+        assert_eq!(integrator.name(), "Symplectic Euler");
         assert_eq!(integrator.order(), 1);
     }
 }

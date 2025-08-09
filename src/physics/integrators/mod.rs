@@ -2,9 +2,9 @@
 
 use crate::physics::math::{Scalar, Vector};
 
-pub mod semi_implicit_euler;
+pub mod symplectic_euler;
 
-pub use semi_implicit_euler::SemiImplicitEuler;
+pub use symplectic_euler::SymplecticEuler;
 
 pub trait Integrator: Send + Sync {
     /// Integrate a single body's state

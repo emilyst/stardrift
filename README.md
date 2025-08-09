@@ -23,7 +23,7 @@ significant changes.
 - **Barnes-Hut octree algorithm**: Efficient O(N log N) gravitational force calculations using spatial partitioning
 - **High precision**: Uses f64 floating-point precision for increased accuracy
 - **Custom physics engine**: Purpose-built component-based physics system optimized for n-body simulation
-- **Custom motion integration**: Semi-implicit Euler integration with support for future integrator methods
+- **Custom motion integration**: Symplectic Euler integration with support for future integrator methods
 - **Parallel processing**: Multi-threaded physics calculations for performance optimization
 - **Dynamic barycenter tracking**: Real-time calculation and visualization of the system's center of mass
 
@@ -76,7 +76,7 @@ The following features are planned for future development:
 1. **Enhanced Diagnostics** - Comprehensive physics accuracy monitoring including energy conservation (Hamiltonian),
    angular momentum tracking, virial ratio, and performance profiling
 2. **Additional Integrators** - Support for multiple integration schemes (Verlet, PEFRL, etc.) beyond the current
-   semi-implicit Euler method
+   symplectic Euler method
 3. **Collision Detection** - Implement collision detection and response between bodies with configurable restitution
 4. **Configurable Simulation Speed** - Time scaling controls for faster or slower simulation playback
 5. **UI rework** - Replacing the current provisional UI with something more friendly and comprehensive
@@ -213,21 +213,21 @@ version = 6  # Configuration format version (required)
 
 ##### Physics Configuration (`[physics]`)
 
-| Field                                        | Type          | Default    | Description                                                            |
-|----------------------------------------------|---------------|------------|------------------------------------------------------------------------|
-| `gravitational_constant`                     | `f64`         | `500.0`    | Strength of gravitational attraction between bodies                    |
-| `body_count`                                 | `usize`       | `100`      | Number of celestial bodies to simulate                                 |
-| `octree_theta`                               | `f64`         | `0.5`      | Barnes-Hut accuracy parameter (0.0-2.0). Lower = more accurate, slower |
-| `octree_leaf_threshold`                      | `usize`       | `2`        | Maximum bodies per octree leaf before subdivision                      |
-| `body_distribution_sphere_radius_multiplier` | `f32`         | `100.0`    | Multiplier for initial body distribution radius                        |
-| `body_distribution_min_distance`             | `f32`         | `0.001`    | Minimum distance between bodies at spawn                               |
-| `min_body_radius`                            | `f32`         | `1.0`      | Minimum radius for generated bodies                                    |
-| `max_body_radius`                            | `f32`         | `2.0`      | Maximum radius for generated bodies                                    |
-| `force_calculation_min_distance`             | `f64`         | `2.0`      | Minimum distance for force calculations (prevents singularities)       |
-| `force_calculation_max_force`                | `f64`         | `10000.0`  | Maximum force magnitude to prevent instabilities                       |
-| `force_calculation_softening`                | `f64`         | `0.5`      | Softening parameter for smooth force transitions (prevents singularities at close distances) |
-| `initial_seed`                               | `Option<u64>` | `None`     | Random seed for deterministic generation. None = random                |
-| `integrator`                                 | `string`      | `"SemiImplicitEuler"` | Numerical integration method for physics calculations |
+| Field                                        | Type          | Default              | Description                                                                                  |
+|----------------------------------------------|---------------|----------------------|----------------------------------------------------------------------------------------------|
+| `gravitational_constant`                     | `f64`         | `500.0`              | Strength of gravitational attraction between bodies                                          |
+| `body_count`                                 | `usize`       | `100`                | Number of celestial bodies to simulate                                                       |
+| `octree_theta`                               | `f64`         | `0.5`                | Barnes-Hut accuracy parameter (0.0-2.0). Lower = more accurate, slower                       |
+| `octree_leaf_threshold`                      | `usize`       | `2`                  | Maximum bodies per octree leaf before subdivision                                            |
+| `body_distribution_sphere_radius_multiplier` | `f32`         | `100.0`              | Multiplier for initial body distribution radius                                              |
+| `body_distribution_min_distance`             | `f32`         | `0.001`              | Minimum distance between bodies at spawn                                                     |
+| `min_body_radius`                            | `f32`         | `1.0`                | Minimum radius for generated bodies                                                          |
+| `max_body_radius`                            | `f32`         | `2.0`                | Maximum radius for generated bodies                                                          |
+| `force_calculation_min_distance`             | `f64`         | `2.0`                | Minimum distance for force calculations (prevents singularities)                             |
+| `force_calculation_max_force`                | `f64`         | `10000.0`            | Maximum force magnitude to prevent instabilities                                             |
+| `force_calculation_softening`                | `f64`         | `0.5`                | Softening parameter for smooth force transitions (prevents singularities at close distances) |
+| `initial_seed`                               | `Option<u64>` | `None`               | Random seed for deterministic generation. None = random                                      |
+| `integrator`                                 | `string`      | `"symplectic_euler"` | Numerical integration method for physics calculations                                        |
 
 ##### Initial Velocity Configuration (`[physics.initial_velocity]`)
 
@@ -462,7 +462,7 @@ src/
     ├── math.rs                   # Mathematical functions and physics calculations
     ├── integrators/              # Numerical integration methods
     │   ├── mod.rs                # Integrator trait and exports
-    │   └── semi_implicit_euler.rs # Semi-implicit Euler integrator
+    │   └── symplectic_euler.rs # Symplectic Euler integrator
     ├── aabb3d.rs                 # Axis-aligned bounding box implementation
     └── octree.rs                 # Barnes-Hut octree implementation
 ```

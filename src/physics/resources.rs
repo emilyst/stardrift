@@ -10,7 +10,7 @@ pub struct CurrentIntegrator(pub Box<dyn Integrator + Send + Sync>);
 
 impl Default for CurrentIntegrator {
     fn default() -> Self {
-        Self(Box::new(super::integrators::SemiImplicitEuler))
+        Self(Box::new(super::integrators::SymplecticEuler))
     }
 }
 

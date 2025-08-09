@@ -175,12 +175,7 @@ pub fn spawn_simulation_bodies(
         let mass = density * 4.0 / 3.0 * std::f32::consts::PI * radius.powi(3);
 
         commands.spawn((
-            PhysicsBodyBundle::new(
-                Vector::from(position),
-                mass.into(),
-                radius,
-                Vector::from(velocity),
-            ),
+            PhysicsBodyBundle::new(Vector::from(position), mass, radius, Vector::from(velocity)),
             MeshMaterial3d(material),
             Mesh3d(mesh),
         ));
@@ -190,7 +185,7 @@ pub fn spawn_simulation_bodies(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::physics::integrators::SemiImplicitEuler;
+    use crate::physics::integrators::SymplecticEuler;
 
     #[test]
     fn test_integration_step() {
@@ -198,7 +193,7 @@ mod tests {
         app.add_plugins(MinimalPlugins);
 
         // Add resources
-        app.insert_resource(CurrentIntegrator(Box::new(SemiImplicitEuler)));
+        app.insert_resource(CurrentIntegrator(Box::new(SymplecticEuler)));
         app.insert_resource(PhysicsTime::default());
 
         // Create a test body

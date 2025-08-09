@@ -61,11 +61,11 @@ impl Plugin for SimulationPlugin {
 
         // Set up integrator based on configuration
         use crate::config::IntegratorType;
-        use crate::physics::integrators::SemiImplicitEuler;
+        use crate::physics::integrators::SymplecticEuler;
         use crate::physics::resources::CurrentIntegrator;
 
         let integrator = match config.physics.integrator {
-            IntegratorType::SemiImplicitEuler => Box::new(SemiImplicitEuler),
+            IntegratorType::SymplecticEuler => Box::new(SymplecticEuler),
         };
         app.insert_resource(CurrentIntegrator(integrator));
 
