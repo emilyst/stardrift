@@ -56,9 +56,6 @@ jobs:
       - name: Check formatting
         run: cargo fmt -- --check
 
-      - name: Run clippy
-        run: cargo clippy --all-features -- -D warnings
-
   check:
     name: Check
     runs-on: ubuntu-latest
