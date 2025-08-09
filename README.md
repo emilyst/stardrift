@@ -252,7 +252,7 @@ version = 6  # Configuration format version (required)
 |----------------------------|-------|-----------|-------------------------------------------------------|
 | `min_temperature`          | `f64` | `3000.0`  | Minimum stellar temperature in Kelvin (affects color) |
 | `max_temperature`          | `f64` | `15000.0` | Maximum stellar temperature in Kelvin (affects color) |
-| `bloom_intensity`          | `f64` | `100.0`   | Intensity of bloom visual effect                      |
+| `bloom_intensity`          | `f64` | `250.0`   | Intensity of bloom visual effect                      |
 | `saturation_intensity`     | `f64` | `3.0`     | Color saturation multiplier                           |
 | `camera_radius_multiplier` | `f64` | `4.0`     | Camera distance multiplier relative to system size    |
 
@@ -342,7 +342,7 @@ tangential_bias = 0.7
 [rendering]
 min_temperature = 3000.0
 max_temperature = 15000.0
-bloom_intensity = 100.0
+bloom_intensity = 250.0
 saturation_intensity = 3.0
 camera_radius_multiplier = 4.0
 

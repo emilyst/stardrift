@@ -25,21 +25,25 @@
 //!
 //! # Main Functions
 //!
-//! - [`emissive_material_for_temp`]: Creates Bevy materials with temperature-based
-//!   colors and bloom
+//! - [`emissive_material_for_temp`]: Creates Bevy materials with temperature-based colors and bloom
+//! - [`rgb_for_temp`]: Converts color temperature (Kelvin) to normalized RGB values
+//! - [`intensify_for_bloom`]: Applies luminance-based intensity scaling for bloom effects
 //!
 //! # Usage
 //!
-//! ```rust,ignore
-//! use crate::color::*;
+//! ```rust
+//! # use bevy::prelude::*;
+//! use stardrift::utils::color::emissive_material_for_temp;
 //!
-//! // Create a material for a star at 5778K (Sun's temperature)
-//! let material = emissive_material_for_temp(
-//!     &mut materials,
-//!     5778.0,  // Temperature in Kelvin
-//!     2.0      // Bloom intensity multiplier
-//!     2.0      // Saturation intensity multiplier
-//! );
+//! fn create_star_material(mut materials: ResMut<Assets<StandardMaterial>>) {
+//!     // Create a material for a star at 5778K (Sun's temperature)
+//!     let material = emissive_material_for_temp(
+//!         &mut materials,
+//!         5778.0,  // Temperature in Kelvin
+//!         2.0,     // Bloom intensity multiplier
+//!         1.0      // Saturation intensity multiplier
+//!     );
+//! }
 //! ```
 //!
 //! # Algorithm Details
@@ -57,17 +61,17 @@ const DAYLIGHT_TEMP_THRESHOLD: f64 = 6600.0;
 const BLUE_TEMP_THRESHOLD: f64 = 1900.0;
 const MAX_COLOR_VALUE: f64 = 255.0;
 
-const RED_COEFFICIENT: f64 = 329.698727446;
+const RED_COEFFICIENT: f64 = 329.698_727_446;
 const RED_OFFSET: f64 = 60.0;
-const RED_EXPONENT: f64 = -0.1332047592;
+const RED_EXPONENT: f64 = -0.133_204_759_2;
 
-const GREEN_WARM_COEFFICIENT: f64 = 99.4708025861;
-const GREEN_WARM_OFFSET: f64 = -161.1195681661;
-const GREEN_COOL_COEFFICIENT: f64 = 288.1221695283;
-const GREEN_COOL_EXPONENT: f64 = -0.0755148492;
+const GREEN_WARM_COEFFICIENT: f64 = 99.470_802_586_1;
+const GREEN_WARM_OFFSET: f64 = -161.119_568_166_1;
+const GREEN_COOL_COEFFICIENT: f64 = 288.122_169_528_3;
+const GREEN_COOL_EXPONENT: f64 = -0.075_514_849_2;
 
-const BLUE_COEFFICIENT: f64 = 138.5177312231;
-const BLUE_OFFSET: f64 = -305.0447927307;
+const BLUE_COEFFICIENT: f64 = 138.517_731_223_1;
+const BLUE_OFFSET: f64 = -305.044_792_730_7;
 const BLUE_LOG_OFFSET: f64 = 10.0;
 
 /// Creates a Bevy `StandardMaterial` with temperature-based colors and bloom effects.
@@ -82,7 +86,7 @@ const BLUE_LOG_OFFSET: f64 = 10.0;
 /// * `materials` - Mutable reference to Bevy's material asset storage
 /// * `temperature` - Color temperature in Kelvin (clamped to 1000K - 40000K range)
 /// * `bloom_intensity` - Multiplier for bloom effect intensity (typically 1.0 - 5.0)
-/// * `saturation_intensity` - Multiplier for saturation intensity (typically 1.0 - 5.0)
+/// * `saturation_intensity` - Multiplier for color saturation (typically 1.0 - 3.0)
 ///
 /// # Returns
 ///
@@ -93,24 +97,29 @@ const BLUE_LOG_OFFSET: f64 = 10.0;
 ///
 /// # Examples
 ///
-/// ```rust,ignore
-/// // Create a material for the Sun (5778K) with moderate bloom
-/// let sun_material = emissive_material_for_temp(
-///     &mut materials,
-///     5778.0,
-///     2.5,
-///     1.0,
-/// );
+/// ```rust
+/// # use bevy::prelude::*;
+/// use stardrift::utils::color::emissive_material_for_temp;
 ///
-/// // Create a material for a red giant star (3500K) with intense bloom and saturation
-/// let red_giant_material = emissive_material_for_temp(
-///     &mut materials,
-///     3500.0,
-///     4.0,
-///     2.0,
-/// );
+/// fn create_star_materials(mut materials: ResMut<Assets<StandardMaterial>>) {
+///     // Create a material for the Sun (5778K) with moderate bloom
+///     let sun_material = emissive_material_for_temp(
+///         &mut materials,
+///         5778.0,
+///         2.5,
+///         1.0
+///     );
+///
+///     // Create a material for a red giant star (3500K) with intense bloom and saturation
+///     let red_giant_material = emissive_material_for_temp(
+///         &mut materials,
+///         3500.0,
+///         4.0,
+///         2.0
+///     );
+/// }
 /// ```
-pub(crate) fn emissive_material_for_temp(
+pub fn emissive_material_for_temp(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     temperature: f64,
     bloom_intensity: f64,
@@ -150,7 +159,16 @@ pub(crate) fn emissive_material_for_temp(
 ///
 /// # Returns
 ///
-/// A tuple of enhanced RGB values, clamped to [0.0, 1.0] range.
+/// A tuple of enhanced RGB values, clamped to `[0.0, 1.0]` range.
+///
+/// # Example
+///
+/// ```text
+/// // Enhance saturation of an orange color
+/// enhance_saturation((1.0, 0.5, 0.2), 2.0)
+/// // Returns more vivid orange with increased color separation from gray
+/// ```
+#[must_use]
 fn enhance_saturation(rgb: (f64, f64, f64), saturation_factor: f64) -> (f64, f64, f64) {
     let (r, g, b) = rgb;
 
@@ -194,14 +212,19 @@ fn enhance_saturation(rgb: (f64, f64, f64), saturation_factor: f64) -> (f64, f64
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
+/// use stardrift::utils::color::intensify_for_bloom;
+///
 /// // Enhance a bright white color
 /// let enhanced = intensify_for_bloom((1.0, 1.0, 1.0), 2.0);
+/// assert!(enhanced.0 > 1.0); // Values can exceed 1.0 for bloom
 ///
 /// // Enhance a dim red color
 /// let enhanced = intensify_for_bloom((0.3, 0.1, 0.1), 2.0);
+/// assert!(enhanced.0 < 1.0); // Dim colors receive less enhancement
 /// ```
-fn intensify_for_bloom(rgb: (f64, f64, f64), intensity: f64) -> (f64, f64, f64) {
+#[must_use]
+pub fn intensify_for_bloom(rgb: (f64, f64, f64), intensity: f64) -> (f64, f64, f64) {
     let (r, g, b) = rgb;
 
     // Scale using ITU-R BT.601 luminance formula
@@ -228,7 +251,7 @@ fn intensify_for_bloom(rgb: (f64, f64, f64), intensity: f64) -> (f64, f64, f64) 
 ///
 /// # Returns
 ///
-/// A tuple `(r, g, b)` of normalized RGB values in the range [0.0, 1.0].
+/// A tuple `(r, g, b)` of normalized RGB values in the range `[0.0, 1.0]`.
 /// The values represent the linear RGB color space suitable for further
 /// processing or conversion to other color formats.
 ///
@@ -251,18 +274,20 @@ fn intensify_for_bloom(rgb: (f64, f64, f64), intensity: f64) -> (f64, f64, f64) 
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
+/// use stardrift::utils::color::rgb_for_temp;
+///
 /// // Get RGB for the Sun's surface temperature
-/// let (r, g, b) = kelvin_to_rgb(5778.0);
-/// // Result: approximately (1.0, 0.93, 0.84) - warm white
+/// let (r, g, b) = rgb_for_temp(5778.0);
+/// assert!(r > 0.9 && g > 0.8 && b > 0.7); // Warm white
 ///
 /// // Get RGB for a red giant star
-/// let (r, g, b) = kelvin_to_rgb(3500.0);
-/// // Result: approximately (1.0, 0.67, 0.35) - orange-red
+/// let (r, g, b) = rgb_for_temp(3500.0);
+/// assert!(r > 0.99 && g > 0.7 && g < 0.8 && b > 0.5 && b < 0.6); // Orange
 ///
 /// // Get RGB for a blue star
-/// let (r, g, b) = kelvin_to_rgb(10000.0);
-/// // Result: approximately (0.78, 0.84, 1.0) - blue-white
+/// let (r, g, b) = rgb_for_temp(10000.0);
+/// assert!(r < 0.9 && b > 0.9); // Blue-white
 /// ```
 ///
 /// # References
@@ -270,8 +295,9 @@ fn intensify_for_bloom(rgb: (f64, f64, f64), intensity: f64) -> (f64, f64, f64) 
 /// Based on Tanner Helland's approximation algorithm, which provides
 /// accurate color temperature conversion for the range 1000K - 40000K.
 ///
-/// See https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html.
-fn rgb_for_temp(temperature: f64) -> (f64, f64, f64) {
+/// See <https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html>.
+#[must_use]
+pub fn rgb_for_temp(temperature: f64) -> (f64, f64, f64) {
     let temp = temperature.clamp(MIN_TEMPERATURE, MAX_TEMPERATURE);
 
     let red = red_channel_for_temp(temp);
@@ -285,6 +311,10 @@ fn rgb_for_temp(temperature: f64) -> (f64, f64, f64) {
     (red_norm, green_norm, blue_norm)
 }
 
+/// Calculates the red channel value for a given color temperature.
+///
+/// Returns 255.0 for temperatures at or below 6600K (warm colors),
+/// and uses a power function for cooler temperatures.
 fn red_channel_for_temp(temp: f64) -> f64 {
     if temp <= DAYLIGHT_TEMP_THRESHOLD {
         MAX_COLOR_VALUE
@@ -293,6 +323,10 @@ fn red_channel_for_temp(temp: f64) -> f64 {
     }
 }
 
+/// Calculates the green channel value for a given color temperature.
+///
+/// Uses logarithmic calculation for warm temperatures (≤6600K)
+/// and power function for cool temperatures.
 fn green_channel_for_temp(temp: f64) -> f64 {
     if temp <= DAYLIGHT_TEMP_THRESHOLD {
         GREEN_WARM_COEFFICIENT * libm::log(temp / 100.0) + GREEN_WARM_OFFSET
@@ -301,6 +335,10 @@ fn green_channel_for_temp(temp: f64) -> f64 {
     }
 }
 
+/// Calculates the blue channel value for a given color temperature.
+///
+/// Returns 255.0 for cool temperatures (≥6600K), 0.0 for very warm
+/// temperatures (<1900K), and uses logarithmic calculation in between.
 fn blue_channel_for_temp(temp: f64) -> f64 {
     if temp >= DAYLIGHT_TEMP_THRESHOLD {
         MAX_COLOR_VALUE
