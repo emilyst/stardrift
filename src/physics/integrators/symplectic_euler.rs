@@ -27,6 +27,10 @@ impl Integrator for SymplecticEuler {
     fn order(&self) -> usize {
         1
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 #[cfg(test)]

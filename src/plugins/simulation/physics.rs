@@ -1,7 +1,10 @@
 use crate::config::SimulationConfig;
 use crate::physics::math::{Scalar, Vector};
 use crate::physics::{
-    components::{Acceleration, Mass, PhysicsBody, PhysicsBodyBundle, Position, Velocity},
+    components::{
+        Acceleration, KinematicHistory, KinematicState, Mass, PhysicsBody, PhysicsBodyBundle,
+        Position, Velocity,
+    },
     octree::{Octree, OctreeBody},
     resources::{CurrentIntegrator, PhysicsTime},
 };
@@ -59,9 +62,12 @@ pub fn calculate_accelerations(
         });
 }
 
-/// Integrate positions and velocities using the currently active integrator
-pub fn integrate_motions(
-    mut query: Query<(&mut Position, &mut Velocity, &Acceleration), With<PhysicsBody>>,
+/// Integrate positions and velocities for bodies without history
+pub fn integrate_motions_simple(
+    mut query: Query<
+        (&mut Position, &mut Velocity, &Acceleration),
+        (With<PhysicsBody>, Without<KinematicHistory>),
+    >,
     integrator: Res<CurrentIntegrator>,
     physics_time: Res<PhysicsTime>,
 ) {
@@ -80,6 +86,49 @@ pub fn integrate_motions(
                 acceleration.value(),
                 dt,
             );
+        });
+}
+
+/// Integrate positions and velocities for bodies with history
+pub fn integrate_motions_with_history(
+    mut query: Query<
+        (
+            &mut Position,
+            &mut Velocity,
+            &Acceleration,
+            &mut KinematicHistory,
+        ),
+        With<PhysicsBody>,
+    >,
+    integrator: Res<CurrentIntegrator>,
+    physics_time: Res<PhysicsTime>,
+) {
+    if physics_time.is_paused() {
+        return;
+    }
+
+    let dt = physics_time.dt;
+
+    // For now, all integrators just use the simple step method
+    // When we add multi-step integrators, we'll need to check the type
+    // and call step_with_history if available
+    query
+        .par_iter_mut()
+        .for_each(|(mut position, mut velocity, acceleration, mut history)| {
+            // Use simple integration for now
+            integrator.0.step(
+                position.value_mut(),
+                velocity.value_mut(),
+                acceleration.value(),
+                dt,
+            );
+
+            // Update history with new state for future multi-step integrators
+            history.push(KinematicState::from_components(
+                &position,
+                &velocity,
+                acceleration,
+            ));
         });
 }
 
@@ -209,7 +258,10 @@ mod tests {
             .id();
 
         // Run integration
-        app.add_systems(Update, integrate_motions);
+        app.add_systems(
+            Update,
+            (integrate_motions_simple, integrate_motions_with_history),
+        );
         app.update();
 
         // Check that position and velocity were updated

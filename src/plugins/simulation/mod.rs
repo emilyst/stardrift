@@ -16,8 +16,8 @@ use actions::{
 };
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use physics::{
-    PhysicsSet, calculate_accelerations, counteract_barycentric_drift, integrate_motions,
-    rebuild_octree, sync_transform_from_position,
+    PhysicsSet, calculate_accelerations, counteract_barycentric_drift, integrate_motions_simple,
+    integrate_motions_with_history, rebuild_octree, sync_transform_from_position,
 };
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -129,7 +129,7 @@ impl Plugin for SimulationPlugin {
                 calculate_accelerations
                     .in_set(PhysicsSet::CalculateAccelerations)
                     .run_if(in_state(AppState::Running)),
-                integrate_motions
+                (integrate_motions_simple, integrate_motions_with_history)
                     .in_set(PhysicsSet::IntegrateMotions)
                     .run_if(in_state(AppState::Running)),
                 sync_transform_from_position

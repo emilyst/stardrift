@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Integrator is now selected at startup based on configuration
     - Foundation for adding additional integrator types in the future
 
+- Support for kinematic history in integrators
+    - Added `KinematicHistory` component with fixed size of 8 states (sufficient for most methods)
+    - Added `MultiStepIntegrator` trait for integrators that use historical data
+    - Split integration into two systems: `integrate_motions_simple` and `integrate_motions_with_history`
+    - Systems automatically route bodies based on presence of `KinematicHistory` component
+    - Enables implementation of multi-step integration methods (Adams-Bashforth, Runge-Kutta, etc.)
+    - Added comprehensive documentation for kinematic state management
+
 ### Changed
 
 - Renamed `SemiImplicitEuler` integrator to `SymplecticEuler`
