@@ -44,7 +44,7 @@ impl Default for InitialVelocityConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            min_speed: 10.0,
+            min_speed: 50.0,
             max_speed: 100.0,
             velocity_mode: VelocityMode::Random,
             tangential_bias: 0.7,
@@ -85,16 +85,16 @@ impl Default for IntegratorConfig {
 impl Default for PhysicsConfig {
     fn default() -> Self {
         Self {
-            gravitational_constant: 0.01,
+            gravitational_constant: 0.001,
             body_count: 100,
             octree_theta: 0.5,
-            octree_leaf_threshold: 4,
+            octree_leaf_threshold: 1,
             body_distribution_sphere_radius_multiplier: 100.0,
             body_distribution_min_distance: 0.001,
-            min_body_radius: 1.0,
-            max_body_radius: 2.0,
-            force_calculation_min_distance: 2.0,
-            force_calculation_max_force: 1e4,
+            min_body_radius: 2.0,
+            max_body_radius: 4.0,
+            force_calculation_min_distance: 1.0,
+            force_calculation_max_force: 1e6,
             initial_seed: None,
             initial_velocity: InitialVelocityConfig::default(),
             integrator: IntegratorConfig::default(),
