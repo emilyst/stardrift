@@ -118,6 +118,7 @@ pub fn sync_transform_from_position(
 pub fn counteract_barycentric_drift(
     mut bodies: Query<(&mut Position, &Mass), With<PhysicsBody>>,
     mut barycenter: ResMut<Barycenter>,
+    config: Res<SimulationConfig>,
 ) {
     let (weighted_positions, total_mass): (Vector, Scalar) = bodies
         .iter()
@@ -126,30 +127,39 @@ pub fn counteract_barycentric_drift(
             (pos_acc + pos * mass, mass_acc + mass)
         });
 
-    let updated_barycenter = weighted_positions / total_mass;
-
     if total_mass.abs() <= Scalar::EPSILON {
         return;
     }
+
+    let updated_barycenter = weighted_positions / total_mass;
 
     if !updated_barycenter.is_finite() {
         return;
     }
 
-    let Some(barycenter) = **barycenter else {
+    let Some(previous_barycenter) = **barycenter else {
         **barycenter = Some(updated_barycenter);
         return;
     };
 
-    let barycentric_drift = updated_barycenter - barycenter;
+    if !config.physics.barycentric_drift_correction {
+        **barycenter = Some(updated_barycenter);
+        return;
+    }
+
+    let barycentric_drift = updated_barycenter - previous_barycenter;
 
     if barycentric_drift.length_squared().abs() <= Scalar::EPSILON {
         return;
     }
 
+    // When correcting drift, we move bodies back so the barycenter stays at the previous position
     bodies.par_iter_mut().for_each(|(mut position, _)| {
         *position.value_mut() += -barycentric_drift;
     });
+
+    // After correction, the barycenter remains at the previous position
+    // So we don't update the stored barycenter value
 }
 
 /// Helper function to spawn bodies with the given parameters
@@ -214,6 +224,7 @@ pub fn spawn_simulation_bodies(
 mod tests {
     use super::*;
     use crate::physics::integrators::{RungeKuttaFourthOrder, SymplecticEuler};
+    use bevy::ecs::system::RunSystemOnce;
 
     #[test]
     fn test_rk4_integration_works() {
@@ -443,6 +454,171 @@ mod tests {
         assert!(
             position.value().x != 0.0 || position.value().y != 10.0,
             "Position should have changed from initial state"
+        );
+    }
+
+    #[test]
+    fn test_barycentric_drift_correction_enabled() {
+        use crate::test_utils::create_test_app;
+
+        let mut app = create_test_app();
+
+        // Add SimulationConfig resource and set up with drift correction enabled
+        let mut config = SimulationConfig::default();
+        config.physics.barycentric_drift_correction = true;
+        app.insert_resource(config);
+        app.insert_resource(Barycenter::default());
+
+        // Spawn two bodies at different positions
+        app.world_mut().spawn((
+            Position::new(Vector::new(10.0, 0.0, 0.0)),
+            Mass::new(1.0),
+            PhysicsBody,
+        ));
+        app.world_mut().spawn((
+            Position::new(Vector::new(-10.0, 0.0, 0.0)),
+            Mass::new(1.0),
+            PhysicsBody,
+        ));
+
+        // Run the system once to initialize barycenter
+        let _ = app
+            .world_mut()
+            .run_system_once(counteract_barycentric_drift);
+
+        let initial_barycenter = app.world().resource::<Barycenter>().0;
+        assert!(initial_barycenter.is_some());
+        let initial_barycenter_value = initial_barycenter.unwrap();
+
+        // Move bodies to simulate drift
+        let mut query = app.world_mut().query::<&mut Position>();
+        for mut pos in query.iter_mut(app.world_mut()) {
+            *pos.value_mut() += Vector::new(5.0, 0.0, 0.0);
+        }
+
+        // Run the correction system
+        let _ = app
+            .world_mut()
+            .run_system_once(counteract_barycentric_drift);
+
+        // With correction enabled, barycenter should remain at original position
+        let final_barycenter = app.world().resource::<Barycenter>().0.unwrap();
+        assert!(
+            (final_barycenter - initial_barycenter_value).length() < 1e-6,
+            "Barycenter should remain fixed when correction is enabled"
+        );
+
+        // Bodies should have been shifted back
+        let mut query = app.world_mut().query::<&Position>();
+        let positions: Vec<Vector> = query.iter(app.world()).map(|p| p.value()).collect();
+
+        // Center of mass should still be at origin (original barycenter)
+        let center_of_mass = positions.iter().sum::<Vector>() / positions.len() as f64;
+        assert!(
+            center_of_mass.length() < 1e-6,
+            "Center of mass should be at origin after correction"
+        );
+    }
+
+    #[test]
+    fn test_barycentric_drift_correction_disabled() {
+        use crate::test_utils::create_test_app;
+
+        let mut app = create_test_app();
+
+        // Add SimulationConfig resource and set up with drift correction disabled
+        let mut config = SimulationConfig::default();
+        config.physics.barycentric_drift_correction = false;
+        app.insert_resource(config);
+        app.insert_resource(Barycenter::default());
+
+        // Spawn two bodies at different positions
+        app.world_mut().spawn((
+            Position::new(Vector::new(10.0, 0.0, 0.0)),
+            Mass::new(1.0),
+            PhysicsBody,
+        ));
+        app.world_mut().spawn((
+            Position::new(Vector::new(-10.0, 0.0, 0.0)),
+            Mass::new(1.0),
+            PhysicsBody,
+        ));
+
+        // Run the system once to initialize barycenter
+        let _ = app
+            .world_mut()
+            .run_system_once(counteract_barycentric_drift);
+
+        let initial_barycenter = app.world().resource::<Barycenter>().0;
+        assert!(initial_barycenter.is_some());
+        assert!(
+            initial_barycenter.unwrap().length() < 1e-6,
+            "Initial barycenter should be at origin"
+        );
+
+        // Move bodies to simulate drift
+        let mut query = app.world_mut().query::<&mut Position>();
+        for mut pos in query.iter_mut(app.world_mut()) {
+            *pos.value_mut() += Vector::new(5.0, 0.0, 0.0);
+        }
+
+        // Run the correction system
+        let _ = app
+            .world_mut()
+            .run_system_once(counteract_barycentric_drift);
+
+        // With correction disabled, barycenter should have moved
+        let final_barycenter = app.world().resource::<Barycenter>().0.unwrap();
+        assert!(
+            (final_barycenter - Vector::new(5.0, 0.0, 0.0)).length() < 1e-6,
+            "Barycenter should have moved to new position when correction is disabled"
+        );
+
+        // Bodies should not have been shifted
+        let mut query = app.world_mut().query::<&Position>();
+        let positions: Vec<Vector> = query.iter(app.world()).map(|p| p.value()).collect();
+
+        // Check that bodies are at their moved positions
+        assert!(positions.contains(&Vector::new(15.0, 0.0, 0.0)));
+        assert!(positions.contains(&Vector::new(-5.0, 0.0, 0.0)));
+    }
+
+    #[test]
+    fn test_barycentric_drift_with_different_masses() {
+        use crate::test_utils::create_test_app;
+
+        let mut app = create_test_app();
+
+        // Add SimulationConfig resource with correction disabled to test barycenter calculation
+        let mut config = SimulationConfig::default();
+        config.physics.barycentric_drift_correction = false;
+        app.insert_resource(config);
+        app.insert_resource(Barycenter::default());
+
+        // Spawn bodies with different masses
+        app.world_mut().spawn((
+            Position::new(Vector::new(10.0, 0.0, 0.0)),
+            Mass::new(2.0), // Heavier mass
+            PhysicsBody,
+        ));
+        app.world_mut().spawn((
+            Position::new(Vector::new(-10.0, 0.0, 0.0)),
+            Mass::new(1.0), // Lighter mass
+            PhysicsBody,
+        ));
+
+        // Run the system to calculate barycenter
+        let _ = app
+            .world_mut()
+            .run_system_once(counteract_barycentric_drift);
+
+        // Barycenter should be weighted towards heavier mass
+        // Expected: (10*2 + (-10)*1) / (2+1) = (20-10)/3 = 10/3 ≈ 3.33
+        let barycenter = app.world().resource::<Barycenter>().0.unwrap();
+        assert!(
+            (barycenter.x - 10.0 / 3.0).abs() < 1e-6,
+            "Barycenter should be weighted by mass, expected x=3.33, got x={}",
+            barycenter.x
         );
     }
 }

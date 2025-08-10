@@ -203,6 +203,7 @@ The simulation uses a TOML-based configuration file.
 | `force_calculation_min_distance`             | `f64`         | `2.0`               | Minimum distance for force calculations (prevents singularities)       |
 | `force_calculation_max_force`                | `f64`         | `10000.0`           | Maximum force magnitude to prevent instabilities                       |
 | `initial_seed`                               | `Option<u64>` | `None`              | Random seed for deterministic generation. None = random                |
+| `barycentric_drift_correction`               | `bool`        | `true`              | Enable automatic recentering around barycenter. False = pure physics   |
 | `integrator.type`                            | `string`      | `"velocity_verlet"` | Numerical integration method (see Integrator Types below)              |
 
 ##### Initial Velocity Configuration (`[physics.initial_velocity]`)

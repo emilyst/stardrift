@@ -29,6 +29,7 @@ pub struct PhysicsConfig {
     pub initial_velocity: InitialVelocityConfig,
     #[serde(default)]
     pub integrator: IntegratorConfig,
+    pub barycentric_drift_correction: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -98,6 +99,7 @@ impl Default for PhysicsConfig {
             initial_seed: None,
             initial_velocity: InitialVelocityConfig::default(),
             integrator: IntegratorConfig::default(),
+            barycentric_drift_correction: true,
         }
     }
 }

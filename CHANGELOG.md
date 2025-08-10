@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Configurable barycentric drift correction option
+    - Added `barycentric_drift_correction` boolean field to physics configuration (defaults to true)
+    - When enabled (default), simulation automatically recenters around the barycenter for visual stability
+    - When disabled, bodies drift naturally according to gravitational interactions for pure physics accuracy
+    - Maintains backwards compatibility with existing configurations
+    - Provides control over trade-off between visual stability and scientific accuracy
+
 ## [0.0.31] - 2025-08-10
 
 ## [0.0.30] - 2025-08-10
