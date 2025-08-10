@@ -165,6 +165,74 @@ Located in `configs/benchmark_profiles/`:
 
 ## Architecture Guidelines
 
+### Adding a New Integrator
+
+To add a new numerical integrator to the simulation:
+
+1. **Create the integrator implementation** (`src/physics/integrators/your_integrator.rs`)
+   ```rust
+   use super::{ForceEvaluator, Integrator};
+   use crate::physics::math::{Scalar, Vector};
+   
+   #[derive(Debug, Clone, Default)]
+   pub struct YourIntegrator;
+   
+   impl Integrator for YourIntegrator {
+       fn step(
+           &self,
+           position: &mut Vector,
+           velocity: &mut Vector,
+           evaluator: &dyn ForceEvaluator,
+           dt: Scalar,
+       ) {
+           // Implementation
+       }
+   }
+   ```
+
+2. **Export from module** (`src/physics/integrators/mod.rs`)
+   - Add module declaration: `pub mod your_integrator;`
+   - Add public export: `pub use your_integrator::YourIntegrator;`
+
+3. **Register in the registry** (`src/physics/integrators/registry.rs`)
+   - Import the integrator: Add to the `use super::{...}` statement
+   - Add to `get()` method match statement
+   - Add to `list_available()` method
+   - Add any convenient aliases in `new()` method
+
+4. **Update documentation**
+   - **README.md**: Add to the integrator list in features and configuration sections
+   - **CHANGELOG.md**: Add entry under "Added" in [Unreleased] section
+   - **Create devlog**: `docs/log/YYYY-MM-DD_NNN_integrator_name.md`
+
+5. **Add tests and benchmarks** (optional but recommended)
+   - Unit tests in the integrator file
+   - Integration tests in `tests/`
+   - Add to `benches/integrators.rs`:
+     - Include in imports at top of file
+     - Add to `get_integrators()` function
+     - Add to `get_integrators_with_order()` with expected convergence order
+   - The benchmark suite automatically tests:
+     - Performance (raw speed)
+     - Accuracy (harmonic oscillator, Kepler orbits)
+     - Convergence order verification
+     - Energy conservation
+     - Work-precision tradeoffs
+     - N-body realistic scenarios
+
+6. **Verify the integration**
+   ```bash
+   # List available integrators
+   ./target/debug/stardrift --list-integrators
+   
+   # Test the new integrator
+   # Edit config.toml: integrator.type = "your_integrator"
+   cargo run
+   
+   # Run benchmarks if added
+   cargo bench integrators
+   ```
+
 ### Plugin System
 
 All major features should be implemented as Bevy plugins:
@@ -225,8 +293,16 @@ Configure integrators in `config.toml`:
 
 ```toml
 [physics]
-integrator.type = "velocity_verlet"  # Options: symplectic_euler, velocity_verlet, heun, runge_kutta_second_order_midpoint, runge_kutta_fourth_order
+integrator.type = "velocity_verlet"  # Options: symplectic_euler, velocity_verlet, heun, runge_kutta_second_order_midpoint, runge_kutta_fourth_order, pefrl
 ```
+
+Available integrators:
+- `symplectic_euler` - 1st order symplectic, good energy conservation
+- `velocity_verlet` - 2nd order symplectic, excellent energy conservation
+- `heun` - 2nd order predictor-corrector (improved Euler)
+- `runge_kutta_second_order_midpoint` - 2nd order RK (midpoint method)
+- `runge_kutta_fourth_order` - 4th order RK, high accuracy
+- `pefrl` - 4th order symplectic, superior long-term energy conservation
 
 Available aliases for convenience:
 
@@ -236,6 +312,7 @@ Available aliases for convenience:
 - `rk2` → `runge_kutta_second_order_midpoint`
 - `midpoint` → `runge_kutta_second_order_midpoint`
 - `improved_euler` → `heun`
+- `forest_ruth` → `pefrl`
 
 To list available integrators:
 

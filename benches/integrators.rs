@@ -12,7 +12,7 @@ use std::hint::black_box;
 
 extern crate stardrift;
 use stardrift::physics::integrators::{
-    ForceEvaluator, Heun, Integrator, RungeKuttaFourthOrder, RungeKuttaSecondOrderMidpoint,
+    ForceEvaluator, Heun, Integrator, Pefrl, RungeKuttaFourthOrder, RungeKuttaSecondOrderMidpoint,
     SymplecticEuler, VelocityVerlet,
 };
 use stardrift::physics::math::{Scalar, Vector};
@@ -32,6 +32,7 @@ fn get_integrators() -> Vec<(&'static str, Box<dyn Integrator>)> {
         ("heun", Box::new(Heun)),
         ("rk2_midpoint", Box::new(RungeKuttaSecondOrderMidpoint)),
         ("rk4", Box::new(RungeKuttaFourthOrder)),
+        ("pefrl", Box::new(Pefrl)),
     ]
 }
 
@@ -43,6 +44,7 @@ fn get_integrators_with_order() -> Vec<(&'static str, Box<dyn Integrator>, usize
         ("heun", Box::new(Heun), 2),
         ("rk2_midpoint", Box::new(RungeKuttaSecondOrderMidpoint), 2),
         ("rk4", Box::new(RungeKuttaFourthOrder), 4),
+        ("pefrl", Box::new(Pefrl), 4),
     ]
 }
 

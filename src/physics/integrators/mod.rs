@@ -3,12 +3,14 @@
 use crate::physics::math::{Scalar, Vector};
 
 pub mod heun;
+pub mod pefrl;
 pub mod registry;
 pub mod runge_kutta;
 pub mod symplectic_euler;
 pub mod velocity_verlet;
 
 pub use heun::Heun;
+pub use pefrl::Pefrl;
 pub use runge_kutta::RungeKuttaFourthOrder;
 pub use runge_kutta::RungeKuttaSecondOrderMidpoint;
 pub use symplectic_euler::SymplecticEuler;

@@ -1,7 +1,7 @@
 //! Registry pattern for dynamic integrator management
 
 use super::{
-    Heun, Integrator, RungeKuttaFourthOrder, RungeKuttaSecondOrderMidpoint, SymplecticEuler,
+    Heun, Integrator, Pefrl, RungeKuttaFourthOrder, RungeKuttaSecondOrderMidpoint, SymplecticEuler,
     VelocityVerlet,
 };
 use bevy::prelude::*;
@@ -28,6 +28,7 @@ impl IntegratorRegistry {
         registry.add_alias("rk2", "runge_kutta_second_order_midpoint");
         registry.add_alias("midpoint", "runge_kutta_second_order_midpoint");
         registry.add_alias("improved_euler", "heun");
+        registry.add_alias("forest_ruth", "pefrl");
 
         registry
     }
@@ -50,6 +51,7 @@ impl IntegratorRegistry {
             "runge_kutta_fourth_order" => Ok(Box::new(RungeKuttaFourthOrder)),
             "runge_kutta_second_order_midpoint" => Ok(Box::new(RungeKuttaSecondOrderMidpoint)),
             "heun" => Ok(Box::new(Heun)),
+            "pefrl" => Ok(Box::new(Pefrl)),
             _ => {
                 let available = self.list_available();
                 let aliases: Vec<String> = self.aliases.keys().cloned().collect();
@@ -70,6 +72,7 @@ impl IntegratorRegistry {
             "runge_kutta_fourth_order".to_string(),
             "runge_kutta_second_order_midpoint".to_string(),
             "heun".to_string(),
+            "pefrl".to_string(),
         ]
     }
 

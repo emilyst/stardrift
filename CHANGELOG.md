@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Three new numerical integrators with proper accuracy guarantees
+- Four new numerical integrators with proper accuracy guarantees
     - **Heun (Improved Euler)**: 2nd order explicit integrator with better stability than basic Euler
     - **Runge-Kutta 2nd Order (Midpoint)**: 2nd order explicit integrator with midpoint evaluation
     - **Runge-Kutta 4th Order**: Classical 4th order integrator with highest accuracy
-    - All integrators now support multiple convenient aliases (e.g., `"rk4"`, `"improved_euler"`)
+    - **PEFRL (Position-Extended Forest-Ruth-Like)**: 4th order symplectic integrator optimized for long-term energy conservation
+    - All integrators now support multiple convenient aliases (e.g., `"rk4"`, `"improved_euler"`, `"forest_ruth"`)
+    - All new integrators are included in comprehensive benchmark suite
 
 - Force evaluator architecture for accurate multi-stage integration
     - Added `ForceEvaluator` trait allowing integrators to query forces at arbitrary positions
