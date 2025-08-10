@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.31] - 2025-08-10
+
 ## [0.0.30] - 2025-08-10
 
 ### Added
@@ -450,7 +452,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple build profiles (dev, release, distribution, wasm)
 - Platform-specific configuration paths (XDG compliant)
 
-[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.30...HEAD
+[Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.31...HEAD
+[0.0.31]: https://github.com/emilyst/stardrift/compare/v0.0.30...v0.0.31
 [0.0.30]: https://github.com/emilyst/stardrift/compare/v0.0.29...v0.0.30
 [0.0.29]: https://github.com/emilyst/stardrift/compare/v0.0.28...v0.0.29
 
