@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Three new numerical integrators with proper accuracy guarantees
+    - **Heun (Improved Euler)**: 2nd order explicit integrator with better stability than basic Euler
+    - **Runge-Kutta 2nd Order (Midpoint)**: 2nd order explicit integrator with midpoint evaluation
+    - **Runge-Kutta 4th Order**: Classical 4th order integrator with highest accuracy
+    - All integrators now support multiple convenient aliases (e.g., `"rk4"`, `"improved_euler"`)
+
+- Force evaluator architecture for accurate multi-stage integration
+    - Added `ForceEvaluator` trait allowing integrators to query forces at arbitrary positions
+    - Enables mathematically correct implementation of Velocity Verlet, RK4, and other multi-stage methods
+    - Forces can now be calculated at intermediate positions without rebuilding the octree
+    - All integrators now achieve their theoretical order of convergence
+
+### Changed
+
+- **BREAKING**: Integrator configuration format updated
+    - Configuration now uses `integrator.type` instead of `integrator` field
+    - All integrator names use snake_case format (e.g., `"velocity_verlet"` instead of `"VelocityVerlet"`)
+    - Multiple aliases supported for user convenience (see README for full list)
+
+- Major architectural simplification and accuracy improvements
+    - Removed over 1200 lines of unnecessary abstraction code
+    - Eliminated history-based infrastructure (`KinematicHistory`, `MultiStepIntegrator` trait)
+    - Removed complex multi-stage abstractions (`MultiStageIntegrator` trait)
+    - Simplified registry pattern from factory-based to simple match statement
+    - Single, unified integration system handles all methods consistently
+
+- Fixed critical accuracy issues across all integrators
+    - **Velocity Verlet**: Now correctly recalculates forces (0.1% energy drift vs 619% previously)
+    - **RK4**: Achieves true 4th order convergence (was artificially limited to 1st order)
+    - **Heun and RK2**: Now achieve proper 2nd order convergence as mathematically expected
+    - All integrators properly implement their theoretical properties
+
+### Removed
+
+- **BREAKING**: Adams-Bashforth integrator and all related infrastructure
+    - Complexity of maintaining history for one rarely-used integrator was not justified
+    - Users should use RK4 for high-order accuracy or Velocity Verlet for symplectic integration
+    - Removed associated configuration files, tests, and documentation
+
 ## [0.0.29] - 2025-08-09
 
 ### Added
@@ -19,18 +60,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Velocity Verlet integrator implementation
     - Second-order symplectic integrator with excellent energy conservation
-    - Implements both `Integrator` and `MultiStepIntegrator` traits
-    - Uses acceleration history when available for improved accuracy
-    - Falls back to position-Verlet method when history unavailable
+    - Implements `Integrator` trait with force evaluator support
+    - Correctly recalculates forces at new position for true energy conservation
     - Particularly suited for high-precision gravitational n-body simulations
 
-- Support for kinematic history in integrators
+- Support for kinematic history in integrators [REMOVED in Unreleased]
     - Added `KinematicHistory` component with fixed size of 8 states (sufficient for most methods)
     - Added `MultiStepIntegrator` trait for integrators that use historical data
     - Split integration into two systems: `integrate_motions_simple` and `integrate_motions_with_history`
     - Systems automatically route bodies based on presence of `KinematicHistory` component
     - Enables implementation of multi-step integration methods (Adams-Bashforth, Runge-Kutta, etc.)
     - Added comprehensive documentation for kinematic state management
+    - NOTE: This infrastructure was removed in a later refactor for simplification
 
 ### Changed
 

@@ -21,8 +21,6 @@ pub struct PhysicsTime {
     pub dt: Scalar,
     /// Whether physics is paused
     pub paused: bool,
-    /// Accumulated time for fixed timestep
-    pub accumulator: Scalar,
 }
 
 impl Default for PhysicsTime {
@@ -30,7 +28,6 @@ impl Default for PhysicsTime {
         Self {
             dt: 1.0 / 60.0, // 60 Hz default // TODO: base on FixedUpdate schedule?
             paused: false,
-            accumulator: 0.0,
         }
     }
 }
@@ -46,9 +43,5 @@ impl PhysicsTime {
 
     pub fn is_paused(&self) -> bool {
         self.paused
-    }
-
-    pub fn reset_accumulator(&mut self) {
-        self.accumulator = 0.0;
     }
 }

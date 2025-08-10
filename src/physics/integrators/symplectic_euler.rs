@@ -1,6 +1,6 @@
 //! Symplectic Euler integration method
 
-use super::Integrator;
+use super::{ForceEvaluator, Integrator};
 use crate::physics::math::{Scalar, Vector};
 
 /// Symplectic Euler integrator (also known as semi-implicit Euler)
@@ -12,24 +12,21 @@ use crate::physics::math::{Scalar, Vector};
 pub struct SymplecticEuler;
 
 impl Integrator for SymplecticEuler {
-    fn step(&self, position: &mut Vector, velocity: &mut Vector, acceleration: Vector, dt: Scalar) {
+    fn step(
+        &self,
+        position: &mut Vector,
+        velocity: &mut Vector,
+        evaluator: &dyn ForceEvaluator,
+        dt: Scalar,
+    ) {
+        // Calculate acceleration at current position
+        let acceleration = evaluator.calc_acceleration(*position);
+
         // Update velocity first: v(t+dt) = v(t) + a(t) * dt
         *velocity += acceleration * dt;
 
         // Then update position using new velocity: x(t+dt) = x(t) + v(t+dt) * dt
         *position += *velocity * dt;
-    }
-
-    fn name(&self) -> &str {
-        "Symplectic Euler"
-    }
-
-    fn order(&self) -> usize {
-        1
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
     }
 }
 
@@ -40,14 +37,22 @@ mod tests {
 
     #[test]
     fn test_symplectic_euler_integrate_single() {
+        // Simple test evaluator that returns constant acceleration
+        struct TestEvaluator;
+        impl ForceEvaluator for TestEvaluator {
+            fn calc_acceleration(&self, _position: Vector) -> Vector {
+                Vector::new(0.0, 0.0, -9.81)
+            }
+        }
+
         let integrator = SymplecticEuler;
+        let evaluator = TestEvaluator;
 
         let mut position = Vector::new(1.0, 0.0, 0.0);
         let mut velocity = Vector::new(0.0, 1.0, 0.0);
-        let acceleration = Vector::new(0.0, 0.0, -9.81);
         let dt = 0.01;
 
-        integrator.step(&mut position, &mut velocity, acceleration, dt);
+        integrator.step(&mut position, &mut velocity, &evaluator, dt);
 
         // Velocity should be updated first
         assert_eq!(velocity, Vector::new(0.0, 1.0, -0.0981));
@@ -55,12 +60,5 @@ mod tests {
         // Position should use the new velocity
         let expected_position = Vector::new(1.0, 0.01, -0.000981);
         assert!((position - expected_position).length() < 1e-6);
-    }
-
-    #[test]
-    fn test_properties() {
-        let integrator = SymplecticEuler;
-        assert_eq!(integrator.name(), "Symplectic Euler");
-        assert_eq!(integrator.order(), 1);
     }
 }

@@ -16,11 +16,6 @@ impl Aabb3d {
         (self.min + self.max) * 0.5
     }
 
-    #[inline]
-    pub fn size(&self) -> Vector {
-        self.max - self.min
-    }
-
     pub fn octants(self) -> [Aabb3d; 8] {
         let center = self.center();
 

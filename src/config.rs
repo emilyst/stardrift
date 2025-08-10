@@ -25,15 +25,10 @@ pub struct PhysicsConfig {
     pub max_body_radius: f32,
     pub force_calculation_min_distance: Scalar,
     pub force_calculation_max_force: Scalar,
-    /// Softening parameter to prevent force singularities at close distances.
-    /// This adds a small constant to the distance calculation: F = GMm/(r² + ε²)
-    /// where ε is the softening parameter. This ensures smooth force transitions
-    /// and prevents numerical instabilities during close encounters between bodies.
-    /// Typical values: 0.1 to 1.0 times the minimum body radius.
-    pub force_calculation_softening: Scalar,
     pub initial_seed: Option<u64>,
     pub initial_velocity: InitialVelocityConfig,
-    pub integrator: IntegratorType,
+    #[serde(default)]
+    pub integrator: IntegratorConfig,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -66,11 +61,25 @@ pub enum VelocityMode {
     Radial,
 }
 
+/// Flexible integrator configuration
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum IntegratorType {
-    SymplecticEuler,
-    VelocityVerlet,
+pub struct IntegratorConfig {
+    /// Type of integrator (e.g., "velocity_verlet")
+    #[serde(rename = "type")]
+    pub integrator_type: String,
+
+    /// Integrator-specific parameters
+    #[serde(default)]
+    pub params: crate::physics::integrators::registry::IntegratorParams,
+}
+
+impl Default for IntegratorConfig {
+    fn default() -> Self {
+        Self {
+            integrator_type: "velocity_verlet".to_string(),
+            params: Default::default(),
+        }
+    }
 }
 
 impl Default for PhysicsConfig {
@@ -86,10 +95,9 @@ impl Default for PhysicsConfig {
             max_body_radius: 2.0,
             force_calculation_min_distance: 2.0,
             force_calculation_max_force: 1e4,
-            force_calculation_softening: 0.5,
             initial_seed: None,
             initial_velocity: InitialVelocityConfig::default(),
-            integrator: IntegratorType::VelocityVerlet,
+            integrator: IntegratorConfig::default(),
         }
     }
 }
@@ -292,12 +300,14 @@ impl SimulationConfig {
         }
     }
 
+    #[allow(dead_code)]
     pub fn save(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let content = toml::to_string_pretty(self)?;
         std::fs::write(path, content)?;
         Ok(())
     }
 
+    #[allow(dead_code)]
     #[cfg(not(target_arch = "wasm32"))]
     pub fn save_to_user_config(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config_path =
@@ -308,6 +318,7 @@ impl SimulationConfig {
         Ok(())
     }
 
+    #[allow(dead_code)]
     #[cfg(target_arch = "wasm32")]
     pub fn save_to_user_config(&self) -> Result<(), Box<dyn std::error::Error>> {
         Err("Configuration saving not supported on WebAssembly".into())
@@ -492,8 +503,9 @@ min_body_radius = 1.0
 max_body_radius = 2.0
 force_calculation_min_distance = 2.0
 force_calculation_max_force = 10000.0
-force_calculation_softening = 0.5
-integrator = "symplectic_euler"
+
+[physics.integrator]
+type = "symplectic_euler"
 
 [physics.initial_velocity]
 enabled = true
@@ -539,10 +551,10 @@ hide_ui_frame_delay = 2
         let loaded_config = SimulationConfig::load_or_default(temp_path);
 
         // Verify the config loaded correctly with snake_case values
-        assert!(matches!(
-            loaded_config.physics.integrator,
-            IntegratorType::SymplecticEuler
-        ));
+        assert_eq!(
+            loaded_config.physics.integrator.integrator_type,
+            "symplectic_euler"
+        );
         assert!(matches!(
             loaded_config.physics.initial_velocity.velocity_mode,
             VelocityMode::Tangential

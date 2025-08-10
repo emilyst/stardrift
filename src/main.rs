@@ -1,5 +1,4 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
-#![allow(dead_code)]
 
 mod config;
 mod events;
@@ -12,6 +11,8 @@ mod utils;
 
 #[cfg(test)]
 mod test_utils;
+
+use clap::Parser;
 
 use crate::plugins::trails::TrailsPlugin;
 use crate::plugins::{
@@ -29,7 +30,104 @@ use bevy::diagnostic::{
 use bevy::{app::TaskPoolThreadAssignmentPolicy, tasks::available_parallelism, window::WindowMode};
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
 
+/// Stardrift - N-body gravity simulation
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Path to configuration file (TOML format)
+    #[arg(short, long, value_name = "FILE")]
+    config: Option<String>,
+
+    /// Number of bodies to simulate (overrides config file)
+    #[arg(short = 'n', long, value_name = "COUNT")]
+    bodies: Option<usize>,
+
+    /// Gravitational constant (overrides config file)
+    #[arg(short = 'g', long, value_name = "VALUE")]
+    gravity: Option<f64>,
+
+    /// Integrator type (e.g., velocity_verlet, rk4, heun)
+    #[arg(short = 'i', long, value_name = "TYPE")]
+    integrator: Option<String>,
+
+    /// Random seed for body generation
+    #[arg(short = 's', long, value_name = "SEED")]
+    seed: Option<u64>,
+
+    /// Start paused
+    #[arg(short = 'p', long)]
+    paused: bool,
+
+    /// Enable verbose logging
+    #[arg(short = 'v', long)]
+    verbose: bool,
+
+    /// List available integrators and exit
+    #[arg(long)]
+    list_integrators: bool,
+}
+
 fn main() {
+    let args = Args::parse();
+
+    // Handle list-integrators flag
+    if args.list_integrators {
+        use crate::physics::integrators::registry::IntegratorRegistry;
+        let registry = IntegratorRegistry::new();
+        println!("Available integrators:");
+        for name in registry.list_available() {
+            println!("  - {}", name);
+        }
+
+        let aliases = registry.list_aliases();
+        if !aliases.is_empty() {
+            println!("\nAliases:");
+            for (alias, target) in aliases {
+                println!("  - {} -> {}", alias, target);
+            }
+        }
+        return;
+    }
+
+    // Load configuration
+    let mut config = if let Some(config_path) = &args.config {
+        println!("Loading configuration from: {}", config_path);
+        SimulationConfig::load_or_default(config_path)
+    } else {
+        SimulationConfig::load_from_user_config()
+    };
+
+    // Apply command-line overrides
+    if let Some(body_count) = args.bodies {
+        println!("Overriding body count to: {}", body_count);
+        config.physics.body_count = body_count;
+    }
+
+    if let Some(gravity) = args.gravity {
+        println!("Overriding gravitational constant to: {}", gravity);
+        config.physics.gravitational_constant = gravity;
+    }
+
+    if let Some(integrator_type) = args.integrator {
+        println!("Using integrator: {}", integrator_type);
+        config.physics.integrator = config::IntegratorConfig {
+            integrator_type,
+            params: Default::default(),
+        };
+    }
+
+    if let Some(seed) = args.seed {
+        println!("Using random seed: {}", seed);
+        config.physics.initial_seed = Some(seed);
+    }
+
+    // Set up logging
+    if args.verbose {
+        unsafe {
+            std::env::set_var("RUST_LOG", "stardrift=debug,bevy=info");
+        }
+    }
+
     let mut app = App::new();
 
     app.add_plugins((
@@ -68,7 +166,7 @@ fn main() {
         PanOrbitCameraPlugin,
         SimulationDiagnosticsPlugin::default(),
         SystemInformationDiagnosticsPlugin,
-        SimulationPlugin,
+        SimulationPlugin::with_config(config),
         CameraPlugin,
         ControlsPlugin,
         VisualizationPlugin,
@@ -78,6 +176,11 @@ fn main() {
 
     // Initialize app states after DefaultPlugins (which includes StatesPlugin)
     app.init_state::<AppState>();
+
+    // Start paused if requested
+    if args.paused {
+        app.insert_resource(NextState::Pending(AppState::Paused));
+    }
 
     app.run();
 }

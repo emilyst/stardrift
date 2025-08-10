@@ -1,10 +1,8 @@
 use crate::config::SimulationConfig;
+use crate::physics::integrators::ForceEvaluator;
 use crate::physics::math::{Scalar, Vector};
 use crate::physics::{
-    components::{
-        Acceleration, KinematicHistory, KinematicState, Mass, PhysicsBody, PhysicsBodyBundle,
-        Position, Velocity,
-    },
+    components::{Mass, PhysicsBody, PhysicsBodyBundle, Position, Velocity},
     octree::{Octree, OctreeBody},
     resources::{CurrentIntegrator, PhysicsTime},
 };
@@ -16,7 +14,6 @@ use bevy::prelude::*;
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PhysicsSet {
     BuildOctree,
-    CalculateAccelerations,
     IntegrateMotions,
     SyncTransforms,
     CorrectBarycentricDrift,
@@ -24,132 +21,74 @@ pub enum PhysicsSet {
 
 /// Rebuild the octree structure from current body positions
 pub fn rebuild_octree(
-    bodies: Query<(&Position, &Mass), (With<PhysicsBody>, Changed<Position>)>,
+    bodies: Query<(Entity, &Position, &Mass), (With<PhysicsBody>, Changed<Position>)>,
     mut octree: ResMut<GravitationalOctree>,
 ) {
     if bodies.is_empty() {
         return;
     }
 
-    octree.build(bodies.iter().map(|(position, mass)| OctreeBody {
+    octree.build(bodies.iter().map(|(entity, position, mass)| OctreeBody {
         position: position.value(),
         mass: mass.value(),
+        entity,
     }));
 }
 
-/// Calculate gravitational forces and convert to accelerations
-pub fn calculate_accelerations(
-    g: Res<GravitationalConstant>,
+/// Force evaluator that wraps the octree for a specific body
+///
+/// This struct implements the ForceEvaluator trait to allow integrators
+/// to calculate forces at arbitrary positions during multi-stage integration.
+struct BodyForceEvaluator<'a> {
+    octree: &'a Octree,
+    body_entity: Entity,
+    body_mass: Scalar,
+    g: Scalar,
+}
+
+impl<'a> ForceEvaluator for BodyForceEvaluator<'a> {
+    fn calc_acceleration(&self, position: Vector) -> Vector {
+        let force = self.octree.calculate_force_at_position(
+            position,
+            self.body_mass,
+            self.body_entity,
+            self.g,
+        );
+        force / self.body_mass
+    }
+}
+
+/// Integrate positions and velocities for all bodies
+pub fn integrate_motions(
+    mut query: Query<(Entity, &mut Position, &mut Velocity, &Mass), With<PhysicsBody>>,
+    integrator: Res<CurrentIntegrator>,
+    physics_time: Res<PhysicsTime>,
     octree: Res<GravitationalOctree>,
-    mut bodies: Query<(&Position, &Mass, &mut Acceleration), With<PhysicsBody>>,
+    g: Res<GravitationalConstant>,
 ) {
+    if physics_time.is_paused() {
+        return;
+    }
+
+    let dt = physics_time.dt;
     let octree: &Octree = &octree;
-    let g: Scalar = **g;
-
-    bodies
-        .par_iter_mut()
-        .for_each(|(position, mass, mut acceleration)| {
-            let force = octree.calculate_force(
-                &OctreeBody {
-                    position: position.value(),
-                    mass: mass.value(),
-                },
-                octree.root.as_ref(),
-                g,
-            );
-
-            *acceleration.value_mut() = force / mass.value();
-        });
-}
-
-/// Integrate positions and velocities for bodies without history
-pub fn integrate_motions_simple(
-    mut query: Query<
-        (&mut Position, &mut Velocity, &Acceleration),
-        (With<PhysicsBody>, Without<KinematicHistory>),
-    >,
-    integrator: Res<CurrentIntegrator>,
-    physics_time: Res<PhysicsTime>,
-) {
-    if physics_time.is_paused() {
-        return;
-    }
-
-    let dt = physics_time.dt;
+    let g_value: Scalar = **g;
 
     query
         .par_iter_mut()
-        .for_each(|(mut position, mut velocity, acceleration)| {
-            integrator.0.step(
-                position.value_mut(),
-                velocity.value_mut(),
-                acceleration.value(),
-                dt,
-            );
-        });
-}
+        .for_each(|(entity, mut position, mut velocity, mass)| {
+            // Create a force evaluator for this body
+            let evaluator = BodyForceEvaluator {
+                octree,
+                body_entity: entity,
+                body_mass: mass.value(),
+                g: g_value,
+            };
 
-/// Integrate positions and velocities for bodies with history
-pub fn integrate_motions_with_history(
-    mut query: Query<
-        (
-            &mut Position,
-            &mut Velocity,
-            &Acceleration,
-            &mut KinematicHistory,
-        ),
-        With<PhysicsBody>,
-    >,
-    integrator: Res<CurrentIntegrator>,
-    physics_time: Res<PhysicsTime>,
-) {
-    if physics_time.is_paused() {
-        return;
-    }
-
-    let dt = physics_time.dt;
-
-    // Check if the integrator supports multi-step integration
-    use crate::physics::integrators::{MultiStepIntegrator, VelocityVerlet};
-
-    query
-        .par_iter_mut()
-        .for_each(|(mut position, mut velocity, acceleration, mut history)| {
-            // Store current state before integration
-            let pre_integration_state =
-                KinematicState::from_components(&position, &velocity, acceleration);
-
-            // Try to use multi-step integration if available and we have enough history
-            if let Some(multi_step) = integrator.0.as_any().downcast_ref::<VelocityVerlet>() {
-                if history.is_ready(multi_step.required_history_size()) {
-                    multi_step.step_with_history(
-                        position.value_mut(),
-                        velocity.value_mut(),
-                        acceleration.value(),
-                        dt,
-                        &history,
-                    );
-                } else {
-                    // Not enough history yet, use simple step
-                    integrator.0.step(
-                        position.value_mut(),
-                        velocity.value_mut(),
-                        acceleration.value(),
-                        dt,
-                    );
-                }
-            } else {
-                // Simple integrator
-                integrator.0.step(
-                    position.value_mut(),
-                    velocity.value_mut(),
-                    acceleration.value(),
-                    dt,
-                );
-            }
-
-            // Update history with the state before integration for next frame
-            history.push(pre_integration_state);
+            // Use the integrator with force evaluator
+            integrator
+                .0
+                .step(position.value_mut(), velocity.value_mut(), &evaluator, dt);
         });
 }
 
@@ -213,8 +152,8 @@ pub fn counteract_barycentric_drift(
     });
 }
 
-/// Spawn simulation bodies using the new physics components
-pub fn spawn_simulation_bodies(
+/// Helper function to spawn bodies with the given parameters
+pub fn spawn_bodies(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
@@ -252,10 +191,203 @@ pub fn spawn_simulation_bodies(
     }
 }
 
+/// Bevy system to spawn simulation bodies at startup
+pub fn spawn_simulation_bodies(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut rng: ResMut<SharedRng>,
+    body_count: Res<crate::resources::BodyCount>,
+    config: Res<SimulationConfig>,
+) {
+    spawn_bodies(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &mut rng,
+        **body_count,
+        &config,
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::physics::integrators::SymplecticEuler;
+    use crate::physics::integrators::{RungeKuttaFourthOrder, SymplecticEuler};
+
+    #[test]
+    fn test_rk4_integration_works() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        // Use RK4 integrator
+        app.insert_resource(CurrentIntegrator(Box::new(RungeKuttaFourthOrder)));
+        app.insert_resource(PhysicsTime::default());
+        app.insert_resource(GravitationalOctree(Octree::new(0.5, 0.01, 1e6)));
+        app.insert_resource(GravitationalConstant(1.0));
+
+        // Create a test body with known initial conditions
+        let entity = app
+            .world_mut()
+            .spawn((
+                Position::new(Vector::new(0.0, 10.0, 0.0)),
+                Mass::new(1.0),
+                Velocity::new(Vector::new(5.0, 0.0, 0.0)),
+                PhysicsBody,
+            ))
+            .id();
+
+        // Add a massive body below to generate downward force
+        app.world_mut().spawn((
+            Position::new(Vector::new(0.0, -1000.0, 0.0)),
+            Mass::new(1e15), // Very massive to generate noticeable force
+            Velocity::new(Vector::ZERO),
+            PhysicsBody,
+        ));
+
+        // Add integration system (only one now)
+        app.add_systems(Update, (rebuild_octree, integrate_motions).chain());
+
+        // Store initial position for comparison
+        let initial_pos = app
+            .world()
+            .entity(entity)
+            .get::<Position>()
+            .unwrap()
+            .value();
+        let initial_vel = app
+            .world()
+            .entity(entity)
+            .get::<Velocity>()
+            .unwrap()
+            .value();
+
+        // Run update to integrate motion
+        app.update();
+
+        // Check that position and velocity were updated (RK4 should work)
+        let position = app.world().entity(entity).get::<Position>().unwrap();
+        let velocity = app.world().entity(entity).get::<Velocity>().unwrap();
+
+        // Verify motion happened
+        assert_ne!(
+            position.value(),
+            initial_pos,
+            "Position should have changed"
+        );
+        assert_ne!(
+            velocity.value(),
+            initial_vel,
+            "Velocity should have changed"
+        );
+
+        // With gravity, y-velocity should decrease
+        assert!(
+            velocity.value().y < initial_vel.y,
+            "Y-velocity should decrease due to gravity"
+        );
+    }
+
+    #[test]
+    fn test_rk4_vs_euler_difference() {
+        use crate::physics::integrators::Integrator;
+
+        // This test demonstrates that RK4 currently produces the same results as Euler
+        // because the multi-stage system isn't implemented
+        let dt = 1.0 / 60.0;
+        let acceleration = Vector::new(0.0, -9.81, 0.0);
+
+        // Test with Euler
+        let mut euler_pos = Vector::new(0.0, 10.0, 0.0);
+        let mut euler_vel = Vector::new(5.0, 0.0, 0.0);
+        let euler_integrator = SymplecticEuler;
+        // Simple test evaluator that returns constant acceleration
+        struct TestEvaluator {
+            acceleration: Vector,
+        }
+        impl ForceEvaluator for TestEvaluator {
+            fn calc_acceleration(&self, _position: Vector) -> Vector {
+                self.acceleration
+            }
+        }
+        let evaluator = TestEvaluator { acceleration };
+
+        euler_integrator.step(&mut euler_pos, &mut euler_vel, &evaluator, dt);
+
+        // Test with RK4
+        let mut rk4_pos = Vector::new(0.0, 10.0, 0.0);
+        let mut rk4_vel = Vector::new(5.0, 0.0, 0.0);
+        let rk4_integrator = RungeKuttaFourthOrder;
+        rk4_integrator.step(&mut rk4_pos, &mut rk4_vel, &evaluator, dt);
+
+        // Print the values for debugging
+        println!("Euler pos: {:?}, vel: {:?}", euler_pos, euler_vel);
+        println!("RK4 pos: {:?}, vel: {:?}", rk4_pos, rk4_vel);
+
+        // Currently RK4 produces slightly different results than Euler
+        // The difference is small because we're using constant acceleration
+        // In a proper N-body simulation with varying forces, the difference would be larger
+
+        // For constant acceleration, RK4 should still be slightly different due to
+        // the different integration method
+        let pos_diff = (euler_pos - rk4_pos).length();
+        let vel_diff = (euler_vel - rk4_vel).length();
+
+        // There should be some difference, even if small
+        assert!(
+            pos_diff > 1e-10 || vel_diff > 1e-10,
+            "RK4 should produce different results than Euler, but got pos_diff={}, vel_diff={}",
+            pos_diff,
+            vel_diff
+        );
+    }
+
+    #[test]
+    fn test_rk4_multi_stage_integration() {
+        use crate::physics::integrators::Integrator;
+
+        // This test verifies that RK4 works correctly after removing MultiStageIntegrator.
+        // RK4 now handles all its stages internally using the ForceEvaluator.
+
+        let integrator = RungeKuttaFourthOrder;
+        let mut position = Vector::new(0.0, 10.0, 0.0);
+        let mut velocity = Vector::new(5.0, 0.0, 0.0);
+        let dt = 1.0 / 60.0;
+
+        // Simple constant acceleration evaluator
+        struct TestEvaluator;
+        impl ForceEvaluator for TestEvaluator {
+            fn calc_acceleration(&self, _position: Vector) -> Vector {
+                Vector::new(0.0, -9.81, 0.0)
+            }
+        }
+        let evaluator = TestEvaluator;
+
+        let initial_pos = position;
+        let initial_vel = velocity;
+
+        // Run one integration step
+        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+
+        // Check that position and velocity changed
+        assert_ne!(position, initial_pos, "Position should change");
+        assert_ne!(velocity, initial_vel, "Velocity should change");
+
+        // RK4 with constant acceleration should produce specific results
+        // For constant acceleration, RK4 reduces to exact solution
+        let expected_vel = initial_vel + Vector::new(0.0, -9.81, 0.0) * dt;
+        let expected_pos =
+            initial_pos + initial_vel * dt + Vector::new(0.0, -9.81, 0.0) * dt * dt * 0.5;
+
+        assert!(
+            (velocity - expected_vel).length() < 1e-10,
+            "Velocity should match expected"
+        );
+        assert!(
+            (position - expected_pos).length() < 1e-10,
+            "Position should match expected"
+        );
+    }
 
     #[test]
     fn test_integration_step() {
@@ -265,6 +397,8 @@ mod tests {
         // Add resources
         app.insert_resource(CurrentIntegrator(Box::new(SymplecticEuler)));
         app.insert_resource(PhysicsTime::default());
+        app.insert_resource(GravitationalOctree(Octree::new(0.5, 0.01, 1e6)));
+        app.insert_resource(GravitationalConstant(1.0));
 
         // Create a test body
         let entity = app
@@ -273,33 +407,42 @@ mod tests {
                 Position::new(Vector::new(0.0, 10.0, 0.0)),
                 Mass::new(1.0),
                 Velocity::new(Vector::new(5.0, 0.0, 0.0)),
-                Acceleration::new(Vector::new(0.0, -9.81, 0.0)),
                 PhysicsBody,
             ))
             .id();
 
+        // Add a massive body below to generate downward force
+        app.world_mut().spawn((
+            Position::new(Vector::new(0.0, -1000.0, 0.0)),
+            Mass::new(1e15), // Very massive to generate noticeable force
+            Velocity::new(Vector::ZERO),
+            PhysicsBody,
+        ));
+
         // Run integration
-        app.add_systems(
-            Update,
-            (integrate_motions_simple, integrate_motions_with_history),
-        );
+        app.add_systems(Update, (rebuild_octree, integrate_motions).chain());
         app.update();
 
         // Check that position and velocity were updated
         let position = app.world().entity(entity).get::<Position>().unwrap();
         let velocity = app.world().entity(entity).get::<Velocity>().unwrap();
 
-        // With dt = 1/60 and semi-implicit Euler:
-        // v_new = v_old + a * dt = (5, 0, 0) + (0, -9.81, 0) * (1/60)
-        // x_new = x_old + v_new * dt
+        // The system now uses gravitational forces from the octree
+        // We just verify that motion occurred (body moved and velocity changed)
 
-        let dt = 1.0 / 60.0;
-        let expected_vel_y = -9.81 * dt;
-        let expected_pos_x = 5.0 * dt; // Starting from x=0
-        let expected_pos_y = 10.0 + expected_vel_y * dt;
+        // X position should increase (initial velocity was 5.0 in x)
+        assert!(position.value().x > 0.0, "X position should have increased");
 
-        assert!((position.value().x - expected_pos_x).abs() < 1e-10);
-        assert!((position.value().y - expected_pos_y).abs() < 1e-10);
-        assert!((velocity.value().y - expected_vel_y).abs() < 1e-10);
+        // Y velocity should be negative (gravitational attraction from massive body below)
+        assert!(
+            velocity.value().y < 0.0,
+            "Y velocity should be negative due to gravity"
+        );
+
+        // Position should have changed from initial (0, 10, 0)
+        assert!(
+            position.value().x != 0.0 || position.value().y != 10.0,
+            "Position should have changed from initial state"
+        );
     }
 }

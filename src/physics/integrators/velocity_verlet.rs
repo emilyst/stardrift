@@ -1,7 +1,6 @@
 //! Velocity Verlet integration method
 
-use super::{Integrator, MultiStepIntegrator};
-use crate::physics::components::KinematicHistory;
+use super::{ForceEvaluator, Integrator};
 use crate::physics::math::{Scalar, Vector};
 
 /// Velocity Verlet integrator
@@ -22,68 +21,35 @@ use crate::physics::math::{Scalar, Vector};
 pub struct VelocityVerlet;
 
 impl Integrator for VelocityVerlet {
-    fn step(&self, position: &mut Vector, velocity: &mut Vector, acceleration: Vector, dt: Scalar) {
-        // Fallback: Position-Verlet when no history is available
-        // This is still second-order accurate for position
-
-        // Update position using current velocity and acceleration
-        // x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt²
-        *position += *velocity * dt + acceleration * (0.5 * dt * dt);
-
-        // Update velocity using current acceleration only
-        // v(t+dt) = v(t) + a(t)*dt
-        // Note: This is less accurate than full Velocity Verlet but maintains stability
-        *velocity += acceleration * dt;
-    }
-
-    fn name(&self) -> &str {
-        "Velocity Verlet"
-    }
-
-    fn order(&self) -> usize {
-        2
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
-impl MultiStepIntegrator for VelocityVerlet {
-    fn step_with_history(
+    fn step(
         &self,
         position: &mut Vector,
         velocity: &mut Vector,
-        acceleration: Vector,
+        evaluator: &dyn ForceEvaluator,
         dt: Scalar,
-        history: &KinematicHistory,
     ) {
-        // Get previous acceleration from history if available
-        if let Some(previous_state) = history.get(0) {
-            // Full Velocity Verlet algorithm
+        // Proper Velocity Verlet with force recalculation
+        // This is the mathematically correct implementation that conserves energy
 
-            // Update position using current velocity and acceleration
-            // x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt²
-            *position += *velocity * dt + acceleration * (0.5 * dt * dt);
+        // Calculate acceleration at current position
+        let accel_old = evaluator.calc_acceleration(*position);
 
-            // Update velocity using average of current and previous acceleration
-            // v(t+dt) = v(t) + 0.5*(a(t) + a(t-dt))*dt
-            *velocity += (acceleration + previous_state.acceleration) * (0.5 * dt);
-        } else {
-            // Fall back to simple step if no history available
-            self.step(position, velocity, acceleration, dt);
-        }
-    }
+        // Update position using current velocity and acceleration
+        // x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt²
+        *position += *velocity * dt + accel_old * (0.5 * dt * dt);
 
-    fn required_history_size(&self) -> usize {
-        1 // Only needs one previous state for the previous acceleration
+        // Calculate acceleration at new position
+        let accel_new = evaluator.calc_acceleration(*position);
+
+        // Update velocity using average of old and new acceleration
+        // v(t+dt) = v(t) + 0.5*(a(t) + a(t+dt))*dt
+        *velocity += (accel_old + accel_new) * (0.5 * dt);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::physics::components::{KinematicHistory, KinematicState};
     use crate::physics::math::Vector;
 
     #[test]
@@ -92,10 +58,18 @@ mod tests {
 
         let mut position = Vector::new(1.0, 0.0, 0.0);
         let mut velocity = Vector::new(0.0, 1.0, 0.0);
-        let acceleration = Vector::new(0.0, 0.0, -9.81);
         let dt = 0.01;
 
-        integrator.step(&mut position, &mut velocity, acceleration, dt);
+        // Test evaluator
+        struct TestEvaluator;
+        impl ForceEvaluator for TestEvaluator {
+            fn calc_acceleration(&self, _position: Vector) -> Vector {
+                Vector::new(0.0, 0.0, -9.81)
+            }
+        }
+        let evaluator = TestEvaluator;
+
+        integrator.step(&mut position, &mut velocity, &evaluator, dt);
 
         // Position should be updated with velocity and half acceleration
         let expected_x = 1.0;
@@ -111,46 +85,6 @@ mod tests {
     }
 
     #[test]
-    fn test_velocity_verlet_with_history() {
-        let integrator = VelocityVerlet;
-
-        let mut position = Vector::new(1.0, 0.0, 0.0);
-        let mut velocity = Vector::new(0.0, 1.0, 0.0);
-        let acceleration = Vector::new(0.0, 0.0, -9.81);
-        let dt = 0.01;
-
-        // Create history with previous acceleration
-        let mut history = KinematicHistory::new(KinematicState::new(
-            Vector::new(0.0, 0.0, 0.0),
-            Vector::new(0.0, 0.0, 0.0),
-            Vector::new(0.0, 0.0, 0.0),
-        ));
-        let previous_acceleration = Vector::new(0.0, 0.0, -9.0);
-        history.push(KinematicState::new(
-            Vector::new(0.9, -0.01, 0.0),
-            Vector::new(0.0, 0.9, 0.0),
-            previous_acceleration,
-        ));
-
-        integrator.step_with_history(&mut position, &mut velocity, acceleration, dt, &history);
-
-        // Position update should be the same as simple step
-        let expected_x = 1.0;
-        let expected_y = 0.01;
-        let expected_z = -0.00049;
-
-        assert!((position.x - expected_x).abs() < 1e-6);
-        assert!((position.y - expected_y).abs() < 1e-6);
-        assert!((position.z - expected_z).abs() < 1e-6);
-
-        // Velocity should use average of current and previous acceleration
-        // v(t+dt) = v(t) + 0.5*(a(t) + a(t-dt))*dt
-        // v_z = 0 + 0.5*(-9.81 + -9.0)*0.01 = -0.09405
-        let expected_vz = -0.09405;
-        assert!((velocity.z - expected_vz).abs() < 1e-6);
-    }
-
-    #[test]
     fn test_energy_conservation() {
         // Test with a simple harmonic oscillator to verify energy conservation
         let integrator = VelocityVerlet;
@@ -162,38 +96,29 @@ mod tests {
 
         let initial_energy = 0.5 * k * position.length_squared();
 
-        let mut history = KinematicHistory::new(KinematicState::new(
-            Vector::new(0.0, 0.0, 0.0),
-            Vector::new(0.0, 0.0, 0.0),
-            Vector::new(0.0, 0.0, 0.0),
-        ));
+        // Spring force evaluator
+        struct SpringEvaluator {
+            k: Scalar,
+        }
+        impl ForceEvaluator for SpringEvaluator {
+            fn calc_acceleration(&self, position: Vector) -> Vector {
+                position * (-self.k)
+            }
+        }
+        let evaluator = SpringEvaluator { k };
 
         // Simulate for many steps
         for _ in 0..1000 {
-            // Spring force: F = -kx, so a = -kx/m (assuming m=1)
-            let acceleration = position * (-k);
-
-            // Store current state before integration
-            history.push(KinematicState::new(position, velocity, acceleration));
-
             // Integrate
-            integrator.step_with_history(&mut position, &mut velocity, acceleration, dt, &history);
+            integrator.step(&mut position, &mut velocity, &evaluator, dt);
         }
 
         // Calculate final energy
         let final_energy = 0.5 * velocity.length_squared() + 0.5 * k * position.length_squared();
 
         // Energy should be conserved to within numerical precision
-        // Note: Larger error tolerance because the integrator needs warm-up period
+        // With proper Velocity Verlet, energy conservation is excellent
         let energy_error = (final_energy - initial_energy).abs() / initial_energy;
-        assert!(energy_error < 0.05, "Energy error: {}", energy_error);
-    }
-
-    #[test]
-    fn test_properties() {
-        let integrator = VelocityVerlet;
-        assert_eq!(integrator.name(), "Velocity Verlet");
-        assert_eq!(integrator.order(), 2);
-        assert_eq!(integrator.required_history_size(), 1);
+        assert!(energy_error < 0.001, "Energy error: {}", energy_error);
     }
 }

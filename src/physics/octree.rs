@@ -1,14 +1,17 @@
 use crate::physics::aabb3d::Aabb3d;
 use crate::physics::math::{Scalar, Vector};
+use bevy::prelude::Entity;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Debug, Clone, Copy)]
 pub struct OctreeBody {
     pub position: Vector,
     pub mass: Scalar,
+    pub entity: Entity,
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct OctreeStats {
     pub node_count: usize,
     pub body_count: usize,
@@ -29,6 +32,7 @@ impl Default for OctreeNodePool {
     }
 }
 
+#[allow(dead_code)]
 impl OctreeNodePool {
     pub fn new() -> Self {
         Self {
@@ -99,38 +103,28 @@ impl OctreeNodePool {
 #[derive(Debug)]
 pub struct Octree {
     pub root: Option<OctreeNode>,
-    pub theta: Scalar,                  // Barnes-Hut approximation parameter
-    pub min_distance: Scalar,           // Minimum distance for force calculation
-    pub max_force: Scalar,              // Maximum force magnitude
-    pub softening: Scalar,              // Softening parameter for smooth force transitions
-    pub leaf_threshold: usize,          // Maximum bodies per leaf node
-    min_distance_squared: Scalar,       // Cached value to avoid repeated multiplication
-    softening_squared: Scalar,          // Cached softening squared value
-    node_pool: OctreeNodePool,          // Pool for reusing node allocations
+    pub theta: Scalar, // Barnes-Hut approximation parameter
+    #[allow(dead_code)]
+    pub min_distance: Scalar, // Minimum distance for force calculation
+    pub max_force: Scalar, // Maximum force magnitude
+    pub leaf_threshold: usize, // Maximum bodies per leaf node
+    min_distance_squared: Scalar, // Cached value to avoid repeated multiplication
+    node_pool: OctreeNodePool, // Pool for reusing node allocations
     force_calculation_count: AtomicU64, // Counter for force calculations performed
 }
 
 impl Octree {
     pub fn new(theta: Scalar, min_distance: Scalar, max_force: Scalar) -> Self {
-        let softening = 0.5; // Default softening value
         Self {
             root: None,
             theta,
             min_distance,
             max_force,
-            softening,
             leaf_threshold: 4,
             min_distance_squared: min_distance * min_distance,
-            softening_squared: softening * softening,
             node_pool: OctreeNodePool::new(),
             force_calculation_count: AtomicU64::new(0),
         }
-    }
-
-    pub fn with_softening(mut self, softening: Scalar) -> Self {
-        self.softening = softening;
-        self.softening_squared = softening * softening;
-        self
     }
 
     pub fn with_leaf_threshold(mut self, leaf_threshold: usize) -> Self {
@@ -138,6 +132,7 @@ impl Octree {
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_pool_capacity(
         theta: Scalar,
         min_distance: Scalar,
@@ -145,25 +140,24 @@ impl Octree {
         internal_capacity: usize,
         external_capacity: usize,
     ) -> Self {
-        let softening = 0.5; // Default softening value
         Self {
             root: None,
             theta,
             min_distance,
             max_force,
-            softening,
             leaf_threshold: 4,
             min_distance_squared: min_distance * min_distance,
-            softening_squared: softening * softening,
             node_pool: OctreeNodePool::with_capacity(internal_capacity, external_capacity),
             force_calculation_count: AtomicU64::new(0),
         }
     }
 
+    #[allow(dead_code)]
     pub fn node_pool_stats(&self) -> (usize, usize) {
         self.node_pool.stats()
     }
 
+    #[allow(dead_code)]
     pub fn octree_stats(&self) -> OctreeStats {
         match &self.root {
             Some(root) => OctreeStats {
@@ -183,6 +177,7 @@ impl Octree {
         }
     }
 
+    #[allow(dead_code)]
     pub fn clear_node_pool(&mut self) {
         self.node_pool.clear();
     }
@@ -335,7 +330,61 @@ impl Octree {
     }
 
     #[inline]
-    pub fn calculate_force(
+    fn calculate_force_from_point(
+        &self,
+        body: &OctreeBody,
+        point_position: Vector,
+        point_mass: Scalar,
+        g: Scalar,
+    ) -> Vector {
+        let direction = point_position - body.position;
+        let distance_squared = direction.length_squared();
+
+        if distance_squared < self.min_distance_squared {
+            return Vector::ZERO;
+        }
+
+        self.force_calculation_count.fetch_add(1, Ordering::Relaxed);
+
+        let distance = distance_squared.sqrt();
+        let direction_normalized = direction / distance;
+        let force_magnitude = g * body.mass * point_mass;
+        let force_magnitude = force_magnitude.min(self.max_force);
+
+        direction_normalized * force_magnitude
+    }
+
+    /// Calculate force at an arbitrary position, excluding a specific entity
+    ///
+    /// This method allows integrators to evaluate forces at intermediate positions
+    /// during multi-stage integration. It excludes the specified entity to avoid
+    /// self-interaction when calculating forces for a body at a different position.
+    ///
+    /// # Arguments
+    /// * `position` - The position at which to evaluate the force
+    /// * `mass` - The mass of the body for which force is being calculated
+    /// * `exclude_entity` - Entity to exclude from force calculation (typically the body itself)
+    /// * `g` - Gravitational constant
+    ///
+    /// # Returns
+    /// The force vector at the given position
+    pub fn calculate_force_at_position(
+        &self,
+        position: Vector,
+        mass: Scalar,
+        exclude_entity: Entity,
+        g: Scalar,
+    ) -> Vector {
+        let temp_body = OctreeBody {
+            position,
+            mass,
+            entity: exclude_entity,
+        };
+        self.traverse_tree_for_force(&temp_body, self.root.as_ref(), g)
+    }
+
+    /// Recursively traverse the octree to calculate forces, excluding a specific entity
+    fn traverse_tree_for_force(
         &self,
         body: &OctreeBody,
         node: Option<&OctreeNode>,
@@ -358,7 +407,8 @@ impl Octree {
                 } else {
                     let mut force = Vector::ZERO;
                     children.iter().for_each(|child| {
-                        force += self.calculate_force(body, child.as_ref().map(|v| &**v), g);
+                        force +=
+                            self.traverse_tree_for_force(body, child.as_ref().map(|v| &**v), g);
                     });
                     force
                 }
@@ -366,7 +416,8 @@ impl Octree {
             Some(OctreeNode::External { bodies, .. }) => {
                 let mut force = Vector::ZERO;
                 bodies.iter().for_each(|other_body| {
-                    if other_body.position != body.position {
+                    // Exclude the specified entity from force calculation
+                    if other_body.entity != body.entity {
                         force += self.calculate_force_from_point(
                             body,
                             other_body.position,
@@ -379,35 +430,6 @@ impl Octree {
             }
             None => Vector::ZERO,
         }
-    }
-
-    #[inline]
-    fn calculate_force_from_point(
-        &self,
-        body: &OctreeBody,
-        point_position: Vector,
-        point_mass: Scalar,
-        g: Scalar,
-    ) -> Vector {
-        let direction = point_position - body.position;
-        let distance_squared = direction.length_squared();
-
-        if distance_squared < self.min_distance_squared {
-            return Vector::ZERO;
-        }
-
-        self.force_calculation_count.fetch_add(1, Ordering::Relaxed);
-
-        // Apply softening to prevent singularities and provide smooth transitions
-        // The softening parameter prevents infinite forces at very close distances
-        // by adding a small constant to the denominator: F = GMm/(r² + ε²)
-        let softened_distance_squared = distance_squared + self.softening_squared;
-        let distance = distance_squared.sqrt();
-        let direction_normalized = direction / distance;
-        let force_magnitude = g * body.mass * point_mass / softened_distance_squared;
-        let force_magnitude = force_magnitude.min(self.max_force);
-
-        direction_normalized * force_magnitude
     }
 }
 
@@ -439,10 +461,10 @@ impl OctreeNode {
         current_depth: usize,
         max_depth: Option<usize>,
     ) {
-        if let Some(max_depth) = max_depth {
-            if current_depth > max_depth {
-                return;
-            }
+        if let Some(max_depth) = max_depth
+            && current_depth > max_depth
+        {
+            return;
         }
 
         bounds.push(self.bounds());
@@ -454,6 +476,7 @@ impl OctreeNode {
         }
     }
 
+    #[allow(dead_code)]
     pub fn count_bodies(&self) -> usize {
         match self {
             OctreeNode::External { bodies, .. } => bodies.len(),
@@ -465,6 +488,7 @@ impl OctreeNode {
         }
     }
 
+    #[allow(dead_code)]
     pub fn count_nodes(&self) -> usize {
         match self {
             OctreeNode::External { .. } => 1,
@@ -478,10 +502,12 @@ impl OctreeNode {
         }
     }
 
+    #[allow(dead_code)]
     pub fn is_leaf(&self) -> bool {
         matches!(self, OctreeNode::External { .. })
     }
 
+    #[allow(dead_code)]
     pub fn total_mass(&self) -> Scalar {
         match self {
             OctreeNode::Internal { total_mass, .. } => *total_mass,
@@ -489,6 +515,7 @@ impl OctreeNode {
         }
     }
 
+    #[allow(dead_code)]
     pub fn center_of_mass(&self) -> Vector {
         match self {
             OctreeNode::Internal { center_of_mass, .. } => *center_of_mass,
@@ -524,17 +551,20 @@ mod tests {
         let body1 = OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
+            entity: Entity::from_raw(0),
         };
 
         let body2 = OctreeBody {
             position: Vector::new(10.0, 0.0, 0.0),
             mass: 1000.0,
+            entity: Entity::from_raw(1),
         };
 
         octree.build(vec![body1, body2]);
 
         // Calculate force on body1 from the octree
-        let force = octree.calculate_force(&body1, octree.root.as_ref(), 1000.0);
+        let force =
+            octree.calculate_force_at_position(body1.position, body1.mass, body1.entity, 1000.0);
 
         // The force should be non-zero and pointing towards body2 (positive x direction)
         assert!(force.length() > 0.0, "Force should be non-zero");
@@ -545,98 +575,6 @@ mod tests {
     }
 
     #[test]
-    fn test_softening_effect() {
-        // Test that softening prevents singularities at close distances
-        let mut octree_with_softening = Octree::new(0.5, 0.1, 1e10).with_softening(1.0);
-        let mut octree_without_softening = Octree::new(0.5, 0.1, 1e10).with_softening(0.0);
-
-        let body1 = OctreeBody {
-            position: Vector::new(0.0, 0.0, 0.0),
-            mass: 1000.0,
-        };
-
-        // Very close body - would cause near-singularity without softening
-        let body2 = OctreeBody {
-            position: Vector::new(0.2, 0.0, 0.0), // Just above min_distance
-            mass: 1000.0,
-        };
-
-        octree_with_softening.build(vec![body1, body2]);
-        octree_without_softening.build(vec![body1, body2]);
-
-        let force_with_softening =
-            octree_with_softening.calculate_force(&body1, octree_with_softening.root.as_ref(), 1.0);
-        let force_without_softening = octree_without_softening.calculate_force(
-            &body1,
-            octree_without_softening.root.as_ref(),
-            1.0,
-        );
-
-        // Force with softening should be smaller (less extreme) at close distances
-        assert!(
-            force_with_softening.length() < force_without_softening.length(),
-            "Softening should reduce force magnitude at close distances"
-        );
-
-        // Both forces should still be finite
-        assert!(
-            force_with_softening.is_finite(),
-            "Force with softening should be finite"
-        );
-        assert!(
-            force_without_softening.is_finite(),
-            "Force without softening should be finite"
-        );
-    }
-
-    #[test]
-    fn test_softening_smooth_transition() {
-        // Test that softening provides smooth force transitions
-        let softening = 0.5;
-        let mut octree = Octree::new(0.5, 0.1, 1e10).with_softening(softening);
-
-        let central_body = OctreeBody {
-            position: Vector::new(0.0, 0.0, 0.0),
-            mass: 1000.0,
-        };
-
-        // Test forces at various distances
-        let test_distances = vec![0.15, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0];
-        let mut previous_force_magnitude = f64::INFINITY;
-
-        for distance in test_distances {
-            let test_body = OctreeBody {
-                position: Vector::new(distance, 0.0, 0.0),
-                mass: 1.0,
-            };
-
-            octree.build(vec![central_body]);
-            let force = octree.calculate_force_from_point(
-                &test_body,
-                central_body.position,
-                central_body.mass,
-                1.0,
-            );
-
-            let force_magnitude = force.length();
-
-            // Force should decrease with distance (inverse square law with softening)
-            assert!(
-                force_magnitude < previous_force_magnitude,
-                "Force should decrease with distance: {force_magnitude} at distance {distance}",
-            );
-
-            // Force should always be finite
-            assert!(
-                force_magnitude.is_finite(),
-                "Force should be finite at distance {distance}"
-            );
-
-            previous_force_magnitude = force_magnitude;
-        }
-    }
-
-    #[test]
     fn test_octree_boundary_handling() {
         let mut octree = Octree::new(0.5, 10.0, 1e4);
 
@@ -644,17 +582,20 @@ mod tests {
         let center_body = OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
+            entity: Entity::from_raw(0),
         };
 
         // Create bodies in different octants
         let body1 = OctreeBody {
             position: Vector::new(-1.0, -1.0, -1.0),
             mass: 1000.0,
+            entity: Entity::from_raw(1),
         };
 
         let body2 = OctreeBody {
             position: Vector::new(1.0, 1.0, 1.0),
             mass: 1000.0,
+            entity: Entity::from_raw(2),
         };
 
         // Build octree with these bodies
@@ -664,7 +605,12 @@ mod tests {
         assert!(octree.root.is_some());
 
         // Calculate force on center body - should not be zero due to other bodies
-        let force = octree.calculate_force(&center_body, octree.root.as_ref(), 1000.0);
+        let force = octree.calculate_force_at_position(
+            center_body.position,
+            center_body.mass,
+            center_body.entity,
+            1000.0,
+        );
 
         // Force should be finite (not NaN or infinite)
         assert!(force.is_finite(), "Force should be finite");
@@ -679,14 +625,17 @@ mod tests {
             OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0), // Exactly at center
                 mass: 1000.0,
+                entity: Entity::from_raw(0),
             },
             OctreeBody {
                 position: Vector::new(-2.0, -2.0, -2.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(1),
             },
             OctreeBody {
                 position: Vector::new(2.0, 2.0, 2.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(2),
             },
         ];
 
@@ -751,26 +700,32 @@ mod tests {
             OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(0),
             },
             OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(1),
             },
             OctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(2),
             },
             OctreeBody {
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(3),
             },
             OctreeBody {
                 position: Vector::new(-5.0, -5.0, 5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(4),
             },
             OctreeBody {
                 position: Vector::new(5.0, 5.0, -5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(5),
             },
         ];
 
@@ -785,10 +740,12 @@ mod tests {
             OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(0),
             },
             OctreeBody {
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(1),
             },
         ];
 
@@ -819,10 +776,12 @@ mod tests {
             OctreeBody {
                 position: Vector::new(-1.0, -1.0, -1.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(0),
             },
             OctreeBody {
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(1),
             },
         ];
 
@@ -861,6 +820,7 @@ mod tests {
         let single_body = vec![OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
+            entity: Entity::from_raw(2),
         }];
 
         octree.build(single_body);
@@ -872,18 +832,22 @@ mod tests {
             OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(3),
             },
             OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(4),
             },
             OctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(5),
             },
             OctreeBody {
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(6),
             },
         ];
 
@@ -904,6 +868,7 @@ mod tests {
         let single_body = vec![OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
+            entity: Entity::from_raw(7),
         }];
 
         octree.build(single_body);
@@ -915,10 +880,12 @@ mod tests {
             OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(8),
             },
             OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(9),
             },
         ];
 
@@ -939,10 +906,12 @@ mod tests {
             OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 500.0,
+                entity: Entity::from_raw(10),
             },
             OctreeBody {
                 position: Vector::new(0.1, 0.1, 0.1),
                 mass: 300.0,
+                entity: Entity::from_raw(11),
             },
         ];
 
@@ -956,14 +925,17 @@ mod tests {
             OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(12),
             },
             OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 2000.0,
+                entity: Entity::from_raw(13),
             },
             OctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1500.0,
+                entity: Entity::from_raw(14),
             },
         ];
 
@@ -977,10 +949,12 @@ mod tests {
             OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 0.0,
+                entity: Entity::from_raw(15),
             },
             OctreeBody {
                 position: Vector::new(1.0, 1.0, 1.0),
                 mass: 0.0,
+                entity: Entity::from_raw(16),
             },
         ];
 
@@ -998,10 +972,12 @@ mod tests {
             OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(17),
             },
             OctreeBody {
                 position: Vector::new(2.0, 0.0, 0.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(18),
             },
         ];
 
@@ -1022,14 +998,17 @@ mod tests {
             OctreeBody {
                 position: Vector::new(-10.0, -10.0, -10.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(19),
             },
             OctreeBody {
                 position: Vector::new(10.0, 10.0, 10.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(20),
             },
             OctreeBody {
                 position: Vector::new(-10.0, 10.0, -10.0),
                 mass: 2000.0,
+                entity: Entity::from_raw(21),
             },
         ];
 
@@ -1053,10 +1032,12 @@ mod tests {
             OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 0.0,
+                entity: Entity::from_raw(22),
             },
             OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 0.0,
+                entity: Entity::from_raw(23),
             },
         ];
 
@@ -1079,18 +1060,22 @@ mod tests {
             OctreeBody {
                 position: Vector::new(-5.0, -5.0, -5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(24),
             },
             OctreeBody {
                 position: Vector::new(5.0, 5.0, 5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(25),
             },
             OctreeBody {
                 position: Vector::new(-5.0, 5.0, -5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(26),
             },
             OctreeBody {
                 position: Vector::new(5.0, -5.0, 5.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(27),
             },
         ];
 
@@ -1128,6 +1113,7 @@ mod tests {
         let single_body = vec![OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 1000.0,
+            entity: Entity::from_raw(28),
         }];
 
         octree.build(single_body);
@@ -1150,10 +1136,12 @@ mod tests {
             OctreeBody {
                 position: Vector::new(-3.0, -3.0, -3.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(29),
             },
             OctreeBody {
                 position: Vector::new(3.0, 3.0, 3.0),
                 mass: 1000.0,
+                entity: Entity::from_raw(30),
             },
         ];
 
@@ -1203,14 +1191,17 @@ mod tests {
             OctreeBody {
                 position: Vector::new(0.0, 0.0, 0.0),
                 mass: 100.0,
+                entity: Entity::from_raw(31),
             },
             OctreeBody {
                 position: Vector::new(10.0, 0.0, 0.0),
                 mass: 200.0,
+                entity: Entity::from_raw(32),
             },
             OctreeBody {
                 position: Vector::new(0.0, 10.0, 0.0),
                 mass: 300.0,
+                entity: Entity::from_raw(33),
             },
         ];
 
@@ -1234,7 +1225,12 @@ mod tests {
 
         // Test force calculation counter
         let initial_count = stats.force_calculation_count;
-        let _force = octree.calculate_force(&bodies[0], octree.root.as_ref(), 1.0);
+        let _force = octree.calculate_force_at_position(
+            bodies[0].position,
+            bodies[0].mass,
+            bodies[0].entity,
+            1.0,
+        );
         let updated_stats = octree.octree_stats();
         assert!(
             updated_stats.force_calculation_count > initial_count,
@@ -1250,6 +1246,7 @@ mod tests {
         let single_body = vec![OctreeBody {
             position: Vector::new(0.0, 0.0, 0.0),
             mass: 100.0,
+            entity: Entity::from_raw(34),
         }];
         octree.build(single_body);
         let stats = octree.octree_stats();
@@ -1262,18 +1259,22 @@ mod tests {
             OctreeBody {
                 position: Vector::new(-10.0, -10.0, -10.0),
                 mass: 100.0,
+                entity: Entity::from_raw(35),
             },
             OctreeBody {
                 position: Vector::new(10.0, 10.0, 10.0),
                 mass: 100.0,
+                entity: Entity::from_raw(36),
             },
             OctreeBody {
                 position: Vector::new(-10.0, 10.0, -10.0),
                 mass: 100.0,
+                entity: Entity::from_raw(37),
             },
             OctreeBody {
                 position: Vector::new(10.0, -10.0, 10.0),
                 mass: 100.0,
+                entity: Entity::from_raw(38),
             },
         ];
         octree.build(multiple_bodies);

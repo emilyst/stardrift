@@ -3,7 +3,7 @@
 //! This module contains handlers for SimulationCommand events including
 //! restart, pause/resume, and screenshot functionality.
 
-use super::physics::spawn_simulation_bodies;
+use super::physics::spawn_bodies;
 use crate::physics::components::PhysicsBody;
 use crate::physics::resources::PhysicsTime;
 use crate::prelude::*;
@@ -56,7 +56,7 @@ pub fn handle_restart_simulation_event(
 
         *rng = SharedRng::default();
 
-        spawn_simulation_bodies(
+        spawn_bodies(
             &mut commands,
             &mut meshes,
             &mut materials,
@@ -205,7 +205,7 @@ mod tests {
     fn test_pause_toggle_physics_time() {
         let mut app = create_test_app();
         app.add_plugins(bevy_panorbit_camera::PanOrbitCameraPlugin);
-        app.add_plugins(crate::plugins::simulation::SimulationPlugin);
+        app.add_plugins(crate::plugins::simulation::SimulationPlugin::new());
 
         app.world_mut()
             .insert_resource(NextState::Pending(AppState::Running));
@@ -236,7 +236,7 @@ mod tests {
     fn test_screenshot_command_with_ui_hiding() {
         let mut app = create_test_app();
         app.add_plugins(bevy_panorbit_camera::PanOrbitCameraPlugin);
-        app.add_plugins(crate::plugins::simulation::SimulationPlugin);
+        app.add_plugins(crate::plugins::simulation::SimulationPlugin::new());
 
         // Add screenshot config and state
         let mut config = SimulationConfig::default();

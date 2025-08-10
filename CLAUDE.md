@@ -40,6 +40,7 @@ cargo test test_specific_function  # Run specific test
 - Devlogs: `docs/log/YYYY-MM-DD_NNN_*.md`
 - Benchmarks: `benches/`
 - Integration tests: `tests/`
+- Integrators: `src/physics/integrators/`
 
 ### Pre-Commit Workflow
 
@@ -137,11 +138,12 @@ cargo test --test '*'
 cargo bench
 
 # Run specific benchmark groups
-cargo bench construction       # Octree construction scaling
-cargo bench physics           # Force calculation performance
-cargo bench realworld         # Real-world scenarios
-cargo bench configurations    # Profile-based testing
-cargo bench characteristics   # Special performance patterns
+cargo bench integrators      # Integrator accuracy and performance
+cargo bench construction     # Octree construction scaling
+cargo bench physics          # Force calculation performance
+cargo bench realworld        # Real-world scenarios
+cargo bench configurations   # Profile-based testing
+cargo bench characteristics  # Special performance patterns
 
 # After running benchmarks, create devlog if performance changed significantly
 ```
@@ -217,9 +219,34 @@ fn handle_simulation_commands(
 - Benchmark tests for performance-critical code
 - Example: `cargo test test_trails_visibility_toggle`
 
+### Integrator Configuration
+
+Configure integrators in `config.toml`:
+
+```toml
+[physics]
+integrator.type = "velocity_verlet"  # Options: symplectic_euler, velocity_verlet, heun, runge_kutta_second_order_midpoint, runge_kutta_fourth_order
+```
+
+Available aliases for convenience:
+
+- `euler` → `symplectic_euler`
+- `verlet` → `velocity_verlet`
+- `rk4` → `runge_kutta_fourth_order`
+- `rk2` → `runge_kutta_second_order_midpoint`
+- `midpoint` → `runge_kutta_second_order_midpoint`
+- `improved_euler` → `heun`
+
+To list available integrators:
+
+```bash
+./target/debug/stardrift --list-integrators
+```
+
 ## Project Structure
 
-See README.md for the detailed project structure. The codebase uses a plugin-based architecture with all major features implemented as self-contained Bevy plugins under `src/plugins/`.
+See README.md for the detailed project structure. The codebase uses a plugin-based architecture with all major features
+implemented as self-contained Bevy plugins under `src/plugins/`.
 
 ## Sub-Agent Usage
 
@@ -230,7 +257,6 @@ Use specialized agents for complex tasks:
 1. **architecture-guardian** - When adding new modules or reviewing design decisions
 2. **project-documentation-maintainer** - For devlog and CHANGELOG updates
 3. **bevy-ecs-architect** - For ECS patterns, system design, plugin architecture
-
 
 ### Example Agent Workflow
 

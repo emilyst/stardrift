@@ -13,7 +13,7 @@ fn generate_test_bodies_spherical(count: usize, seed: u64, radius: Scalar) -> Ve
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let mut bodies = Vec::with_capacity(count);
 
-    for _ in 0..count {
+    for i in 0..count {
         // Proper spherical coordinate generation (matching physics::math::random_unit_vector)
         let theta = rng.random_range(0.0..=2.0 * consts::PI);
         let phi = libm::acos(rng.random_range(-1.0..=1.0));
@@ -26,16 +26,14 @@ fn generate_test_bodies_spherical(count: usize, seed: u64, radius: Scalar) -> Ve
         );
 
         let mass = rng.random_range(1.0..100.0);
-        bodies.push(OctreeBody { position, mass });
+        bodies.push(OctreeBody {
+            position,
+            mass,
+            entity: bevy::ecs::entity::Entity::from_raw(i as u32),
+        });
     }
 
     bodies
-}
-
-/// Load configuration from file
-fn load_config(profile: &str) -> SimulationConfig {
-    let config_path = format!("configs/benchmark_profiles/{profile}.toml");
-    SimulationConfig::load_or_default(&config_path)
 }
 
 // =============================================================================
@@ -121,9 +119,10 @@ fn bench_force_calculation_scaling(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
             let test_body = &bodies[count / 2]; // Middle body
             b.iter(|| {
-                let force = octree.calculate_force(
-                    black_box(test_body),
-                    None,
+                let force = octree.calculate_force_at_position(
+                    black_box(test_body.position),
+                    black_box(test_body.mass),
+                    black_box(test_body.entity),
                     physics.gravitational_constant,
                 );
                 black_box(force);
@@ -155,7 +154,12 @@ fn bench_theta_accuracy_tradeoff(c: &mut Criterion) {
                 b.iter(|| {
                     let mut total_force = Vector::ZERO;
                     for body in &bodies {
-                        let force = octree.calculate_force(black_box(body), None, g);
+                        let force = octree.calculate_force_at_position(
+                            black_box(body.position),
+                            black_box(body.mass),
+                            black_box(body.entity),
+                            g,
+                        );
                         total_force += force;
                     }
                     black_box(total_force);
@@ -195,52 +199,16 @@ fn bench_realworld_60fps_target(c: &mut Criterion) {
 
                 let mut forces = Vec::with_capacity(bodies.len());
                 for body in &bodies {
-                    let force = octree.calculate_force(body, None, physics.gravitational_constant);
+                    let force = octree.calculate_force_at_position(
+                        body.position,
+                        body.mass,
+                        body.entity,
+                        physics.gravitational_constant,
+                    );
                     forces.push(force);
                 }
 
                 black_box((octree, forces));
-            });
-        });
-    }
-
-    group.finish();
-}
-
-// =============================================================================
-// Configuration Profile Benchmarks
-// =============================================================================
-
-fn bench_configuration_profiles(c: &mut Criterion) {
-    let mut group = c.benchmark_group("config_profiles");
-
-    let profiles = ["fast_inaccurate", "balanced", "high_accuracy"];
-    let body_count = 1_000;
-    let bodies = generate_test_bodies_spherical(body_count, 42, 300.0);
-
-    for profile in &profiles {
-        let config = load_config(profile);
-        let physics = &config.physics;
-
-        group.throughput(Throughput::Elements(body_count as u64));
-        group.bench_with_input(BenchmarkId::new("profile", profile), profile, |b, _| {
-            b.iter(|| {
-                let mut octree = Octree::new(
-                    physics.octree_theta,
-                    physics.force_calculation_min_distance,
-                    physics.force_calculation_max_force,
-                )
-                .with_leaf_threshold(physics.octree_leaf_threshold);
-
-                octree.build(black_box(bodies.iter().copied()));
-
-                let mut total_force = Vector::ZERO;
-                for body in &bodies {
-                    let force = octree.calculate_force(body, None, physics.gravitational_constant);
-                    total_force += force;
-                }
-
-                black_box((octree, total_force));
             });
         });
     }
@@ -291,14 +259,6 @@ criterion_group!(
 
 criterion_group!(realworld, bench_realworld_60fps_target);
 
-criterion_group!(configurations, bench_configuration_profiles);
-
 criterion_group!(characteristics, bench_stats_overhead);
 
-criterion_main!(
-    construction,
-    physics,
-    realworld,
-    configurations,
-    characteristics
-);
+criterion_main!(construction, physics, realworld, characteristics);

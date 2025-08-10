@@ -23,7 +23,12 @@ significant changes.
 - **Barnes-Hut octree algorithm**: Efficient O(N log N) gravitational force calculations using spatial partitioning
 - **High precision**: Uses f64 floating-point precision for increased accuracy
 - **Custom physics engine**: Purpose-built component-based physics system optimized for n-body simulation
-- **Custom motion integration**: Multiple integration methods (Symplectic Euler, Velocity Verlet) with multi-step support
+- **Multiple numerical integrators**: Five integration methods with different accuracy/performance trade-offs:
+  - Symplectic Euler (1st order, symplectic)
+  - Velocity Verlet (2nd order, symplectic)
+  - Heun/Improved Euler (2nd order)
+  - Runge-Kutta 2nd Order Midpoint (2nd order)
+  - Runge-Kutta 4th Order (4th order)
 - **Parallel processing**: Multi-threaded physics calculations for performance optimization
 - **Dynamic barycenter tracking**: Real-time calculation and visualization of the system's center of mass
 
@@ -75,11 +80,10 @@ The following features are planned for future development:
 
 1. **Enhanced Diagnostics** - Comprehensive physics accuracy monitoring including energy conservation (Hamiltonian),
    angular momentum tracking, virial ratio, and performance profiling
-2. **Additional Integrators** - Support for more integration schemes (PEFRL, Yoshida, etc.) beyond the current
-   symplectic Euler method
-3. **Collision Detection** - Implement collision detection and response between bodies with configurable restitution
-4. **Configurable Simulation Speed** - Time scaling controls for faster or slower simulation playback
-5. **UI rework** - Replacing the current provisional UI with something more friendly and comprehensive
+2. **Collision Detection** - Implement collision detection and response between bodies with configurable restitution
+3. **Configurable Simulation Speed** - Time scaling controls for faster or slower simulation playback
+4. **UI rework** - Replacing the current provisional UI with something more friendly and comprehensive
+5. **Advanced Integrators** - Support for specialized integration schemes (PEFRL, Yoshida symplectic methods, etc.)
 
 ## Installation
 
@@ -185,21 +189,20 @@ The simulation uses a TOML-based configuration file.
 
 ##### Physics Configuration (`[physics]`)
 
-| Field                                        | Type          | Default              | Description                                                                                  |
-|----------------------------------------------|---------------|----------------------|----------------------------------------------------------------------------------------------|
-| `gravitational_constant`                     | `f64`         | `500.0`              | Strength of gravitational attraction between bodies                                          |
-| `body_count`                                 | `usize`       | `100`                | Number of celestial bodies to simulate                                                       |
-| `octree_theta`                               | `f64`         | `0.5`                | Barnes-Hut accuracy parameter (0.0-2.0). Lower = more accurate, slower                       |
-| `octree_leaf_threshold`                      | `usize`       | `2`                  | Maximum bodies per octree leaf before subdivision                                            |
-| `body_distribution_sphere_radius_multiplier` | `f32`         | `100.0`              | Multiplier for initial body distribution radius                                              |
-| `body_distribution_min_distance`             | `f32`         | `0.001`              | Minimum distance between bodies at spawn                                                     |
-| `min_body_radius`                            | `f32`         | `1.0`                | Minimum radius for generated bodies                                                          |
-| `max_body_radius`                            | `f32`         | `2.0`                | Maximum radius for generated bodies                                                          |
-| `force_calculation_min_distance`             | `f64`         | `2.0`                | Minimum distance for force calculations (prevents singularities)                             |
-| `force_calculation_max_force`                | `f64`         | `10000.0`            | Maximum force magnitude to prevent instabilities                                             |
-| `force_calculation_softening`                | `f64`         | `0.5`                | Softening parameter for smooth force transitions (prevents singularities at close distances) |
-| `initial_seed`                               | `Option<u64>` | `None`               | Random seed for deterministic generation. None = random                                      |
-| `integrator`                                 | `string`      | `"velocity_verlet"`  | Numerical integration method (`"symplectic_euler"`, `"velocity_verlet"`)                     |
+| Field                                        | Type          | Default             | Description                                                              |
+|----------------------------------------------|---------------|---------------------|--------------------------------------------------------------------------|
+| `gravitational_constant`                     | `f64`         | `500.0`             | Strength of gravitational attraction between bodies                      |
+| `body_count`                                 | `usize`       | `100`               | Number of celestial bodies to simulate                                   |
+| `octree_theta`                               | `f64`         | `0.5`               | Barnes-Hut accuracy parameter (0.0-2.0). Lower = more accurate, slower   |
+| `octree_leaf_threshold`                      | `usize`       | `2`                 | Maximum bodies per octree leaf before subdivision                        |
+| `body_distribution_sphere_radius_multiplier` | `f32`         | `100.0`             | Multiplier for initial body distribution radius                          |
+| `body_distribution_min_distance`             | `f32`         | `0.001`             | Minimum distance between bodies at spawn                                 |
+| `min_body_radius`                            | `f32`         | `1.0`               | Minimum radius for generated bodies                                      |
+| `max_body_radius`                            | `f32`         | `2.0`               | Maximum radius for generated bodies                                      |
+| `force_calculation_min_distance`             | `f64`         | `2.0`               | Minimum distance for force calculations (prevents singularities)         |
+| `force_calculation_max_force`                | `f64`         | `10000.0`           | Maximum force magnitude to prevent instabilities                         |
+| `initial_seed`                               | `Option<u64>` | `None`              | Random seed for deterministic generation. None = random                  |
+| `integrator.type`                            | `string`      | `"velocity_verlet"` | Numerical integration method (see Integrator Types below) |
 
 ##### Initial Velocity Configuration (`[physics.initial_velocity]`)
 
@@ -210,6 +213,14 @@ The simulation uses a TOML-based configuration file.
 | `max_speed`       | `f64`    | `20.0`     | Maximum initial speed                                          |
 | `velocity_mode`   | `string` | `"random"` | Velocity distribution mode (see below)                         |
 | `tangential_bias` | `f64`    | `0.7`      | Bias toward tangential motion (0.0-1.0) when using Random mode |
+
+**Integrator Types:** (use snake_case in config)
+
+- `"symplectic_euler"` - 1st order symplectic integrator (aliases: `"euler"`, `"semi_implicit_euler"`)
+- `"velocity_verlet"` - 2nd order symplectic integrator, excellent energy conservation (alias: `"verlet"`)
+- `"heun"` - 2nd order explicit integrator, also known as Improved Euler (alias: `"improved_euler"`)
+- `"runge_kutta_second_order_midpoint"` - 2nd order explicit integrator (aliases: `"rk2"`, `"midpoint"`)
+- `"runge_kutta_fourth_order"` - 4th order explicit integrator, highest accuracy (alias: `"rk4"`)
 
 **Velocity Modes:** (use snake_case in config, e.g. `"random"`, `"orbital"`)
 
@@ -373,9 +384,12 @@ src/
     ├── resources.rs              # Physics resources (GravitationalConstant, PhysicsTime)
     ├── math.rs                   # Mathematical functions and physics calculations
     ├── integrators/              # Numerical integration methods
-    │   ├── mod.rs                # Integrator traits and exports
-    │   ├── symplectic_euler.rs  # Symplectic Euler integrator
-    │   └── velocity_verlet.rs   # Velocity Verlet integrator (2nd order, symplectic)
+    │   ├── mod.rs                # Integrator traits and ForceEvaluator
+    │   ├── registry.rs           # Integrator registry with aliases
+    │   ├── symplectic_euler.rs  # Symplectic Euler integrator (1st order, symplectic)
+    │   ├── velocity_verlet.rs   # Velocity Verlet integrator (2nd order, symplectic)
+    │   ├── heun.rs              # Heun/Improved Euler integrator (2nd order)
+    │   └── runge_kutta.rs       # Runge-Kutta 2nd and 4th order integrators
     ├── aabb3d.rs                 # Axis-aligned bounding box implementation
     └── octree.rs                 # Barnes-Hut octree implementation
 ```
@@ -410,7 +424,7 @@ src/
 - **`physics/math.rs`**: Mathematical utilities for sphere distribution and physics calculations
 - **`physics/components.rs`**: Core physics components (Mass, Velocity, Acceleration)
 - **`physics/resources.rs`**: Physics resources and runtime configuration
-- **`physics/integrators/`**: Numerical integration methods with multi-step integrator support
+- **`physics/integrators/`**: Five numerical integration methods with force evaluator architecture and registry system
 - **`config.rs`**: Centralized configuration management with serialization support
 - **`states.rs`**: Application state management and transitions
 - **`physics/octree.rs`**: High-performance Barnes-Hut spatial partitioning implementation

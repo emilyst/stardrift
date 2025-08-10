@@ -10,14 +10,17 @@ mod actions;
 mod components;
 mod physics;
 
+use crate::physics::integrators::VelocityVerlet;
+use crate::physics::integrators::registry::IntegratorRegistry;
+use crate::physics::resources::CurrentIntegrator;
 use actions::{
     ScreenshotState, handle_restart_simulation_event, handle_take_screenshot_event,
     handle_toggle_pause_simulation_event, process_screenshot_capture,
 };
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use physics::{
-    PhysicsSet, calculate_accelerations, counteract_barycentric_drift, integrate_motions_simple,
-    integrate_motions_with_history, rebuild_octree, sync_transform_from_position,
+    PhysicsSet, counteract_barycentric_drift, integrate_motions, rebuild_octree,
+    sync_transform_from_position,
 };
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -27,16 +30,39 @@ pub enum SimulationSet {
     Camera,
 }
 
-pub struct SimulationPlugin;
+pub struct SimulationPlugin {
+    config: Option<SimulationConfig>,
+}
+
+impl SimulationPlugin {
+    pub fn new() -> Self {
+        Self { config: None }
+    }
+
+    pub fn with_config(config: SimulationConfig) -> Self {
+        Self {
+            config: Some(config),
+        }
+    }
+}
+
+impl Default for SimulationPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Plugin for SimulationPlugin {
     fn build(&self, app: &mut App) {
-        let config = SimulationConfig::load_from_user_config();
+        let config = self
+            .config
+            .clone()
+            .unwrap_or_else(SimulationConfig::load_from_user_config);
 
         match toml::to_string_pretty(&config) {
             Ok(toml_string) => {
-                info!("=== Current Configuration (TOML) ===\n{}", toml_string);
-                info!("=== End Configuration ===");
+                debug!("=== Current Configuration (TOML) ===\n{}", toml_string);
+                debug!("=== End Configuration ===");
             }
             Err(e) => {
                 error!("Failed to serialize configuration to TOML: {}", e);
@@ -54,22 +80,28 @@ impl Plugin for SimulationPlugin {
                 config.physics.force_calculation_min_distance,
                 config.physics.force_calculation_max_force,
             )
-            .with_softening(config.physics.force_calculation_softening)
             .with_leaf_threshold(config.physics.octree_leaf_threshold),
         ));
         app.init_resource::<ScreenshotState>();
 
-        // Set up integrator based on configuration
-        use crate::config::IntegratorType;
-        use crate::physics::integrators::{SymplecticEuler, VelocityVerlet};
-        use crate::physics::resources::CurrentIntegrator;
-
+        // Create integrator using flexible configuration system
+        let registry = IntegratorRegistry::new();
         let integrator: Box<dyn crate::physics::integrators::Integrator + Send + Sync> =
-            match config.physics.integrator {
-                IntegratorType::SymplecticEuler => Box::new(SymplecticEuler),
-                IntegratorType::VelocityVerlet => Box::new(VelocityVerlet),
+            match registry.create(
+                &config.physics.integrator.integrator_type,
+                &config.physics.integrator.params,
+            ) {
+                Ok(integrator) => integrator,
+                Err(e) => {
+                    warn!(
+                        "Failed to create integrator '{}': {}. Falling back to velocity_verlet",
+                        config.physics.integrator.integrator_type, e
+                    );
+                    Box::new(VelocityVerlet)
+                }
             };
         app.insert_resource(CurrentIntegrator(integrator));
+        app.init_resource::<IntegratorRegistry>();
 
         app.init_resource::<crate::physics::resources::PhysicsTime>();
 
@@ -87,7 +119,6 @@ impl Plugin for SimulationPlugin {
             FixedUpdate,
             (
                 PhysicsSet::BuildOctree,
-                PhysicsSet::CalculateAccelerations,
                 PhysicsSet::IntegrateMotions,
                 PhysicsSet::SyncTransforms,
                 PhysicsSet::CorrectBarycentricDrift,
@@ -105,33 +136,13 @@ impl Plugin for SimulationPlugin {
                 .chain(),
         );
 
-        app.add_systems(
-            Startup,
-            |mut commands: Commands,
-             mut meshes: ResMut<Assets<Mesh>>,
-             mut materials: ResMut<Assets<StandardMaterial>>,
-             mut rng: ResMut<SharedRng>,
-             body_count: Res<BodyCount>,
-             config: Res<SimulationConfig>| {
-                physics::spawn_simulation_bodies(
-                    &mut commands,
-                    &mut meshes,
-                    &mut materials,
-                    &mut rng,
-                    **body_count,
-                    &config,
-                );
-            },
-        );
+        app.add_systems(Startup, physics::spawn_simulation_bodies);
 
         app.add_systems(
             FixedUpdate,
             (
                 rebuild_octree.in_set(PhysicsSet::BuildOctree),
-                calculate_accelerations
-                    .in_set(PhysicsSet::CalculateAccelerations)
-                    .run_if(in_state(AppState::Running)),
-                (integrate_motions_simple, integrate_motions_with_history)
+                integrate_motions
                     .in_set(PhysicsSet::IntegrateMotions)
                     .run_if(in_state(AppState::Running)),
                 sync_transform_from_position

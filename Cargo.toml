@@ -31,6 +31,7 @@ chrono = "0.4"
 [dependencies]
 bevy_panorbit_camera = "0.27.0"
 chrono = "0.4"
+clap = { version = "4.5", features = ["derive"] }
 config = "0.15.12"
 directories = "6.0.0"
 libm = "0.2.15"
@@ -99,11 +100,11 @@ pre-release-replacements = [
 ]
 
 [[bench]]
-name = "octree_benchmarks"
+name = "octree"
 harness = false
 
 [[bench]]
-name = "integrator_benchmarks"
+name = "integrators"
 harness = false
 
 [lints.clippy]
