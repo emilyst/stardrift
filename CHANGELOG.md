@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Default physics configuration values updated for better stability
+    - `gravitational_constant` reduced from `500.0` to `0.01` for more realistic forces
+    - `octree_leaf_threshold` increased from `2` to `4` for better performance/accuracy balance
+    - `min_speed` increased from `5.0` to `10.0` for more dynamic initial velocities
+    - `max_speed` increased from `20.0` to `100.0` to match new gravitational scaling
+
 - **BREAKING**: Integrator configuration format updated
     - Configuration now uses `integrator.type` instead of `integrator` field
     - All integrator names use snake_case format (e.g., `"velocity_verlet"` instead of `"VelocityVerlet"`)

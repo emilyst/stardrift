@@ -191,10 +191,10 @@ The simulation uses a TOML-based configuration file.
 
 | Field                                        | Type          | Default             | Description                                                              |
 |----------------------------------------------|---------------|---------------------|--------------------------------------------------------------------------|
-| `gravitational_constant`                     | `f64`         | `500.0`             | Strength of gravitational attraction between bodies                      |
+| `gravitational_constant`                     | `f64`         | `0.01`              | Strength of gravitational attraction between bodies                      |
 | `body_count`                                 | `usize`       | `100`               | Number of celestial bodies to simulate                                   |
 | `octree_theta`                               | `f64`         | `0.5`               | Barnes-Hut accuracy parameter (0.0-2.0). Lower = more accurate, slower   |
-| `octree_leaf_threshold`                      | `usize`       | `2`                 | Maximum bodies per octree leaf before subdivision                        |
+| `octree_leaf_threshold`                      | `usize`       | `4`                 | Maximum bodies per octree leaf before subdivision                        |
 | `body_distribution_sphere_radius_multiplier` | `f32`         | `100.0`             | Multiplier for initial body distribution radius                          |
 | `body_distribution_min_distance`             | `f32`         | `0.001`             | Minimum distance between bodies at spawn                                 |
 | `min_body_radius`                            | `f32`         | `1.0`               | Minimum radius for generated bodies                                      |
@@ -209,8 +209,8 @@ The simulation uses a TOML-based configuration file.
 | Field             | Type     | Default    | Description                                                    |
 |-------------------|----------|------------|----------------------------------------------------------------|
 | `enabled`         | `bool`   | `true`     | Whether bodies spawn with initial velocities                   |
-| `min_speed`       | `f64`    | `5.0`      | Minimum initial speed                                          |
-| `max_speed`       | `f64`    | `20.0`     | Maximum initial speed                                          |
+| `min_speed`       | `f64`    | `10.0`     | Minimum initial speed                                          |
+| `max_speed`       | `f64`    | `100.0`    | Maximum initial speed                                          |
 | `velocity_mode`   | `string` | `"random"` | Velocity distribution mode (see below)                         |
 | `tangential_bias` | `f64`    | `0.7`      | Bias toward tangential motion (0.0-1.0) when using Random mode |
 
