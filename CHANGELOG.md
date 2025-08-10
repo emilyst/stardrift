@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Maintains backwards compatibility with existing configurations
     - Provides control over trade-off between visual stability and scientific accuracy
 
+### Changed
+
+- **BREAKING**: Restructured project to use Cargo workspace architecture
+    - Main application moved to `crates/stardrift/` directory
+    - Procedural macros moved to `crates/stardrift-macros/` directory
+    - Created library target (`lib.rs`) alongside binary for better modularity
+    - Assets relocated to `crates/stardrift/assets/` for proper encapsulation
+    - Enables integration testing, benchmarking, and future extensibility
+    - GitHub Actions workflows updated to support workspace structure
+    - Commands now require package specification: `cargo run -p stardrift`
+
 ## [0.0.31] - 2025-08-10
 
 ## [0.0.30] - 2025-08-10

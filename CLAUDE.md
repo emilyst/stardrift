@@ -8,10 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 cargo check              # Quick compilation check
-cargo fmt                # Format code
-cargo test               # Run all tests
-cargo clippy             # Lint check
-cargo run                # Run the simulation
+cargo fmt --all          # Format all workspace code
+cargo test --all         # Run all workspace tests
+cargo clippy --all       # Lint check all crates
+cargo run -p stardrift   # Run the simulation
 cargo bench              # Run benchmarks
 ```
 
@@ -38,9 +38,11 @@ cargo test test_specific_function  # Run specific test
 
 - Config: `config.toml`
 - Devlogs: `docs/log/YYYY-MM-DD_NNN_*.md`
-- Benchmarks: `benches/`
-- Integration tests: `tests/`
-- Integrators: `src/physics/integrators/`
+- Main crate: `crates/stardrift/`
+- Proc macros: `crates/stardrift-macros/`
+- Benchmarks: `crates/stardrift/benches/`
+- Integration tests: `crates/stardrift/tests/`
+- Integrators: `crates/stardrift/src/physics/integrators/`
 
 ### Pre-Commit Workflow
 
@@ -169,7 +171,7 @@ Located in `configs/benchmark_profiles/`:
 
 To add a new numerical integrator to the simulation:
 
-1. **Create the integrator implementation** (`src/physics/integrators/your_integrator.rs`)
+1. **Create the integrator implementation** (`crates/stardrift/src/physics/integrators/your_integrator.rs`)
    ```rust
    use super::{ForceEvaluator, Integrator};
    use crate::physics::math::{Scalar, Vector};
@@ -190,11 +192,11 @@ To add a new numerical integrator to the simulation:
    }
    ```
 
-2. **Export from module** (`src/physics/integrators/mod.rs`)
+2. **Export from module** (`crates/stardrift/src/physics/integrators/mod.rs`)
     - Add module declaration: `pub mod your_integrator;`
     - Add public export: `pub use your_integrator::YourIntegrator;`
 
-3. **Register in the registry** (`src/physics/integrators/registry.rs`)
+3. **Register in the registry** (`crates/stardrift/src/physics/integrators/registry.rs`)
     - Import the integrator: Add to the `use super::{...}` statement
     - Add to `get()` method match statement
     - Add to `list_available()` method
@@ -331,8 +333,25 @@ To list available integrators:
 
 ## Project Structure
 
-See README.md for the detailed project structure. The codebase uses a plugin-based architecture with all major features
-implemented as self-contained Bevy plugins under `src/plugins/`.
+This project uses a Cargo workspace layout:
+
+```
+stardrift/
+├── Cargo.toml              # Workspace configuration
+├── crates/
+│   ├── stardrift/          # Main application
+│   │   ├── Cargo.toml
+│   │   ├── src/            # Source code
+│   │   ├── benches/        # Benchmarks
+│   │   └── tests/          # Integration tests
+│   └── stardrift-macros/   # Proc macros for configuration
+│       ├── Cargo.toml
+│       └── src/
+└── docs/                   # Documentation and devlogs
+```
+
+The main codebase uses a plugin-based architecture with all major features
+implemented as self-contained Bevy plugins under `crates/stardrift/src/plugins/`.
 
 ## Sub-Agent Usage
 
@@ -351,3 +370,5 @@ Use specialized agents for complex tasks:
 2. Implement feature
 3. Use project-documentation-maintainer to create devlog
 ```
+- Always use the dev profile for any checks or compilation. The release profile has optimizations that make it take a very long time.
+- This project is a one-person side project made in my spare time for enjoyment. It's pre-release and not yet meant for general consumption. Backwards compatibility during changes is a low priority.

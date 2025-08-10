@@ -129,10 +129,10 @@ cd stardrift
 
 ```bash
 # Development build (faster compilation)
-cargo run
+cargo run -p stardrift
 
 # Release build (optimized performance)
-cargo run --release
+cargo run -p stardrift --release
 ```
 
 ### WebAssembly Build
@@ -420,53 +420,43 @@ If no configuration file exists, the application uses default values.
 
 ## Project Structure
 
-The codebase uses a pure self-contained plugin architecture designed for maintainability, scalability, and clear
-separation of concerns. Each plugin owns all its functionality internally with event-driven communication between
-plugins:
+Stardrift uses a Cargo workspace with a plugin-based architecture built on Bevy ECS (Entity Component System).
 
-```
-src/
-├── main.rs                       # Application entry point and plugin registration
-├── prelude.rs                    # Common imports and type aliases
-├── config.rs                     # Configuration management system
-├── states.rs                     # Application state management
-├── events.rs                     # Centralized event definitions for inter-plugin communication
-├── plugins/                      # Self-contained Bevy plugins
-│   ├── mod.rs
-│   ├── simulation/               # Core simulation plugin with submodules
-│   │   ├── mod.rs                # Plugin definition and system coordination
-│   │   ├── physics.rs            # Physics system orchestration and integration
-│   │   ├── actions.rs            # Simulation control and action handling
-│   │   └── components.rs         # PhysicsBodyBundle and component definitions
-│   ├── controls.rs               # Complete input handling and UI structure
-│   ├── camera.rs                 # Camera setup and positioning logic
-│   ├── visualization.rs          # Debug rendering (octree wireframe, barycenter gizmo)
-│   ├── simulation_diagnostics.rs # Simulation metrics and diagnostics plugin
-│   ├── diagnostics_hud.rs        # Real-time HUD display plugin (feature-gated)
-│   ├── embedded_assets.rs        # Embedded asset management plugin
-│   ├── trails.rs                 # Trail rendering plugin with Trail component
-│   └── attribution.rs            # Version attribution display plugin
-├── resources/                    # Bevy ECS resources (global state)
-│   └── mod.rs                    # Shared resources like RNG, constants, and octree
-├── utils/                        # Utility modules
-│   ├── mod.rs
-│   └── color.rs                  # Color and material utilities
-└── physics/                      # Physics-specific modules
-    ├── mod.rs
-    ├── components.rs             # Physics components (Mass, Velocity, Acceleration)
-    ├── resources.rs              # Physics resources (GravitationalConstant, PhysicsTime)
-    ├── math.rs                   # Mathematical functions and physics calculations
-    ├── integrators/              # Numerical integration methods
-    │   ├── mod.rs                # Integrator traits and ForceEvaluator
-    │   ├── registry.rs           # Integrator registry with aliases
-    │   ├── symplectic_euler.rs   # Symplectic Euler integrator (1st order, symplectic)
-    │   ├── velocity_verlet.rs    # Velocity Verlet integrator (2nd order, symplectic)
-    │   ├── heun.rs               # Heun/Improved Euler integrator (2nd order)
-    │   ├── runge_kutta.rs        # Runge-Kutta 2nd and 4th order integrators
-    │   └── pefrl.rs              # PEFRL integrator (4th order, symplectic)
-    ├── aabb3d.rs                 # Axis-aligned bounding box implementation
-    └── octree.rs                 # Barnes-Hut octree implementation
-```
+### Workspace Layout
+
+- **`crates/stardrift/`** - Main application
+    - `src/plugins/` - Self-contained feature plugins
+    - `src/physics/` - Physics engine and integrators
+    - `benches/` - Performance benchmarks
+    - `tests/` - Integration tests
+- **`crates/stardrift-macros/`** - Procedural macros for configuration
+
+### Architecture
+
+The project follows a **pure plugin architecture** where each major feature is a self-contained Bevy plugin:
+
+- **Simulation Plugin** - Core physics simulation and body management
+- **Controls Plugin** - Input handling and UI
+- **Visualization Plugin** - Debug rendering (octree wireframe, barycenter)
+- **Trails Plugin** - Particle trail rendering
+- **Diagnostics Plugin** - Performance metrics and HUD display
+- **Camera Plugin** - 3D camera controls
+- **Attribution Plugin** - Version and credit display
+
+Plugins communicate through:
+
+- **Events** - Command pattern for user actions
+- **Resources** - Shared state (RNG, constants, octree)
+- **Components** - ECS data (Mass, Velocity, Trail, etc.)
+
+### Physics Engine
+
+The physics module implements:
+
+- **Barnes-Hut Algorithm** - Octree-based force calculation for O(n log n) performance
+- **Multiple Integrators** - Symplectic and Runge-Kutta methods
+- **Collision Detection** - Body merging on contact
+- **Barycenter Tracking** - System center of mass calculation
 
 ### Design Principles
 

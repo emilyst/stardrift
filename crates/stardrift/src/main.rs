@@ -1,34 +1,22 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
-mod config;
-mod events;
-mod physics;
-mod plugins;
-mod prelude;
-mod resources;
-mod states;
-mod utils;
-
-#[cfg(test)]
-mod test_utils;
-
 use clap::Parser;
 
-use crate::plugins::trails::TrailsPlugin;
-use crate::plugins::{
-    attribution::AttributionPlugin, camera::CameraPlugin, controls::ControlsPlugin,
-    embedded_assets::EmbeddedAssetsPlugin, simulation::SimulationPlugin,
-    visualization::VisualizationPlugin,
-};
-use crate::plugins::{
-    diagnostics_hud::DiagnosticsHudPlugin, simulation_diagnostics::SimulationDiagnosticsPlugin,
-};
-use crate::prelude::*;
 use bevy::diagnostic::{
     EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin, SystemInformationDiagnosticsPlugin,
 };
 use bevy::{app::TaskPoolThreadAssignmentPolicy, tasks::available_parallelism, window::WindowMode};
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
+use stardrift::plugins::trails::TrailsPlugin;
+use stardrift::plugins::{
+    attribution::AttributionPlugin, camera::CameraPlugin, controls::ControlsPlugin,
+    embedded_assets::EmbeddedAssetsPlugin, simulation::SimulationPlugin,
+    visualization::VisualizationPlugin,
+};
+use stardrift::plugins::{
+    diagnostics_hud::DiagnosticsHudPlugin, simulation_diagnostics::SimulationDiagnosticsPlugin,
+};
+use stardrift::prelude::*;
 
 /// Stardrift - N-body gravity simulation
 #[derive(Parser, Debug)]
@@ -72,7 +60,7 @@ fn main() {
 
     // Handle list-integrators flag
     if args.list_integrators {
-        use crate::physics::integrators::registry::IntegratorRegistry;
+        use stardrift::physics::integrators::registry::IntegratorRegistry;
         let registry = IntegratorRegistry::new();
         println!("Available integrators:");
         for name in registry.list_available() {
@@ -110,7 +98,7 @@ fn main() {
 
     if let Some(integrator_type) = args.integrator {
         println!("Using integrator: {}", integrator_type);
-        config.physics.integrator = config::IntegratorConfig {
+        config.physics.integrator = stardrift::config::IntegratorConfig {
             integrator_type,
             params: Default::default(),
         };

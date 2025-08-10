@@ -1,0 +1,5 @@
+error: ConfigDefaults cannot be derived for unit structs
+ --> tests/ui/unit_struct.rs:5:1
+  |
+5 | struct UnitStruct;
+  | ^^^^^^^^^^^^^^^^^^

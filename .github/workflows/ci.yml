@@ -31,10 +31,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Run tests
-        run: cargo test --lib --all-features
+        run: cargo test --workspace --lib --all-features
 
       - name: Run doctests
-        run: cargo test --doc --all-features
+        run: cargo test --workspace --doc --all-features
 
   lint:
     name: Lint
@@ -54,7 +54,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Check formatting
-        run: cargo fmt -- --check
+        run: cargo fmt --all -- --check
 
   check:
     name: Check
@@ -72,7 +72,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Check code
-        run: cargo check
+        run: cargo check --workspace
 
   wasm-check:
     name: WebAssembly Check
@@ -92,4 +92,4 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Check WebAssembly build
-        run: cargo check --target wasm32-unknown-unknown
+        run: cargo check -p stardrift --target wasm32-unknown-unknown
