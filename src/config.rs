@@ -14,6 +14,7 @@ pub struct SimulationConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
 pub struct PhysicsConfig {
     pub gravitational_constant: Scalar,
     pub body_count: usize,
@@ -33,6 +34,7 @@ pub struct PhysicsConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
 pub struct InitialVelocityConfig {
     pub enabled: bool,
     pub min_speed: Scalar,
@@ -64,6 +66,7 @@ pub enum VelocityMode {
 
 /// Flexible integrator configuration
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
 pub struct IntegratorConfig {
     /// Type of integrator (e.g., "velocity_verlet")
     #[serde(rename = "type")]
@@ -105,6 +108,7 @@ impl Default for PhysicsConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
 pub struct RenderingConfig {
     pub min_temperature: f32,
     pub max_temperature: f32,
@@ -126,6 +130,7 @@ impl Default for RenderingConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
 pub struct TrailConfig {
     // Length & Timing
     pub trail_length_seconds: f32,
@@ -193,6 +198,7 @@ pub enum TaperCurve {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
 pub struct ScreenshotConfig {
     pub directory: Option<String>,
     pub filename_prefix: String,
