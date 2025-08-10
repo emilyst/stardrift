@@ -22,7 +22,7 @@ cargo bench              # Run benchmarks
 | New feature     | ✓      | ✓              | ✓      |
 | Bug fix         | ✓      | ✓ (if visible) |        |
 | Performance     | ✓      |                |        |
-| Config option   | ✓      | ✓              |        |
+| Config option   | ✓      | ✓              | ✓      |
 | Breaking change | ✓      | ✓              | ✓      |
 
 ### Quick Testing
@@ -191,42 +191,42 @@ To add a new numerical integrator to the simulation:
    ```
 
 2. **Export from module** (`src/physics/integrators/mod.rs`)
-   - Add module declaration: `pub mod your_integrator;`
-   - Add public export: `pub use your_integrator::YourIntegrator;`
+    - Add module declaration: `pub mod your_integrator;`
+    - Add public export: `pub use your_integrator::YourIntegrator;`
 
 3. **Register in the registry** (`src/physics/integrators/registry.rs`)
-   - Import the integrator: Add to the `use super::{...}` statement
-   - Add to `get()` method match statement
-   - Add to `list_available()` method
-   - Add any convenient aliases in `new()` method
+    - Import the integrator: Add to the `use super::{...}` statement
+    - Add to `get()` method match statement
+    - Add to `list_available()` method
+    - Add any convenient aliases in `new()` method
 
 4. **Update documentation**
-   - **README.md**: 
-     - Add to the integrator list in features and configuration sections
-     - Add comprehensive description in the "Integrator Selection Guide" section including:
-       - Category (Symplectic or Explicit)
-       - Order of accuracy
-       - Pros and cons
-       - Use cases
-       - Algorithm description
-       - Update the performance comparison table with force evaluations/step and characteristics
-   - **CHANGELOG.md**: Add entry under "Added" in [Unreleased] section
-   - **Create devlog**: `docs/log/YYYY-MM-DD_NNN_integrator_name.md`
+    - **README.md**:
+        - Add to the integrator list in features and configuration sections
+        - Add comprehensive description in the "Integrator Selection Guide" section including:
+            - Category (Symplectic or Explicit)
+            - Order of accuracy
+            - Pros and cons
+            - Use cases
+            - Algorithm description
+            - Update the performance comparison table with force evaluations/step and characteristics
+    - **CHANGELOG.md**: Add entry under "Added" in [Unreleased] section
+    - **Create devlog**: `docs/log/YYYY-MM-DD_NNN_integrator_name.md`
 
 5. **Add tests and benchmarks** (optional but recommended)
-   - Unit tests in the integrator file
-   - Integration tests in `tests/`
-   - Add to `benches/integrators.rs`:
-     - Include in imports at top of file
-     - Add to `get_integrators()` function
-     - Add to `get_integrators_with_order()` with expected convergence order
-   - The benchmark suite automatically tests:
-     - Performance (raw speed)
-     - Accuracy (harmonic oscillator, Kepler orbits)
-     - Convergence order verification
-     - Energy conservation
-     - Work-precision tradeoffs
-     - N-body realistic scenarios
+    - Unit tests in the integrator file
+    - Integration tests in `tests/`
+    - Add to `benches/integrators.rs`:
+        - Include in imports at top of file
+        - Add to `get_integrators()` function
+        - Add to `get_integrators_with_order()` with expected convergence order
+    - The benchmark suite automatically tests:
+        - Performance (raw speed)
+        - Accuracy (harmonic oscillator, Kepler orbits)
+        - Convergence order verification
+        - Energy conservation
+        - Work-precision tradeoffs
+        - N-body realistic scenarios
 
 6. **Verify the integration**
    ```bash
@@ -305,6 +305,7 @@ integrator.type = "velocity_verlet"  # Options: symplectic_euler, velocity_verle
 ```
 
 Available integrators:
+
 - `symplectic_euler` - 1st order symplectic, good energy conservation
 - `velocity_verlet` - 2nd order symplectic, excellent energy conservation
 - `heun` - 2nd order predictor-corrector (improved Euler)
