@@ -201,7 +201,15 @@ To add a new numerical integrator to the simulation:
    - Add any convenient aliases in `new()` method
 
 4. **Update documentation**
-   - **README.md**: Add to the integrator list in features and configuration sections
+   - **README.md**: 
+     - Add to the integrator list in features and configuration sections
+     - Add comprehensive description in the "Integrator Selection Guide" section including:
+       - Category (Symplectic or Explicit)
+       - Order of accuracy
+       - Pros and cons
+       - Use cases
+       - Algorithm description
+       - Update the performance comparison table with force evaluations/step and characteristics
    - **CHANGELOG.md**: Add entry under "Added" in [Unreleased] section
    - **Create devlog**: `docs/log/YYYY-MM-DD_NNN_integrator_name.md`
 

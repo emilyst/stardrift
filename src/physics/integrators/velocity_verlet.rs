@@ -6,17 +6,14 @@ use crate::physics::math::{Scalar, Vector};
 /// Velocity Verlet integrator
 ///
 /// A second-order symplectic integrator that provides excellent energy conservation
-/// for Hamiltonian systems like gravitational n-body simulations. When historical
-/// acceleration data is available, it uses the standard Velocity Verlet algorithm.
-/// Otherwise, it falls back to a position-Verlet method using only current acceleration.
+/// for Hamiltonian systems like gravitational n-body simulations. This implementation
+/// uses the standard Velocity Verlet algorithm with force recalculation.
 ///
-/// The algorithm with history:
-/// 1. Update position: x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt²
-/// 2. Update velocity: v(t+dt) = v(t) + 0.5*(a(t) + a(t-dt))*dt
-///
-/// Without history (fallback):
-/// 1. Update position: x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt²
-/// 2. Update velocity: v(t+dt) = v(t) + a(t)*dt
+/// The algorithm:
+/// 1. Calculate acceleration at current position: a(t)
+/// 2. Update position: x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt²
+/// 3. Calculate acceleration at new position: a(t+dt)
+/// 4. Update velocity: v(t+dt) = v(t) + 0.5*(a(t) + a(t+dt))*dt
 #[derive(Debug, Clone, Default)]
 pub struct VelocityVerlet;
 

@@ -224,6 +224,69 @@ The simulation uses a TOML-based configuration file.
 - `"runge_kutta_fourth_order"` - 4th order explicit integrator, highest accuracy (alias: `"rk4"`)
 - `"pefrl"` - 4th order symplectic integrator, superior long-term energy conservation (alias: `"forest_ruth"`)
 
+##### Integrator Selection Guide
+
+The choice of integrator significantly affects simulation accuracy, stability, and performance. Here's a detailed guide:
+
+**Symplectic Integrators** (Energy-conserving, ideal for long-term simulations):
+
+- **`symplectic_euler`** (1st order)
+    - **Pros**: Fast, simple, better energy conservation than explicit Euler
+    - **Cons**: Low accuracy, requires small timesteps
+    - **Use Case**: Quick visualizations where accuracy isn't critical
+    - **Algorithm**: Updates velocity before position to preserve phase space volume
+
+- **`velocity_verlet`** (2nd order) - **RECOMMENDED DEFAULT**
+    - **Pros**: Excellent energy conservation, time-reversible, good stability
+    - **Cons**: Requires force recalculation (2 evaluations per step)
+    - **Use Case**: General n-body simulations, especially long-term orbital mechanics
+    - **Algorithm**: Uses average of accelerations at start and end of timestep
+
+- **`pefrl`** (4th order)
+    - **Pros**: Superior long-term energy conservation, high accuracy, symplectic
+    - **Cons**: Most expensive (4 force evaluations per step)
+    - **Use Case**: Scientific simulations requiring long-term stability
+    - **Algorithm**: Optimized Forest-Ruth composition with minimal error coefficients
+
+**Explicit Integrators** (General-purpose, not energy-conserving):
+
+- **`heun`** (2nd order)
+    - **Pros**: Better accuracy than Euler, predictor-corrector approach
+    - **Cons**: Energy drift in long simulations
+    - **Use Case**: Short-term simulations with smooth forces
+    - **Algorithm**: Averages derivatives at start and predicted endpoint
+
+- **`runge_kutta_second_order_midpoint`** (2nd order)
+    - **Pros**: Good accuracy for smooth problems
+    - **Cons**: Energy drift, not suitable for long-term simulations
+    - **Use Case**: Non-Hamiltonian systems or short integration periods
+    - **Algorithm**: Evaluates derivative at the midpoint of timestep
+
+- **`runge_kutta_fourth_order`** (4th order)
+    - **Pros**: High accuracy for smooth functions
+    - **Cons**: Energy drift, expensive (4 evaluations), can be unstable for stiff problems
+    - **Use Case**: High-accuracy requirements over short timeframes
+    - **Algorithm**: Weighted average of 4 intermediate derivative evaluations
+
+**Performance vs. Accuracy Trade-offs**:
+
+| Integrator                          | Order | Force Evals/Step | Energy Conservation | Relative Speed |
+|-------------------------------------|-------|------------------|---------------------|----------------|
+| `symplectic_euler`                  | 1     | 1                | Good                | Fastest        |
+| `heun`                              | 2     | 2                | Poor                | Fast           |
+| `runge_kutta_second_order_midpoint` | 2     | 2                | Poor                | Fast           |
+| `velocity_verlet`                   | 2     | 2                | Excellent           | Fast           |
+| `runge_kutta_fourth_order`          | 4     | 4                | Poor                | Slow           |
+| `pefrl`                             | 4     | 4                | Superior            | Slow           |
+
+**Choosing Guidelines**:
+
+1. **Default Choice**: Use `velocity_verlet` for most n-body simulations
+2. **Long-term stability**: Use `pefrl` for scientific accuracy over extended periods
+3. **Performance critical**: Use `symplectic_euler` with smaller timesteps
+4. **High accuracy, short-term**: Use `runge_kutta_fourth_order`
+5. **Energy conservation important**: Always choose symplectic integrators
+
 **Velocity Modes:** (use snake_case in config, e.g. `"random"`, `"orbital"`)
 
 - `"random"` - Random velocity vectors with optional tangential bias
