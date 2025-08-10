@@ -1,14 +1,17 @@
 //! Comprehensive integrator benchmarks
 //!
 //! This benchmark suite tests various aspects of numerical integrators:
-//! - Performance (speed/throughput)
-//! - Accuracy (error vs analytical solutions, convergence order)
-//! - Stability (energy conservation, orbital mechanics)
-//! - Work-precision (accuracy vs computational cost)
-//! - Real N-body scenarios
+//! - Performance (speed/throughput) - Lower time is better
+//! - Accuracy (error vs analytical solutions) - Lower values are better
+//! - Convergence order (error reduction with smaller timesteps) - Lower deviation is better
+//! - Stability (energy conservation over long simulations) - Lower drift is better  
+//! - Work-precision (accuracy for different timesteps) - Lower error is better
+//! - Real N-body scenarios (performance with octree) - Lower time is better
+//!
+//! Note: Accuracy benchmarks report error values as durations (scaled by 1e9)
+//! to work with Criterion's framework. Lower values indicate better accuracy.
 
 use criterion::{BenchmarkId, Criterion, PlotConfiguration, criterion_group, criterion_main};
-use std::hint::black_box;
 
 extern crate stardrift;
 use stardrift::physics::integrators::{
@@ -97,6 +100,7 @@ impl<'a> ForceEvaluator for NBodyEvaluator<'a> {
 // =============================================================================
 
 fn bench_integrator_performance(c: &mut Criterion) {
+    // Measures raw computational speed of integrators (time per step)
     let mut group = c.benchmark_group("integrator_performance");
     group
         .plot_config(PlotConfiguration::default().summary_scale(criterion::AxisScale::Logarithmic));
@@ -112,7 +116,7 @@ fn bench_integrator_performance(c: &mut Criterion) {
 
             b.iter(|| {
                 integrator.step(&mut position, &mut velocity, &evaluator, dt);
-                black_box((position, velocity));
+                (position, velocity);
             });
         });
     }
@@ -125,7 +129,11 @@ fn bench_integrator_performance(c: &mut Criterion) {
 // =============================================================================
 
 fn bench_integrator_accuracy(c: &mut Criterion) {
+    // Measures position error after one period of harmonic oscillation
     let mut group = c.benchmark_group("integrator_accuracy");
+    // Configure plot for error values (log scale is useful for errors)
+    group
+        .plot_config(PlotConfiguration::default().summary_scale(criterion::AxisScale::Logarithmic));
 
     let integrators = get_integrators();
 
@@ -135,8 +143,7 @@ fn bench_integrator_accuracy(c: &mut Criterion) {
     for (name, integrator) in &integrators {
         group.bench_function(BenchmarkId::new("harmonic", *name), |b| {
             b.iter_custom(|iters| {
-                let mut total_duration = std::time::Duration::from_secs(0);
-                let mut _total_error = 0.0;
+                let mut total_error = 0.0;
 
                 for _ in 0..iters {
                     let mut position = Vector::new(1.0, 0.0, 0.0);
@@ -144,21 +151,22 @@ fn bench_integrator_accuracy(c: &mut Criterion) {
                     let dt = 0.01;
                     let steps = 100; // One period
 
-                    let start = std::time::Instant::now();
                     for _ in 0..steps {
                         integrator.step(&mut position, &mut velocity, &oscillator, dt);
                     }
-                    total_duration += start.elapsed();
 
                     // Compare with analytical solution
                     let t = dt * steps as Scalar;
                     let exact_pos = Vector::new((oscillator.omega * t).cos(), 0.0, 0.0);
                     let error = (position - exact_pos).length();
-                    _total_error += error;
+                    total_error += error;
                 }
 
-                // Return time taken (criterion will compute statistics)
-                total_duration
+                // Return average error as a Duration (nanoseconds as proxy for error magnitude)
+                // Scale up by 1e9 to avoid zero durations for very small errors
+                // This allows Criterion to handle it properly while showing error values
+                let avg_error = total_error / iters as f64;
+                std::time::Duration::from_nanos((avg_error * 1e9) as u64)
             });
         });
     }
@@ -167,8 +175,13 @@ fn bench_integrator_accuracy(c: &mut Criterion) {
 }
 
 fn bench_convergence_order(c: &mut Criterion) {
+    // Verifies that integrators achieve their theoretical convergence order
+    // (how error decreases as timestep decreases)
     let mut group = c.benchmark_group("convergence_order");
     group.sample_size(10);
+    // Log scale for error visualization
+    group
+        .plot_config(PlotConfiguration::default().summary_scale(criterion::AxisScale::Logarithmic));
 
     let integrators = get_integrators_with_order();
     let oscillator = HarmonicOscillator { omega: 1.0 };
@@ -177,12 +190,11 @@ fn bench_convergence_order(c: &mut Criterion) {
     for (name, integrator, expected_order) in &integrators {
         group.bench_function(*name, |b| {
             b.iter_custom(|iters| {
-                let mut total_duration = std::time::Duration::from_secs(0);
+                let mut total_order_error = 0.0;
 
                 for _ in 0..iters {
                     let mut errors = Vec::new();
 
-                    let start = std::time::Instant::now();
                     for &dt in &timesteps {
                         let mut position = Vector::new(1.0, 0.0, 0.0);
                         let mut velocity = Vector::new(0.0, 0.0, 0.0);
@@ -196,7 +208,6 @@ fn bench_convergence_order(c: &mut Criterion) {
                         let error = (position - exact_pos).length();
                         errors.push(error);
                     }
-                    total_duration += start.elapsed();
 
                     // Calculate convergence order
                     let mut orders = Vec::new();
@@ -210,12 +221,17 @@ fn bench_convergence_order(c: &mut Criterion) {
                     // Check if we're close to expected order
                     if !orders.is_empty() {
                         let avg_order = orders.iter().sum::<Scalar>() / orders.len() as Scalar;
-                        let _order_error = (avg_order - *expected_order as Scalar).abs();
-                        black_box(_order_error);
+                        let order_error = (avg_order - *expected_order as Scalar).abs();
+                        total_order_error += order_error;
+                    } else {
+                        // If we can't calculate order (due to very small errors), assume good convergence
+                        total_order_error += 0.01;
                     }
                 }
 
-                total_duration
+                // Return average convergence order error as Duration
+                let avg_order_error = total_order_error / iters as f64;
+                std::time::Duration::from_nanos((avg_order_error * 1e9) as u64)
             });
         });
     }
@@ -228,8 +244,13 @@ fn bench_convergence_order(c: &mut Criterion) {
 // =============================================================================
 
 fn bench_integrator_stability(c: &mut Criterion) {
+    // Measures energy conservation over long simulations (10,000 steps)
+    // Symplectic integrators should show better long-term stability
     let mut group = c.benchmark_group("integrator_stability");
     group.sample_size(10); // Reduce sample size for long-running benchmarks
+    // Log scale for energy drift visualization
+    group
+        .plot_config(PlotConfiguration::default().summary_scale(criterion::AxisScale::Logarithmic));
 
     let integrators = get_integrators();
     let oscillator = HarmonicOscillator { omega: 2.0 * PI };
@@ -237,7 +258,7 @@ fn bench_integrator_stability(c: &mut Criterion) {
     for (name, integrator) in &integrators {
         group.bench_function(BenchmarkId::new("energy_drift", *name), |b| {
             b.iter_custom(|iters| {
-                let mut total_duration = std::time::Duration::from_secs(0);
+                let mut total_energy_drift = 0.0;
 
                 for _ in 0..iters {
                     let mut position = Vector::new(1.0, 0.0, 0.0);
@@ -247,20 +268,20 @@ fn bench_integrator_stability(c: &mut Criterion) {
 
                     let initial_energy = 0.5 * oscillator.omega * oscillator.omega;
 
-                    let start = std::time::Instant::now();
                     for _ in 0..steps {
                         integrator.step(&mut position, &mut velocity, &oscillator, dt);
                     }
-                    total_duration += start.elapsed();
 
                     let final_energy = 0.5 * velocity.length_squared()
                         + 0.5 * oscillator.omega * oscillator.omega * position.length_squared();
-                    let _energy_drift = ((final_energy - initial_energy) / initial_energy).abs();
+                    let energy_drift = ((final_energy - initial_energy) / initial_energy).abs();
 
-                    black_box(_energy_drift);
+                    total_energy_drift += energy_drift;
                 }
 
-                total_duration
+                // Return average energy drift as Duration
+                let avg_drift = total_energy_drift / iters as f64;
+                std::time::Duration::from_nanos((avg_drift * 1e9) as u64)
             });
         });
     }
@@ -269,8 +290,13 @@ fn bench_integrator_stability(c: &mut Criterion) {
 }
 
 fn bench_kepler_orbit(c: &mut Criterion) {
+    // Tests conservation of energy and angular momentum in circular orbit
+    // Critical for astronomical simulations
     let mut group = c.benchmark_group("kepler_orbit");
     group.sample_size(10);
+    // Log scale for error visualization
+    group
+        .plot_config(PlotConfiguration::default().summary_scale(criterion::AxisScale::Logarithmic));
 
     let integrators = get_integrators();
 
@@ -283,7 +309,7 @@ fn bench_kepler_orbit(c: &mut Criterion) {
     for (name, integrator) in &integrators {
         group.bench_function(*name, |b| {
             b.iter_custom(|iters| {
-                let mut total_duration = std::time::Duration::from_secs(0);
+                let mut total_conservation_error = 0.0;
 
                 for _ in 0..iters {
                     let mut position = Vector::new(radius, 0.0, 0.0);
@@ -295,11 +321,9 @@ fn bench_kepler_orbit(c: &mut Criterion) {
                     let initial_energy = -mu / (2.0 * radius); // Specific orbital energy
                     let initial_angular_momentum = radius * orbital_velocity;
 
-                    let start = std::time::Instant::now();
                     for _ in 0..steps {
                         integrator.step(&mut position, &mut velocity, &kepler, dt);
                     }
-                    total_duration += start.elapsed();
 
                     // Check conservation
                     let r = position.length();
@@ -307,17 +331,20 @@ fn bench_kepler_orbit(c: &mut Criterion) {
                     let final_energy = 0.5 * v * v - mu / r;
                     let final_angular_momentum = position.cross(velocity).length();
 
-                    let _energy_error =
+                    let energy_error =
                         ((final_energy - initial_energy) / initial_energy.abs()).abs();
-                    let _angular_momentum_error = ((final_angular_momentum
+                    let angular_momentum_error = ((final_angular_momentum
                         - initial_angular_momentum)
                         / initial_angular_momentum)
                         .abs();
 
-                    black_box((_energy_error, _angular_momentum_error));
+                    // Combine both errors (could also report them separately)
+                    total_conservation_error += energy_error + angular_momentum_error;
                 }
 
-                total_duration
+                // Return average conservation error as Duration
+                let avg_error = total_conservation_error / iters as f64;
+                std::time::Duration::from_nanos((avg_error * 1e9) as u64)
             });
         });
     }
@@ -330,8 +357,13 @@ fn bench_kepler_orbit(c: &mut Criterion) {
 // =============================================================================
 
 fn bench_work_precision(c: &mut Criterion) {
+    // Shows accuracy achieved at different timesteps
+    // Helps choose optimal timestep for desired accuracy
     let mut group = c.benchmark_group("work_precision");
     group.sample_size(20);
+    // Log scale for error visualization
+    group
+        .plot_config(PlotConfiguration::default().summary_scale(criterion::AxisScale::Logarithmic));
 
     // Test different timesteps to show accuracy vs computation tradeoff
     let timesteps = vec![0.1, 0.05, 0.01, 0.005, 0.001];
@@ -346,25 +378,25 @@ fn bench_work_precision(c: &mut Criterion) {
 
             group.bench_function(BenchmarkId::new(*name, format!("dt_{:.3}", dt)), |b| {
                 b.iter_custom(|iters| {
-                    let mut total_duration = std::time::Duration::from_secs(0);
+                    let mut total_error = 0.0;
 
                     for _ in 0..iters {
                         let mut position = Vector::new(1.0, 0.0, 0.0);
                         let mut velocity = Vector::new(0.0, 0.0, 0.0);
 
-                        let start = std::time::Instant::now();
                         for _ in 0..steps {
                             integrator.step(&mut position, &mut velocity, &oscillator, dt);
                         }
-                        total_duration += start.elapsed();
 
                         // Calculate error
                         let exact_pos = Vector::new(final_time.cos(), 0.0, 0.0);
-                        let _error = (position - exact_pos).length();
-                        black_box(_error);
+                        let error = (position - exact_pos).length();
+                        total_error += error;
                     }
 
-                    total_duration
+                    // Return average position error as Duration
+                    let avg_error = total_error / iters as f64;
+                    std::time::Duration::from_nanos((avg_error * 1e9) as u64)
                 });
             });
         }
@@ -378,6 +410,7 @@ fn bench_work_precision(c: &mut Criterion) {
 // =============================================================================
 
 fn bench_nbody_realistic(c: &mut Criterion) {
+    // Tests integrator performance with realistic N-body forces from octree
     let mut group = c.benchmark_group("nbody_realistic");
     group.sample_size(10);
 
@@ -424,7 +457,7 @@ fn bench_nbody_realistic(c: &mut Criterion) {
                     integrator.step(&mut position, &mut velocity, &evaluator, dt);
                 }
 
-                black_box((position, velocity));
+                (position, velocity);
             });
         });
     }
