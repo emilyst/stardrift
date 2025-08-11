@@ -127,8 +127,21 @@ jobs:
           # Ad-hoc sign the app bundle
           codesign --force --deep --sign - "$BUNDLE_DIR"
           
-          # Create DMG from app bundle
-          hdiutil create -volname "Stardrift" -srcfolder "$BUNDLE_DIR" -ov -format UDZO stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
+          # Create a temporary directory for DMG contents
+          DMG_DIR="dmg-contents"
+          mkdir -p "$DMG_DIR"
+          
+          # Copy app bundle to DMG directory
+          cp -r "$BUNDLE_DIR" "$DMG_DIR/"
+          
+          # Create Applications symlink
+          ln -s /Applications "$DMG_DIR/Applications"
+          
+          # Create DMG from directory with app bundle and Applications symlink
+          hdiutil create -volname "Stardrift" -srcfolder "$DMG_DIR" -ov -format UDZO stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
+          
+          # Clean up temporary directory
+          rm -rf "$DMG_DIR"
           
           # Ad-hoc sign the DMG
           codesign --force --sign - stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg

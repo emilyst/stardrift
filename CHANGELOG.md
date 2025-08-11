@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- macOS DMG files now include an Applications folder symlink for easier drag-and-drop installation
+
 ## [0.0.32] - 2025-08-11
 
 ### Added
