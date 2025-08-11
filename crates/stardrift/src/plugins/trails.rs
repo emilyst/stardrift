@@ -349,6 +349,7 @@ impl TrailsPlugin {
         app_state: Res<State<AppState>>,
         time: Res<Time>,
         config: Res<SimulationConfig>,
+        trails_visible: Res<TrailsVisualizationSettings>,
     ) {
         let is_paused = matches!(app_state.get(), AppState::Paused);
         let current_time = time.elapsed_secs();
@@ -387,8 +388,18 @@ impl TrailsPlugin {
                 ..default()
             });
 
+            // Set visibility based on current trails visibility setting
+            let visibility = if trails_visible.enabled {
+                Visibility::Visible
+            } else {
+                Visibility::Hidden
+            };
+
+            let mut bundle = TrailBundle::new(entity, trail, trail_material);
+            bundle.visibility = visibility;
+
             commands.spawn((
-                TrailBundle::new(entity, trail, trail_material),
+                bundle,
                 // TEMPORARY: Disable frustum culling for trails
                 // This prevents trails from being culled incorrectly while we debug bounding volume issues
                 // Frustum culling is still having problems with dynamic trail geometry despite AABB computation
