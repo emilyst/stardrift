@@ -5,7 +5,6 @@ use super::{
     VelocityVerlet,
 };
 use bevy::prelude::*;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Registry for runtime integrator registration
@@ -37,11 +36,7 @@ impl IntegratorRegistry {
         self.aliases.insert(alias.to_string(), target.to_string());
     }
 
-    pub fn create(
-        &self,
-        name: &str,
-        _params: &IntegratorParams,
-    ) -> Result<Box<dyn Integrator>, String> {
+    pub fn create(&self, name: &str) -> Result<Box<dyn Integrator>, String> {
         let resolved_name = self.aliases.get(name).map(|s| s.as_str()).unwrap_or(name);
 
         // Simple match statement instead of factory pattern
@@ -93,10 +88,6 @@ impl Default for IntegratorRegistry {
     }
 }
 
-/// Parameter placeholder for future integrator configuration
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct IntegratorParams {}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,16 +102,15 @@ mod tests {
         assert!(available.contains(&"velocity_verlet".to_string()));
 
         // Test creating integrators
-        let params = IntegratorParams::default();
-        let _ = registry.create("symplectic_euler", &params).unwrap();
-        let _ = registry.create("velocity_verlet", &params).unwrap();
+        let _ = registry.create("symplectic_euler").unwrap();
+        let _ = registry.create("velocity_verlet").unwrap();
 
         // Test aliases
-        let _ = registry.create("euler", &params).unwrap();
-        let _ = registry.create("verlet", &params).unwrap();
+        let _ = registry.create("euler").unwrap();
+        let _ = registry.create("verlet").unwrap();
 
         // Test unknown integrator
-        let result = registry.create("unknown_integrator", &params);
+        let result = registry.create("unknown_integrator");
         assert!(result.is_err());
     }
 }

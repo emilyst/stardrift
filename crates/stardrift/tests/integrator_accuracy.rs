@@ -3,7 +3,7 @@
 //! Tests each integrator against known analytical solutions and verifies
 //! expected order of convergence.
 
-use stardrift::physics::integrators::registry::{IntegratorParams, IntegratorRegistry};
+use stardrift::physics::integrators::registry::IntegratorRegistry;
 use stardrift::physics::integrators::{
     ForceEvaluator, Heun, Integrator, RungeKuttaFourthOrder, RungeKuttaSecondOrderMidpoint,
     SymplecticEuler, VelocityVerlet,
@@ -379,8 +379,7 @@ fn test_registry_integrator_creation() {
     ];
 
     for name in integrator_names {
-        let params = IntegratorParams::default();
-        let integrator = registry.create(name, &params);
+        let integrator = registry.create(name);
         assert!(integrator.is_ok(), "Failed to create integrator: {}", name);
 
         let _integrator = integrator.unwrap();
@@ -397,18 +396,18 @@ fn test_all_integrators_harmonic_oscillator() {
 
     let registry = IntegratorRegistry::new();
     let integrator_configs = vec![
-        ("symplectic_euler", IntegratorParams::default()),
-        ("velocity_verlet", IntegratorParams::default()),
-        ("heun", IntegratorParams::default()),
-        ("rk2", IntegratorParams::default()), // Use alias
-        ("rk4", IntegratorParams::default()), // Use alias
+        "symplectic_euler",
+        "velocity_verlet",
+        "heun",
+        "rk2", // Use alias
+        "rk4", // Use alias
     ];
 
     println!("\nHarmonic Oscillator Test Results (1 period):");
     println!("---------------------------------------------");
 
-    for (name, params) in integrator_configs {
-        let integrator = registry.create(name, &params).unwrap();
+    for name in integrator_configs {
+        let integrator = registry.create(name).unwrap();
         let (pos, vel, time) =
             simulate_harmonic_oscillator(integrator.as_ref(), &oscillator, dt, steps);
 

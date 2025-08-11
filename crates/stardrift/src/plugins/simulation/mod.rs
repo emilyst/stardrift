@@ -87,10 +87,7 @@ impl Plugin for SimulationPlugin {
         // Create integrator using flexible configuration system
         let registry = IntegratorRegistry::new();
         let integrator: Box<dyn crate::physics::integrators::Integrator + Send + Sync> =
-            match registry.create(
-                &config.physics.integrator.integrator_type,
-                &config.physics.integrator.params,
-            ) {
+            match registry.create(&config.physics.integrator.integrator_type) {
                 Ok(integrator) => integrator,
                 Err(e) => {
                     warn!(

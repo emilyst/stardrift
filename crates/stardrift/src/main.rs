@@ -98,10 +98,7 @@ fn main() {
 
     if let Some(integrator_type) = args.integrator {
         println!("Using integrator: {}", integrator_type);
-        config.physics.integrator = stardrift::config::IntegratorConfig {
-            integrator_type,
-            params: Default::default(),
-        };
+        config.physics.integrator = stardrift::config::IntegratorConfig { integrator_type };
     }
 
     if let Some(seed) = args.seed {

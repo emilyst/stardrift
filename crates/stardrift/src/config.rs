@@ -97,11 +97,6 @@ pub struct IntegratorConfig {
     #[serde(rename = "type")]
     #[default("velocity_verlet")]
     pub integrator_type: String,
-
-    /// Integrator-specific parameters
-    #[serde(default)]
-    #[default(crate::physics::integrators::registry::IntegratorParams::default())]
-    pub params: crate::physics::integrators::registry::IntegratorParams,
 }
 
 #[derive(ConfigDefaults, Serialize, Deserialize, Clone, Debug)]
