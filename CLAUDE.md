@@ -150,15 +150,6 @@ cargo bench characteristics  # Special performance patterns
 # After running benchmarks, create devlog if performance changed significantly
 ```
 
-#### Benchmark Configuration Profiles
-
-Located in `configs/benchmark_profiles/`:
-
-- `fast_inaccurate.toml` - Maximum FPS, theta=1.5
-- `balanced.toml` - Standard settings, theta=0.5
-- `high_accuracy.toml` - Scientific precision, theta=0.1
-- `stress_test.toml` - Many bodies for testing
-
 #### Performance Targets
 
 - **60fps goal**: <16.67ms with ~100 bodies
