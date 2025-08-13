@@ -129,10 +129,10 @@ fn generate_default_impl(input: DeriveInput) -> Result<proc_macro2::TokenStream>
 
 /// Check if the type is String
 fn is_string_type(ty: &Type) -> bool {
-    if let Type::Path(type_path) = ty {
-        if let Some(segment) = type_path.path.segments.last() {
-            return segment.ident == "String";
-        }
+    if let Type::Path(type_path) = ty
+        && let Some(segment) = type_path.path.segments.last()
+    {
+        return segment.ident == "String";
     }
     false
 }
@@ -152,10 +152,7 @@ fn extract_default_value(field: &syn::Field) -> Result<proc_macro2::TokenStream>
             let tokens: proc_macro2::TokenStream = attr.parse_args().map_err(|e| {
                 Error::new_spanned(
                     attr,
-                    format!(
-                        "Failed to parse default attribute for field '{}': {}",
-                        field_name, e
-                    ),
+                    format!("Failed to parse default attribute for field '{field_name}': {e}"),
                 )
             })?;
 
@@ -164,8 +161,7 @@ fn extract_default_value(field: &syn::Field) -> Result<proc_macro2::TokenStream>
                 return Err(Error::new_spanned(
                     attr,
                     format!(
-                        "Field '{}' has an empty #[default()] attribute. Please provide a default value.",
-                        field_name
+                        "Field '{field_name}' has an empty #[default()] attribute. Please provide a default value."
                     ),
                 ));
             }
@@ -178,8 +174,7 @@ fn extract_default_value(field: &syn::Field) -> Result<proc_macro2::TokenStream>
     Err(Error::new_spanned(
         field,
         format!(
-            "Field '{}' must have a #[default(...)] attribute specifying its default value",
-            field_name
+            "Field '{field_name}' must have a #[default(...)] attribute specifying its default value"
         ),
     ))
 }

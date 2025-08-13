@@ -321,10 +321,10 @@ impl TrailsPlugin {
             }
 
             // Only add new points if we're tracking an active body
-            if let Ok(transform) = body_query.get(tracked_body.0) {
-                if trail.should_update(current_time, config.trails.update_interval_seconds) {
-                    trail.add_point(transform.translation, current_time);
-                }
+            if let Ok(transform) = body_query.get(tracked_body.0)
+                && trail.should_update(current_time, config.trails.update_interval_seconds)
+            {
+                trail.add_point(transform.translation, current_time);
             }
 
             // Always cleanup old points, even for orphaned trails

@@ -3,7 +3,8 @@
 use clap::Parser;
 
 use bevy::diagnostic::{
-    EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin, SystemInformationDiagnosticsPlugin,
+    EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin,
+    SystemInformationDiagnosticsPlugin,
 };
 use bevy::{app::TaskPoolThreadAssignmentPolicy, tasks::available_parallelism, window::WindowMode};
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
@@ -64,14 +65,14 @@ fn main() {
         let registry = IntegratorRegistry::new();
         println!("Available integrators:");
         for name in registry.list_available() {
-            println!("  - {}", name);
+            println!("  - {name}");
         }
 
         let aliases = registry.list_aliases();
         if !aliases.is_empty() {
             println!("\nAliases:");
             for (alias, target) in aliases {
-                println!("  - {} -> {}", alias, target);
+                println!("  - {alias} -> {target}");
             }
         }
         return;
@@ -79,7 +80,7 @@ fn main() {
 
     // Load configuration
     let mut config = if let Some(config_path) = &args.config {
-        println!("Loading configuration from: {}", config_path);
+        println!("Loading configuration from: {config_path}");
         SimulationConfig::load_or_default(config_path)
     } else {
         SimulationConfig::load_from_user_config()
@@ -87,22 +88,22 @@ fn main() {
 
     // Apply command-line overrides
     if let Some(body_count) = args.bodies {
-        println!("Overriding body count to: {}", body_count);
+        println!("Overriding body count to: {body_count}");
         config.physics.body_count = body_count;
     }
 
     if let Some(gravity) = args.gravity {
-        println!("Overriding gravitational constant to: {}", gravity);
+        println!("Overriding gravitational constant to: {gravity}");
         config.physics.gravitational_constant = gravity;
     }
 
     if let Some(integrator_type) = args.integrator {
-        println!("Using integrator: {}", integrator_type);
+        println!("Using integrator: {integrator_type}");
         config.physics.integrator = stardrift::config::IntegratorConfig { integrator_type };
     }
 
     if let Some(seed) = args.seed {
-        println!("Using random seed: {}", seed);
+        println!("Using random seed: {seed}");
         config.physics.initial_seed = Some(seed);
     }
 

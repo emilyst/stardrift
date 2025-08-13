@@ -178,16 +178,15 @@ fn draw_barycenter_gizmo(
     barycenter_gizmo_visibility: Res<BarycenterGizmoVisibility>,
     barycenter: Res<Barycenter>,
 ) {
-    if barycenter_gizmo_visibility.enabled {
-        if let Some(barycenter) = **barycenter {
-            if barycenter.is_finite() {
-                gizmos.cross(
-                    barycenter.as_vec3(),
-                    libm::cbrt(**body_count as Scalar * **body_count as Scalar / 3.0) as f32,
-                    css::WHITE,
-                );
-            }
-        }
+    if barycenter_gizmo_visibility.enabled
+        && let Some(barycenter) = **barycenter
+        && barycenter.is_finite()
+    {
+        gizmos.cross(
+            barycenter.as_vec3(),
+            libm::cbrt(**body_count as Scalar * **body_count as Scalar / 3.0) as f32,
+            css::WHITE,
+        );
     }
 }
 

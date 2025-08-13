@@ -165,12 +165,11 @@ impl DiagnosticsHudPlugin {
         mut frame_count_text: Single<&mut Text, With<FrameCountTextNode>>,
         state: ResMut<DiagnosticsHudState>,
     ) {
-        if state.refresh_timer.finished() {
-            if let Some(frame_count) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FRAME_COUNT) {
-                if let Some(fps) = frame_count.smoothed() {
-                    ***frame_count_text = format!("{fps}");
-                }
-            }
+        if state.refresh_timer.finished()
+            && let Some(frame_count) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FRAME_COUNT)
+            && let Some(fps) = frame_count.smoothed()
+        {
+            ***frame_count_text = format!("{fps}");
         }
     }
 
@@ -179,12 +178,11 @@ impl DiagnosticsHudPlugin {
         mut fps_text: Single<&mut Text, With<FpsTextNode>>,
         state: Res<DiagnosticsHudState>,
     ) {
-        if state.refresh_timer.finished() {
-            if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
-                if let Some(fps) = fps.smoothed() {
-                    ***fps_text = format!("{fps:.2}");
-                }
-            }
+        if state.refresh_timer.finished()
+            && let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS)
+            && let Some(fps) = fps.smoothed()
+        {
+            ***fps_text = format!("{fps:.2}");
         }
     }
 
