@@ -147,6 +147,10 @@ fn main() {
             }),
         EmbeddedAssetsPlugin,
         DiagnosticsHudPlugin,
+        LogDiagnosticsPlugin {
+            debug: true,
+            ..default()
+        },
         EntityCountDiagnosticsPlugin,
         FrameTimeDiagnosticsPlugin::default(),
         PanOrbitCameraPlugin,
