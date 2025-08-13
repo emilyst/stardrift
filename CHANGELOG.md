@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added (back) diagnostic logging plugin for performance monitoring
+    - Integrated `LogDiagnosticsPlugin` that outputs performance metrics when debug logging is enabled
+    - Provides visibility into frame times and other performance diagnostics
+
+### Fixed
+
+- Trail visibility toggle now works correctly when simulation is restarted
+    - Trails respect the visibility settings when restarting the simulation
+    - Fixed issue where trails would still render even when visibility was disabled
+
+### Changed
+
+- Simplified integrator configuration
+    - Removed unused `IntegratorParams` structure from integrator creation
+    - Integrators no longer require parameters for initialization
+    - Cleaner API for creating integrator instances
+
+- Internal code improvements
+    - Updated to use Rust let-chains for cleaner conditional logic
+    - Simplified string formatting to use inline variables throughout the codebase
+
 ## [0.0.33] - 2025-08-11
 
 ### Changed
@@ -45,7 +68,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - **Heun (Improved Euler)**: 2nd order explicit integrator with better stability than basic Euler
     - **Runge-Kutta 2nd Order (Midpoint)**: 2nd order explicit integrator with midpoint evaluation
     - **Runge-Kutta 4th Order**: Classical 4th order integrator with highest accuracy
-    - **PEFRL (Position-Extended Forest-Ruth-Like)**: 4th order symplectic integrator optimized for long-term energy conservation
+    - **PEFRL (Position-Extended Forest-Ruth-Like)**: 4th order symplectic integrator optimized for long-term energy
+      conservation
     - All integrators now support multiple convenient aliases (e.g., `"rk4"`, `"improved_euler"`, `"forest_ruth"`)
     - All new integrators are included in comprehensive benchmark suite
 
@@ -481,8 +505,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Platform-specific configuration paths (XDG compliant)
 
 [Unreleased]: https://github.com/emilyst/stardrift/compare/v0.0.31...HEAD
+
 [0.0.31]: https://github.com/emilyst/stardrift/compare/v0.0.30...v0.0.31
+
 [0.0.30]: https://github.com/emilyst/stardrift/compare/v0.0.29...v0.0.30
+
 [0.0.29]: https://github.com/emilyst/stardrift/compare/v0.0.28...v0.0.29
 
 [0.0.28]: https://github.com/emilyst/stardrift/compare/v0.0.27...v0.0.28
