@@ -97,6 +97,8 @@ Template:
 
 #### CHANGELOG.md Updates (REQUIRED for all user-visible changes)
 
+**Writing Style**: Use factual, objective language. Avoid subjective terms like "improved", "enhanced", "better", "refined". State what changed, not qualitative assessments.
+
 ```markdown
 ### Added
 
@@ -106,12 +108,22 @@ Template:
 
 ### Changed
 
-- What changed and why
+- What changed (factual description)
+    - Specific technical modifications
+    - Measurable changes (e.g., "Changed font size from 10px to 12px")
 
 ### Fixed
 
-- Bug description and impact
+- Bug description and observable behavior change
 ```
+
+**Examples of Objective Writing**:
+- ✓ "Changed button width from 128px to 160px"
+- ✗ "Improved button styling"
+- ✓ "Added platform-specific offset for macOS (32px)"
+- ✗ "Enhanced cross-platform compatibility"
+- ✓ "Increased font size from 10px to 12px"
+- ✗ "Better readability with larger fonts"
 
 ## Essential Commands
 
