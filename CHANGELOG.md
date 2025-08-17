@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Removed redundant binary listings from release notes to avoid duplicating GitHub's automatic asset section
     - Provides cryptographic verification of artifacts built by GitHub Actions
 
+- Adjusted UI styling and layout
+    - Changed font sizes from 10px to 12px in diagnostics HUD
+    - Changed button width from 128px to 160px and border radius from 5px to 4px
+    - Added platform-specific top offset for macOS (32px) vs other platforms (4px)
+    - Centered diagnostics HUD horizontally within viewport
+    - Added min-width constraints (100px) to HUD text elements with left/right justification
+
 ## [0.0.35] - 2025-08-17
 
 ### Fixed

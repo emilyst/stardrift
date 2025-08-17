@@ -69,90 +69,133 @@ impl DiagnosticsHudPlugin {
         let regular_font_asset_path =
             AssetPath::parse("fonts/Saira-Regular").with_source(embedded_asset_source);
         let regular_font = asset_server.load(regular_font_asset_path);
-        let regular_text_font = TextFont::from_font(regular_font).with_font_size(10.0);
+        let regular_text_font = TextFont::from_font(regular_font).with_font_size(12.0);
 
         let extra_bold_font_asset_path =
             AssetPath::parse("fonts/Saira-ExtraBold").with_source(embedded_asset_source);
         let extra_bold_font = asset_server.load(extra_bold_font_asset_path);
-        let extra_bold_text_font = TextFont::from_font(extra_bold_font).with_font_size(10.0);
+        let extra_bold_text_font = TextFont::from_font(extra_bold_font).with_font_size(12.0);
 
         let border_radius = BorderRadius::all(Val::Px(5.0));
         let background_color = BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.01));
-        let hud_node = Node {
+
+        // Platform-specific top offset
+        let top_offset = if cfg!(target_os = "macos") {
+            32.0 // macOS needs clearance for title bar
+        } else {
+            4.0 // Other platforms use minimal offset
+        };
+
+        // Container node for centering with constrained width
+        let container_node = Node {
             position_type: PositionType::Absolute,
-            top: Val::Px(5.0),
-            right: Val::Px(5.0),
-            padding: UiRect::all(Val::Px(5.0)),
+            top: Val::Px(top_offset),
+            width: Val::Percent(100.0),
             display: if settings.enabled {
                 Display::Flex
             } else {
                 Display::None
             },
+            justify_content: JustifyContent::Center,
+            ..default()
+        };
+
+        // HUD content node with natural sizing
+        let hud_node = Node {
+            padding: UiRect::all(Val::Px(5.0)),
+            display: Display::Flex,
             flex_direction: FlexDirection::Column,
             row_gap: Val::Px(1.0),
             ..default()
         };
         let hud_row_node = Node {
             display: Display::Flex,
-            justify_content: JustifyContent::SpaceBetween,
-            column_gap: Val::Px(20.0),
+            justify_content: JustifyContent::Center,
+            column_gap: Val::Px(5.0),
             ..default()
         };
 
         commands.spawn((
-            hud_node,
-            border_radius,
-            background_color,
+            container_node,
             DiagnosticsHudRoot,
-            children![
-                (
-                    hud_row_node.clone(),
-                    children![
-                        (Text::new("FPS"), regular_text_font.clone()),
-                        (
-                            FpsTextNode,
-                            Node {
-                                width: Val::Px(50.0),
-                                ..default()
-                            },
-                            TextLayout::new_with_justify(JustifyText::Right),
-                            Text::new("-"),
-                            extra_bold_text_font.clone(),
-                        ),
-                    ],
-                ),
-                (
-                    hud_row_node.clone(),
-                    children![
-                        (Text::new("Frame count"), regular_text_font.clone()),
-                        (
-                            FrameCountTextNode,
-                            Node {
-                                width: Val::Px(50.0),
-                                ..default()
-                            },
-                            TextLayout::new_with_justify(JustifyText::Right),
-                            Text::new("-"),
-                            extra_bold_text_font.clone(),
-                        ),
-                    ],
-                ),
-                (
-                    hud_row_node.clone(),
-                    children![
-                        (Text::new("Body count"), regular_text_font.clone()),
-                        (
-                            Text::new(format!("{}", **body_count)),
-                            Node {
-                                width: Val::Px(50.0),
-                                ..default()
-                            },
-                            TextLayout::new_with_justify(JustifyText::Right),
-                            extra_bold_text_font.clone(),
-                        ),
-                    ],
-                ),
-            ],
+            children![(
+                hud_node,
+                border_radius,
+                background_color,
+                children![
+                    (
+                        hud_row_node.clone(),
+                        children![
+                            (
+                                Text::new("FPS"),
+                                Node {
+                                    min_width: Val::Px(100.0),
+                                    ..default()
+                                },
+                                TextLayout::new_with_justify(JustifyText::Right),
+                                regular_text_font.clone(),
+                            ),
+                            (
+                                FpsTextNode,
+                                Node {
+                                    min_width: Val::Px(100.0),
+                                    ..default()
+                                },
+                                TextLayout::new_with_justify(JustifyText::Left),
+                                Text::new("-"),
+                                extra_bold_text_font.clone(),
+                            ),
+                        ],
+                    ),
+                    (
+                        hud_row_node.clone(),
+                        children![
+                            (
+                                Text::new("Frame count"),
+                                Node {
+                                    min_width: Val::Px(100.0),
+                                    ..default()
+                                },
+                                TextLayout::new_with_justify(JustifyText::Right),
+                                regular_text_font.clone(),
+                            ),
+                            (
+                                FrameCountTextNode,
+                                Node {
+                                    min_width: Val::Px(100.0),
+                                    ..default()
+                                },
+                                TextLayout::new_with_justify(JustifyText::Left),
+                                Text::new("-"),
+                                extra_bold_text_font.clone(),
+                            ),
+                        ],
+                    ),
+                    (
+                        hud_row_node.clone(),
+                        children![
+                            (
+                                Text::new("Body count"),
+                                Node {
+                                    min_width: Val::Px(100.0),
+                                    ..default()
+                                },
+                                TextLayout::new_with_justify(JustifyText::Right),
+                                regular_text_font.clone(),
+                            ),
+                            (
+                                Text::new(format!("{}", **body_count)),
+                                Node {
+                                    min_width: Val::Px(100.0),
+                                    ..default()
+                                },
+                                TextLayout::new_with_justify(JustifyText::Left),
+                                extra_bold_text_font.clone(),
+                            ),
+                        ],
+                    ),
+                ],
+            )],
         ));
     }
 

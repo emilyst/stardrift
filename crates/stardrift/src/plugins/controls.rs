@@ -12,12 +12,12 @@ use bevy::window::SystemCursorIcon;
 use bevy::winit::cursor::CursorIcon;
 
 const BUTTON_FONT_FACE: &str = "fonts/Saira-Medium";
-const BUTTON_BORDER_RADIUS_PX: f32 = 5.0;
+const BUTTON_BORDER_RADIUS_PX: f32 = 4.0;
 const BUTTON_FONT_SIZE_PX: f32 = 12.0;
 const BUTTON_GAP_PX: f32 = 4.0;
 const BUTTON_MARGIN_PX: f32 = 4.0;
 const BUTTON_PADDING_PX: f32 = 4.0;
-const BUTTON_WIDTH_PX: f32 = 128.0;
+const BUTTON_WIDTH_PX: f32 = 160.0;
 
 const BUTTON_COLOR_NORMAL: Color = Color::srgba(1.0, 1.0, 1.0, 0.01);
 const BUTTON_COLOR_HOVERED: Color = Color::srgba(1.0, 1.0, 1.0, 0.1);
