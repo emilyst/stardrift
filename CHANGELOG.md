@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Trail decay timing after pause/unpause cycles
+    - Trail points no longer generate excessively after unpausing the simulation
+    - Trail point decay now progresses at correct simulation time rate rather than wall clock time
+    - Ensures consistent trail behavior regardless of pause duration or frequency
+
 ## [0.0.34] - 2025-08-13
 
 ### Added

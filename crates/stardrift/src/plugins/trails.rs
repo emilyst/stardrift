@@ -90,9 +90,13 @@ impl Trail {
     }
 
     pub fn add_point(&mut self, position: Vec3, current_time: f32) {
+        // Store the point's age in effective time (simulation time), not wall clock time
+        // This ensures consistent decay behavior after pause/unpause cycles
+        let effective_age = self.effective_time(current_time);
+
         self.points.push_front(TrailPoint {
             position,
-            age: current_time,
+            age: effective_age,
         });
 
         self.last_update = current_time;
@@ -124,8 +128,14 @@ impl Trail {
 
     pub fn unpause(&mut self, current_time: f32) {
         if let Some(pause_start) = self.pause_time {
-            self.total_pause_duration += current_time - pause_start;
+            let pause_duration = current_time - pause_start;
+            self.total_pause_duration += pause_duration;
             self.pause_time = None;
+
+            // CRITICAL FIX: Adjust last_update to account for the pause duration
+            // This prevents the trail from thinking a huge amount of time has passed
+            // and continuously adding new points after unpause
+            self.last_update += pause_duration;
         }
     }
 
