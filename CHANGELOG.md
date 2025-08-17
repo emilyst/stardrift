@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Improved release notes with GitHub attestation verification instructions
+    - Added instructions for verifying build provenance using `gh attestation verify`
+    - Removed redundant binary listings from release notes to avoid duplicating GitHub's automatic asset section
+    - Provides cryptographic verification of artifacts built by GitHub Actions
+
 ## [0.0.35] - 2025-08-17
 
 ### Fixed

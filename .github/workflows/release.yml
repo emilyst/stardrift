@@ -92,36 +92,32 @@ jobs:
             
             ${{ steps.changelog.outputs.content }}
             
-            ## Downloads
+            ## Try Stardrift
             
-            ### Desktop Packages
+            **[→ View in browser](https://stardrift.live/)** - Try Stardrift directly in your web browser
             
-            - **macOS**
-              - Intel: `stardrift-${{ steps.version.outputs.version }}-x86_64-apple-darwin.dmg`
-              - Apple Silicon: `stardrift-${{ steps.version.outputs.version }}-aarch64-apple-darwin.dmg`
+            ## Download Verification
             
-            ### Portable Binaries
+            ### Build Provenance (Recommended)
             
-            - **Linux**
-              - x86_64: `stardrift-${{ steps.version.outputs.version }}-x86_64-unknown-linux-gnu.tar.gz`
-              - ARM64: `stardrift-${{ steps.version.outputs.version }}-aarch64-unknown-linux-gnu.tar.gz`
-            - **Windows**
-              - x86_64: `stardrift-${{ steps.version.outputs.version }}-x86_64-pc-windows-msvc.zip`
-              - ARM64: `stardrift-${{ steps.version.outputs.version }}-aarch64-pc-windows-msvc.zip`
-            - **macOS**
-              - Intel: `stardrift-${{ steps.version.outputs.version }}-x86_64-apple-darwin.tar.gz`
-              - Apple Silicon: `stardrift-${{ steps.version.outputs.version }}-aarch64-apple-darwin.tar.gz`
+            All release artifacts are signed with GitHub Attestations. Verify authenticity using the GitHub CLI:
             
-            ### WebAssembly
+            ```sh
+            # Verify any downloaded artifact (most secure)
+            gh attestation verify <filename> --repo emilyst/stardrift
             
-            - `stardrift-${{ steps.version.outputs.version }}-wasm.tar.gz` - Web build with trail rendering
-            - **[View in browser](https://stardrift.live/)** - Try Stardrift directly in your web browser
+            # Example for macOS DMG
+            gh attestation verify stardrift-*.dmg --repo emilyst/stardrift
             
-            All downloads include SHA256 checksums for verification.
+            # Example for Linux binary
+            gh attestation verify stardrift-*.tar.gz --repo emilyst/stardrift
+            ```
             
-            ### Security Notices
+            This verifies the artifact was built by GitHub Actions from this repository's source code.
             
-            #### macOS
+            ## Security Notices
+            
+            ### macOS
             
             The macOS binaries are ad-hoc signed but not notarized. On macOS Sequoia (15.x) and later:
             
@@ -142,7 +138,7 @@ jobs:
             
             Note: The right-click → "Open" bypass no longer works in macOS Sequoia.
             
-            #### Windows
+            ### Windows
             
             Windows SmartScreen may warn about the executable. To run:
             1. Click "More info" on the SmartScreen dialog
