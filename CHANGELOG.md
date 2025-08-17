@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Centered diagnostics HUD horizontally within viewport
     - Added min-width constraints (100px) to HUD text elements with left/right justification
 
+- Updated dependencies
+
 ## [0.0.35] - 2025-08-17
 
 ### Fixed

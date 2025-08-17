@@ -11,13 +11,13 @@ authors = ["Emily Strickland"]
 
 [workspace.dependencies]
 # Shared dependencies across workspace
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.142"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 chrono = "0.4"
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = ["derive", "parsing"] }
-trybuild = "1.0.110"
+trybuild = "1.0"
 
 # Internal crates
 stardrift-macros = { path = "crates/stardrift-macros" }

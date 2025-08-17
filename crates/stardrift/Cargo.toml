@@ -12,21 +12,21 @@ description = "N-body gravity simulation toy that provides a real-time visualiza
 chrono.workspace = true
 
 [dependencies]
-bevy_panorbit_camera = "0.27.0"
+bevy_panorbit_camera = "0.28"
 chrono.workspace = true
 clap = { version = "4.5", features = ["derive"] }
-config = "0.15.12"
-directories = "6.0.0"
-libm = "0.2.15"
-rand = "0.9.1"
+config = "0.15"
+directories = "6.0"
+libm = "0.2"
+rand = "0.9"
 rand_chacha = "0.9"
 serde.workspace = true
 stardrift-macros.workspace = true
-toml = "0.9.0"
+toml = "0.9"
 webbrowser = { version = "1.0", features = ["hardened"] }
 
 [dependencies.bevy]
-version = "0.16.1"
+version = "0.16"
 default-features = false
 features = [
     "default_no_std",
@@ -58,7 +58,7 @@ features = [
 ]
 
 [dev-dependencies]
-criterion = { version = "0.7.0", features = ["csv_output", "html_reports"] }
+criterion = { version = "0.7", features = ["csv_output", "html_reports"] }
 
 [lib]
 name = "stardrift"
@@ -71,7 +71,7 @@ path = "src/main.rs"
 [target.wasm32-unknown-unknown.dependencies]
 wasm-bindgen = "0.2"
 web-sys = "0.3"
-getrandom = { version = "0.3.3", features = ["wasm_js"] }
+getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [[bench]]
 name = "octree"
@@ -84,7 +84,7 @@ harness = false
 [package.metadata.release]
 shared-version = true
 pre-release-replacements = [
-  {file="../../CHANGELOG.md", search="## \\[Unreleased\\]", replace="## [Unreleased]\n\n## [{{version}}] - {{date}}", exactly=1},
+    { file = "../../CHANGELOG.md", search = "## \\[Unreleased\\]", replace = "## [Unreleased]\n\n## [{{version}}] - {{date}}", exactly = 1 },
 ]
 
 [lints.clippy]
