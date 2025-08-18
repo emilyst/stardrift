@@ -131,10 +131,10 @@ jobs:
             **Alternative for command-line users**:
             
             ```sh
-            sudo xattr -dr com.apple.quarantine /path/to/stardrift
+            xattr -dr com.apple.quarantine /path/to/stardrift
             ```
             
-            Note: This requires your admin password. If it fails with "Operation not permitted", grant Terminal Full Disk Access in System Settings → Privacy & Security → Full Disk Access
+            Note: This requires an admin account. If it fails with "Operation not permitted", grant Terminal Full Disk Access in System Settings → Privacy & Security → Full Disk Access
             
             Note: The right-click → "Open" bypass no longer works in macOS Sequoia.
             
