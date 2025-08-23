@@ -8,10 +8,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 cargo check              # Quick compilation check
-cargo fmt --all          # Format all workspace code
-cargo test --all         # Run all workspace tests
-cargo clippy --all       # Lint check all crates
-cargo run -p stardrift   # Run the simulation
+cargo fmt                # Format all code
+cargo test --workspace   # Run all tests including macros
+cargo test               # Run main crate tests only
+cargo test -p stardrift-macros  # Run just macro tests
+cargo clippy             # Lint check
+cargo run                # Run the simulation
 cargo bench              # Run benchmarks
 ```
 
@@ -32,22 +34,25 @@ cargo test physics::      # Test physics module
 cargo test --lib         # Unit tests only
 cargo test -- --nocapture # See test output
 cargo test test_specific_function  # Run specific test
+
+# Test procedural macros specifically
+cargo test -p stardrift-macros  # Run just macro tests
 ```
 
 ### Common File Locations
 
 - Config: `config.toml`
 - Devlogs: `docs/log/YYYY-MM-DD_NNN_*.md`
-- Main crate: `crates/stardrift/`
-- Proc macros: `crates/stardrift-macros/`
-- Benchmarks: `crates/stardrift/benches/`
-- Integration tests: `crates/stardrift/tests/`
-- Integrators: `crates/stardrift/src/physics/integrators/`
+- Source code: `src/`
+- Proc macros: `stardrift-macros/`
+- Benchmarks: `benches/`
+- Integration tests: `tests/`
+- Integrators: `src/physics/integrators/`
 
 ### Pre-Commit Workflow
 
 1. `cargo fmt` - Format code
-2. `cargo test` - Ensure tests pass
+2. `cargo test --workspace` - Ensure all tests pass (including macros)
 3. `cargo clippy` - Check linting
 4. Create devlog if feature/major change
 5. Update CHANGELOG.md if user-visible
@@ -176,7 +181,7 @@ cargo bench characteristics  # Special performance patterns
 
 To add a new numerical integrator to the simulation:
 
-1. **Create the integrator implementation** (`crates/stardrift/src/physics/integrators/your_integrator.rs`)
+1. **Create the integrator implementation** (`src/physics/integrators/your_integrator.rs`)
    ```rust
    use super::{ForceEvaluator, Integrator};
    use crate::physics::math::{Scalar, Vector};
@@ -197,11 +202,11 @@ To add a new numerical integrator to the simulation:
    }
    ```
 
-2. **Export from module** (`crates/stardrift/src/physics/integrators/mod.rs`)
+2. **Export from module** (`src/physics/integrators/mod.rs`)
     - Add module declaration: `pub mod your_integrator;`
     - Add public export: `pub use your_integrator::YourIntegrator;`
 
-3. **Register in the registry** (`crates/stardrift/src/physics/integrators/registry.rs`)
+3. **Register in the registry** (`src/physics/integrators/registry.rs`)
     - Import the integrator: Add to the `use super::{...}` statement
     - Add to `get()` method match statement
     - Add to `list_available()` method
@@ -267,7 +272,7 @@ impl Plugin for FeaturePlugin {
 
 To add a new control button to the UI:
 
-1. **Create button module** (`crates/stardrift/src/plugins/controls/buttons/your_button.rs`)
+1. **Create button module** (`src/plugins/controls/buttons/your_button.rs`)
    ```rust
    use crate::plugins::controls::ButtonWithLabel;
    use crate::prelude::*;
@@ -428,25 +433,23 @@ To list available integrators:
 
 ## Project Structure
 
-This project uses a Cargo workspace layout:
+This project uses a single-crate layout with procedural macros:
 
 ```
 stardrift/
-├── Cargo.toml              # Workspace configuration
-├── crates/
-│   ├── stardrift/          # Main application
-│   │   ├── Cargo.toml
-│   │   ├── src/            # Source code
-│   │   ├── benches/        # Benchmarks
-│   │   └── tests/          # Integration tests
-│   └── stardrift-macros/   # Proc macros for configuration
-│       ├── Cargo.toml
-│       └── src/
+├── Cargo.toml              # Main project configuration
+├── src/                    # Source code
+├── benches/                # Benchmarks
+├── tests/                  # Integration tests
+├── assets/                 # Static assets (fonts, icons)
+├── stardrift-macros/       # Proc macros for configuration
+│   ├── Cargo.toml
+│   └── src/
 └── docs/                   # Documentation and devlogs
 ```
 
 The main codebase uses a plugin-based architecture with all major features
-implemented as self-contained Bevy plugins under `crates/stardrift/src/plugins/`.
+implemented as self-contained Bevy plugins under `src/plugins/`.
 
 ## Sub-Agent Usage
 

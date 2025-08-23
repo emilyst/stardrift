@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Flattened project structure from workspace to single crate
+    - Moved main application from `crates/stardrift/` to project root
+    - Relocated `stardrift-macros` from `crates/stardrift-macros/` to root level
+    - Eliminated workspace configuration for simpler project layout
+    - Updated all documentation and CI/CD workflows for new structure
+
+- Relocated font assets from crate directory to workspace root
+    - Moved `crates/stardrift/assets/fonts/` to `assets/fonts/`
+    - Updated `include_bytes!` paths in `embedded_assets.rs` to reference workspace root location
+    - Consolidated all assets (fonts and icons) at workspace level for centralized management
+
 ## [0.0.38] - 2025-08-23
 
 ### Fixed

@@ -60,7 +60,7 @@ jobs:
         id: get_version
         shell: bash
         run: |
-          VERSION=$(cargo pkgid -p stardrift | cut -d# -f2)
+          VERSION=$(cargo pkgid | cut -d# -f2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
@@ -80,7 +80,7 @@ jobs:
 
       - name: Build release
         run: |
-          cargo build -p stardrift --release --target ${{ matrix.platform.target }} --all-features
+          cargo build --release --target ${{ matrix.platform.target }} --all-features
         shell: bash
 
       - name: Create app bundle and DMG (macOS)
@@ -117,8 +117,8 @@ jobs:
           plutil -insert NSPrincipalClass -string "NSApplication" "$PLIST_FILE"
           
           # Copy resources
-          if [ -d "crates/stardrift/assets" ]; then
-            cp -r "crates/stardrift/assets" "$BUNDLE_DIR/Contents/Resources/"
+          if [ -d "assets" ]; then
+            cp -r "assets" "$BUNDLE_DIR/Contents/Resources/"
           fi
           if [ -d "configs" ]; then
             cp -r "configs" "$BUNDLE_DIR/Contents/Resources/"
@@ -202,7 +202,7 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          VERSION=$(cargo pkgid -p stardrift | cut -d# -f2)
+          VERSION=$(cargo pkgid | cut -d# -f2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
@@ -224,7 +224,7 @@ jobs:
 
       - name: Build WebAssembly
         run: |
-          trunk build crates/stardrift/index.html
+          trunk build index.html
 
       - name: Package WebAssembly
         run: |

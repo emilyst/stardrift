@@ -49,13 +49,13 @@ jobs:
         if: github.event.inputs.dry_run == 'true'
         run: |
           echo "Running in dry-run mode..."
-          cargo release -p stardrift ${{ github.event.inputs.version }} --verbose
+          cargo release ${{ github.event.inputs.version }} --verbose
 
       - name: Run cargo-release
         if: github.event.inputs.dry_run == 'false'
         run: |
           echo "Creating release..."
-          cargo release -p stardrift ${{ github.event.inputs.version }} --execute --no-confirm
+          cargo release ${{ github.event.inputs.version }} --execute --no-confirm
           
           # Push the commits and tags
           git push origin main --follow-tags

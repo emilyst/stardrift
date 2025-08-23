@@ -1,26 +1,89 @@
 [workspace]
-members = ["crates/*"]
+members = [".", "stardrift-macros"]
 resolver = "2"
 
-[workspace.package]
+[package]
+name = "stardrift"
 version = "0.0.38"
 edition = "2024"
 license = "CC0-1.0"
 repository = "https://github.com/emilyst/stardrift"
 authors = ["Emily Strickland"]
+publish = false
+description = "N-body gravity simulation toy that provides a real-time visualization"
 
-[workspace.dependencies]
-# Shared dependencies across workspace
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+[build-dependencies]
 chrono = "0.4"
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "2.0", features = ["derive", "parsing"] }
-trybuild = "1.0"
 
-# Internal crates
-stardrift-macros = { path = "crates/stardrift-macros" }
+[dependencies]
+bevy_panorbit_camera = "0.28"
+chrono = "0.4"
+clap = { version = "4.5", features = ["derive"] }
+config = "0.15"
+directories = "6.0"
+libm = "0.2"
+rand = "0.9"
+rand_chacha = "0.9"
+serde = { version = "1.0", features = ["derive"] }
+stardrift-macros = { path = "./stardrift-macros" }
+toml = "0.9"
+webbrowser = { version = "1.0", features = ["hardened"] }
+
+[dependencies.bevy]
+version = "0.16"
+default-features = false
+features = [
+    "default_no_std",
+    "libm",
+    "zstd",
+    "reflect_functions",
+    "reflect_documentation",
+    "bevy_ui",
+    "bevy_asset",
+    "bevy_color",
+    "bevy_core_pipeline",
+    "bevy_gilrs",
+    "bevy_gizmos",
+    "bevy_log",
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_state",
+    "bevy_text",
+    "bevy_ui",
+    "bevy_window",
+    "bevy_winit",
+    "hdr",
+    "multi_threaded",
+    "sysinfo_plugin",
+    "tonemapping_luts",
+    "webgl2",
+    "x11",
+    "png",
+]
+
+[dev-dependencies]
+criterion = { version = "0.7", features = ["csv_output", "html_reports"] }
+
+[lib]
+name = "stardrift"
+path = "src/lib.rs"
+
+[[bin]]
+name = "stardrift"
+path = "src/main.rs"
+
+[target.wasm32-unknown-unknown.dependencies]
+wasm-bindgen = "0.2"
+web-sys = "0.3"
+getrandom = { version = "0.3", features = ["wasm_js"] }
+
+[[bench]]
+name = "octree"
+harness = false
+
+[[bench]]
+name = "integrators"
+harness = false
 
 [profile.dev]
 debug = 2
@@ -40,8 +103,8 @@ strip = true
 [profile.bench]
 inherits = "release"
 
-# cargo-release configuration for workspace
-[workspace.metadata.release]
+# cargo-release configuration
+[package.metadata.release]
 allow-branch = ["main"]
 sign-commit = true
 sign-tag = true
@@ -53,3 +116,6 @@ pre-release-replacements = [
     { file = "CHANGELOG.md", search = "## \\[Unreleased\\]", replace = "## [Unreleased]\n\n## [{{version}}] - {{date}}", exactly = 1 },
     { file = "CHANGELOG.md", search = "\\[Unreleased\\]: https://github.com/emilyst/stardrift/compare/v([0-9\\.\\-a-z]+)\\.\\.\\.HEAD", replace = "[Unreleased]: https://github.com/emilyst/stardrift/compare/v{{version}}...HEAD\n[{{version}}]: https://github.com/emilyst/stardrift/compare/v$1...v{{version}}" }
 ]
+
+[lints.clippy]
+type_complexity = "allow"

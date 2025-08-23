@@ -1,5 +1,5 @@
 [build]
-target = "crates/stardrift/index.html"
+target = "index.html"
 release = true
 public_url = "./"
 opt-level = "s"

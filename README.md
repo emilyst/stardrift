@@ -468,16 +468,17 @@ If no configuration file exists, the application uses default values.
 
 ## Project Structure
 
-Stardrift uses a Cargo workspace with a plugin-based architecture built on Bevy ECS (Entity Component System).
+Stardrift uses a plugin-based architecture built on Bevy ECS (Entity Component System).
 
-### Workspace Layout
+### Project Layout
 
-- **`crates/stardrift/`** - Main application
+- **`src/`** - Main application source code
     - `src/plugins/` - Self-contained feature plugins
     - `src/physics/` - Physics engine and integrators
-    - `benches/` - Performance benchmarks
-    - `tests/` - Integration tests
-- **`crates/stardrift-macros/`** - Procedural macros for configuration
+- **`benches/`** - Performance benchmarks
+- **`tests/`** - Integration tests
+- **`assets/`** - Static assets (fonts, icons)
+- **`stardrift-macros/`** - Procedural macros for configuration
 
 ### Architecture
 
