@@ -97,7 +97,8 @@ Template:
 
 #### CHANGELOG.md Updates (REQUIRED for all user-visible changes)
 
-**Writing Style**: Use factual, objective language. Avoid subjective terms like "improved", "enhanced", "better", "refined". State what changed, not qualitative assessments.
+**Writing Style**: Use factual, objective language. Avoid subjective terms like "improved", "enhanced", "better", "
+refined". State what changed, not qualitative assessments.
 
 ```markdown
 ### Added
@@ -118,6 +119,7 @@ Template:
 ```
 
 **Examples of Objective Writing**:
+
 - ✓ "Changed button width from 128px to 160px"
 - ✗ "Improved button styling"
 - ✓ "Added platform-specific offset for macOS (32px)"
@@ -292,18 +294,18 @@ To add a new control button to the UI:
    ```
 
 2. **Export from buttons module** (`buttons/mod.rs`)
-   - Add module declaration: `pub mod your_button;`
-   - Add re-export: `pub use your_button::YourButton;`
+    - Add module declaration: `pub mod your_button;`
+    - Add re-export: `pub use your_button::YourButton;`
 
 3. **Add to controls plugin** (`controls/mod.rs`)
-   - Add button interaction handler in `build()`:
-     ```rust
-     button_interaction_handler::<YourButton>,
-     ```
-   - Add button spawn in `setup_controls_ui()`:
-     ```rust
-     parent.spawn_control_button::<YourButton>(font.clone_weak());
-     ```
+    - Add button interaction handler in `build()`:
+      ```rust
+      button_interaction_handler::<YourButton>,
+      ```
+    - Add button spawn in `setup_controls_ui()`:
+      ```rust
+      parent.spawn_control_button::<YourButton>(font.clone());
+      ```
 
 4. **Define command** in `simulation/mod.rs` if needed
 
@@ -378,11 +380,13 @@ The `ScreenshotPlugin` provides automated screenshot capture for UI testing:
 #### Integration with AI Testing
 
 The `--screenshot-list-paths` flag outputs file paths to stdout:
+
 ```
 SCREENSHOT_PATH: ./test_screenshots/ui_test.png
 ```
 
 This enables easy integration with scripts:
+
 ```bash
 OUTPUT=$(./target/debug/stardrift --screenshot-after 2 --screenshot-list-paths ...)
 SCREENSHOT_PATH=$(echo "$OUTPUT" | grep "SCREENSHOT_PATH:" | cut -d' ' -f2)
@@ -461,5 +465,8 @@ Use specialized agents for complex tasks:
 2. Implement feature
 3. Use project-documentation-maintainer to create devlog
 ```
-- Always use the dev profile for any checks or compilation. The release profile has optimizations that make it take a very long time.
-- This project is a one-person side project made in my spare time for enjoyment. It's pre-release and not yet meant for general consumption. Backwards compatibility during changes is a low priority.
+
+- Always use the dev profile for any checks or compilation. The release profile has optimizations that make it take a
+  very long time.
+- This project is a one-person side project made in my spare time for enjoyment. It's pre-release and not yet meant for
+  general consumption. Backwards compatibility during changes is a low priority.

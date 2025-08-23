@@ -265,13 +265,13 @@ fn setup_controls_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
             UIRoot,
         ))
         .with_children(|parent| {
-            parent.spawn_control_button::<RestartSimulationButton>(font.clone_weak());
-            parent.spawn_control_button::<OctreeToggleButton>(font.clone_weak());
-            parent.spawn_control_button::<BarycenterGizmoToggleButton>(font.clone_weak());
-            parent.spawn_control_button::<TrailsToggleButton>(font.clone_weak());
-            parent.spawn_control_button::<DiagnosticsHudToggleButton>(font.clone_weak());
-            parent.spawn_control_button::<PauseButton>(font.clone_weak());
-            parent.spawn_control_button::<ScreenshotButton>(font.clone_weak());
+            parent.spawn_control_button::<RestartSimulationButton>(font.clone());
+            parent.spawn_control_button::<OctreeToggleButton>(font.clone());
+            parent.spawn_control_button::<BarycenterGizmoToggleButton>(font.clone());
+            parent.spawn_control_button::<TrailsToggleButton>(font.clone());
+            parent.spawn_control_button::<DiagnosticsHudToggleButton>(font.clone());
+            parent.spawn_control_button::<PauseButton>(font.clone());
+            parent.spawn_control_button::<ScreenshotButton>(font.clone());
             #[cfg(not(target_arch = "wasm32"))]
             parent.spawn_control_button::<QuitButton>(font);
         });
