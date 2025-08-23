@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "stardrift-macros"]
+members = [".", "macros"]
 resolver = "2"
 
 [package]
@@ -25,9 +25,11 @@ libm = "0.2"
 rand = "0.9"
 rand_chacha = "0.9"
 serde = { version = "1.0", features = ["derive"] }
-stardrift-macros = { path = "./stardrift-macros" }
 toml = "0.9"
 webbrowser = { version = "1.0", features = ["hardened"] }
+
+[dependencies.macros]
+path = "./macros"
 
 [dependencies.bevy]
 version = "0.16"

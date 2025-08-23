@@ -1,5 +1,5 @@
 // This test should fail to compile because the default attribute is empty
-use stardrift_macros::ConfigDefaults;
+use macros::ConfigDefaults;
 
 #[derive(ConfigDefaults)]
 struct EmptyDefault {

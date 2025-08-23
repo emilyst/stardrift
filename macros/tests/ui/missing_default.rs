@@ -1,5 +1,5 @@
 // This test should fail to compile because field2 is missing a default attribute
-use stardrift_macros::ConfigDefaults;
+use macros::ConfigDefaults;
 
 #[derive(ConfigDefaults)]
 struct MissingDefault {

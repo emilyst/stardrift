@@ -11,7 +11,7 @@ cargo check              # Quick compilation check
 cargo fmt                # Format all code
 cargo test --workspace   # Run all tests including macros
 cargo test               # Run main crate tests only
-cargo test -p stardrift-macros  # Run just macro tests
+cargo test -p macros  # Run just macro tests
 cargo clippy             # Lint check
 cargo run                # Run the simulation
 cargo bench              # Run benchmarks
@@ -36,7 +36,7 @@ cargo test -- --nocapture # See test output
 cargo test test_specific_function  # Run specific test
 
 # Test procedural macros specifically
-cargo test -p stardrift-macros  # Run just macro tests
+cargo test -p macros  # Run just macro tests
 ```
 
 ### Common File Locations
@@ -44,7 +44,7 @@ cargo test -p stardrift-macros  # Run just macro tests
 - Config: `config.toml`
 - Devlogs: `docs/log/YYYY-MM-DD_NNN_*.md`
 - Source code: `src/`
-- Proc macros: `stardrift-macros/`
+- Proc macros: `macros/`
 - Benchmarks: `benches/`
 - Integration tests: `tests/`
 - Integrators: `src/physics/integrators/`
@@ -437,15 +437,15 @@ This project uses a single-crate layout with procedural macros:
 
 ```
 stardrift/
-├── Cargo.toml              # Main project configuration
-├── src/                    # Source code
-├── benches/                # Benchmarks
-├── tests/                  # Integration tests
-├── assets/                 # Static assets (fonts, icons)
-├── stardrift-macros/       # Proc macros for configuration
+├── Cargo.toml       # Main project configuration
+├── src/             # Source code
+├── benches/         # Benchmarks
+├── tests/           # Integration tests
+├── assets/          # Static assets (fonts, icons)
+├── macros/          # Proc macros for configuration
 │   ├── Cargo.toml
 │   └── src/
-└── docs/                   # Documentation and devlogs
+└── docs/            # Documentation and devlogs
 ```
 
 The main codebase uses a plugin-based architecture with all major features

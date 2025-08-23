@@ -1,4 +1,4 @@
-use stardrift_macros::ConfigDefaults;
+use macros::ConfigDefaults;
 
 #[test]
 fn test_derive_macro_compiles() {

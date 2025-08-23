@@ -1,5 +1,5 @@
 [package]
-name = "stardrift-macros"
+name = "macros"
 edition = "2024"
 license = "CC0-1.0"
 publish = false

@@ -11,7 +11,7 @@ use syn::{Data, DeriveInput, Error, Fields, Result, Type, parse_macro_input};
 ///
 /// # Example
 /// ```
-/// use stardrift_macros::ConfigDefaults;
+/// use macros::ConfigDefaults;
 /// use serde::{Serialize, Deserialize};
 ///
 /// #[derive(ConfigDefaults, Serialize, Deserialize)]

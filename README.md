@@ -195,18 +195,18 @@ stardrift --screenshot-after 120 --screenshot-use-frames
 
 #### CLI Options
 
-| Option | Description |
-|--------|-------------|
-| `--screenshot-after N` | Take screenshot after N seconds (or frames with `--screenshot-use-frames`) |
-| `--screenshot-interval N` | Take screenshots every N seconds/frames |
-| `--screenshot-count N` | Number of screenshots to take (default: 1) |
-| `--screenshot-use-frames` | Use frame counting instead of time |
-| `--screenshot-dir PATH` | Output directory (creates if needed) |
-| `--screenshot-name NAME` | Base filename without extension |
-| `--screenshot-sequential` | Use sequential numbering (e.g., `test_0001.png`) |
-| `--screenshot-no-timestamp` | Disable timestamps for predictable names |
-| `--screenshot-list-paths` | Output file paths to stdout |
-| `--exit-after-screenshots` | Exit after all screenshots taken |
+| Option                      | Description                                                                |
+|-----------------------------|----------------------------------------------------------------------------|
+| `--screenshot-after N`      | Take screenshot after N seconds (or frames with `--screenshot-use-frames`) |
+| `--screenshot-interval N`   | Take screenshots every N seconds/frames                                    |
+| `--screenshot-count N`      | Number of screenshots to take (default: 1)                                 |
+| `--screenshot-use-frames`   | Use frame counting instead of time                                         |
+| `--screenshot-dir PATH`     | Output directory (creates if needed)                                       |
+| `--screenshot-name NAME`    | Base filename without extension                                            |
+| `--screenshot-sequential`   | Use sequential numbering (e.g., `test_0001.png`)                           |
+| `--screenshot-no-timestamp` | Disable timestamps for predictable names                                   |
+| `--screenshot-list-paths`   | Output file paths to stdout                                                |
+| `--exit-after-screenshots`  | Exit after all screenshots taken                                           |
 
 #### AI Testing Integration
 
@@ -222,7 +222,8 @@ stardrift --seed 42 --bodies 100 \
 # Output: SCREENSHOT_PATH: ./test_output/ui_state.png
 ```
 
-Note: Automated screenshots preserve UI visibility for validation, unlike manual screenshots (key 'S') which hide UI elements.
+Note: Automated screenshots preserve UI visibility for validation, unlike manual screenshots (key 'S') which hide UI
+elements.
 
 ### Camera Behavior
 
@@ -478,7 +479,7 @@ Stardrift uses a plugin-based architecture built on Bevy ECS (Entity Component S
 - **`benches/`** - Performance benchmarks
 - **`tests/`** - Integration tests
 - **`assets/`** - Static assets (fonts, icons)
-- **`stardrift-macros/`** - Procedural macros for configuration
+- **`macros/`** - Procedural macros for configuration
 
 ### Architecture
 

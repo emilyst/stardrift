@@ -2,8 +2,8 @@ use crate::prelude::*;
 use config::{Config, ConfigError, File};
 #[cfg(not(target_arch = "wasm32"))]
 use directories::ProjectDirs;
+use macros::ConfigDefaults;
 use serde::{Deserialize, Serialize};
-use stardrift_macros::ConfigDefaults;
 use std::path::PathBuf;
 
 #[derive(Resource, Serialize, Deserialize, Clone, Debug, Default)]
