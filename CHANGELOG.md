@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.37] - 2025-08-23
+
 ### Added
 
 - Automated screenshot capture system for UI testing and validation
