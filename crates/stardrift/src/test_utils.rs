@@ -40,11 +40,6 @@ pub fn create_test_app() -> App {
 
     // Add events used by plugins
     app.add_event::<SimulationCommand>();
-    app.add_event::<UpdateButtonTextEvent<crate::plugins::controls::PauseButton>>();
-    app.add_event::<UpdateButtonTextEvent<crate::plugins::controls::OctreeToggleButton>>();
-    app.add_event::<UpdateButtonTextEvent<crate::plugins::controls::BarycenterGizmoToggleButton>>();
-    app.add_event::<UpdateButtonTextEvent<crate::plugins::controls::TrailsToggleButton>>();
-    app.add_event::<UpdateButtonTextEvent<crate::plugins::controls::DiagnosticsHudToggleButton>>();
 
     // Add states
     app.init_state::<AppState>();

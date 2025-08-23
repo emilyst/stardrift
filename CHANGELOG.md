@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Auto-exit after capture completion (`--exit-after-screenshots`)
     - UI elements remain visible in automated screenshots for validation purposes
 
+### Changed
+
+- Modularized controls plugin from monolithic 686-line file into organized module structure
+    - Created `constants.rs` module for shared styling constants (button dimensions, colors)
+    - Extracted `builder.rs` module with `ControlsCommandsExt` trait and `ButtonWithLabel` trait
+    - Separated each button component into individual modules under `buttons/` directory
+    - Each button module contains component definition, trait implementation, and text update logic
+    - Main `mod.rs` retained core plugin structure, input handlers, and UI setup (399 lines)
+    - Module structure enables easier maintenance and addition of new control buttons
+
 ## [0.0.36] - 2025-08-17
 
 ### Changed

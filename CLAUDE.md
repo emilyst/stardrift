@@ -261,6 +261,52 @@ impl Plugin for FeaturePlugin {
 }
 ```
 
+### Adding New Control Buttons
+
+To add a new control button to the UI:
+
+1. **Create button module** (`crates/stardrift/src/plugins/controls/buttons/your_button.rs`)
+   ```rust
+   use crate::plugins::controls::ButtonWithLabel;
+   use crate::prelude::*;
+   use bevy::prelude::*;
+   
+   #[derive(Component, Default)]
+   pub struct YourButton;
+   
+   impl ButtonWithLabel for YourButton {
+       fn command() -> SimulationCommand {
+           SimulationCommand::YourAction
+       }
+       
+       fn marker() -> Self { Self }
+       
+       fn base_text() -> &'static str {
+           "Your Button"
+       }
+       
+       fn shortcut() -> &'static str {
+           "Y"
+       }
+   }
+   ```
+
+2. **Export from buttons module** (`buttons/mod.rs`)
+   - Add module declaration: `pub mod your_button;`
+   - Add re-export: `pub use your_button::YourButton;`
+
+3. **Add to controls plugin** (`controls/mod.rs`)
+   - Add button interaction handler in `build()`:
+     ```rust
+     button_interaction_handler::<YourButton>,
+     ```
+   - Add button spawn in `setup_controls_ui()`:
+     ```rust
+     parent.spawn_control_button::<YourButton>(font.clone_weak());
+     ```
+
+4. **Define command** in `simulation/mod.rs` if needed
+
 ### Event-Driven UI
 
 UI interactions use the command pattern:
