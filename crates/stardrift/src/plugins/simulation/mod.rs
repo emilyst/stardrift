@@ -6,17 +6,14 @@
 
 use crate::prelude::*;
 
-mod actions;
+pub mod actions;
 mod components;
 mod physics;
 
 use crate::physics::integrators::VelocityVerlet;
 use crate::physics::integrators::registry::IntegratorRegistry;
 use crate::physics::resources::CurrentIntegrator;
-use actions::{
-    ScreenshotState, handle_restart_simulation_event, handle_take_screenshot_event,
-    handle_toggle_pause_simulation_event, process_screenshot_capture,
-};
+use actions::{handle_restart_simulation_event, handle_toggle_pause_simulation_event};
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use physics::{
     PhysicsSet, counteract_barycentric_drift, integrate_motions, rebuild_octree,
@@ -82,7 +79,6 @@ impl Plugin for SimulationPlugin {
             )
             .with_leaf_threshold(config.physics.octree_leaf_threshold),
         ));
-        app.init_resource::<ScreenshotState>();
 
         // Create integrator using flexible configuration system
         let registry = IntegratorRegistry::new();
@@ -148,13 +144,12 @@ impl Plugin for SimulationPlugin {
                 counteract_barycentric_drift.in_set(PhysicsSet::CorrectBarycentricDrift),
             ),
         );
+        // Core simulation command handlers
         app.add_systems(
             Update,
             (
                 handle_restart_simulation_event,
                 handle_toggle_pause_simulation_event,
-                handle_take_screenshot_event,
-                process_screenshot_capture,
             )
                 .in_set(SimulationSet::Input),
         );

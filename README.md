@@ -176,6 +176,54 @@ The built files will be in the `dist/` directory, ready for deployment. Trunk au
 | **Escape**      | Quit application                                |
 | **Touch**       | Pan, orbit, and zoom (mobile/tablet)            |
 
+### Automated Screenshot Capture
+
+The simulation includes comprehensive automated screenshot capabilities for UI testing and validation:
+
+#### Basic Usage
+
+```bash
+# Take a single screenshot after 2 seconds
+stardrift --screenshot-after 2 --exit-after-screenshots
+
+# Take 5 screenshots at 1-second intervals
+stardrift --screenshot-interval 1 --screenshot-count 5 --exit-after-screenshots
+
+# Use frame-based timing for deterministic captures
+stardrift --screenshot-after 120 --screenshot-use-frames
+```
+
+#### CLI Options
+
+| Option | Description |
+|--------|-------------|
+| `--screenshot-after N` | Take screenshot after N seconds (or frames with `--screenshot-use-frames`) |
+| `--screenshot-interval N` | Take screenshots every N seconds/frames |
+| `--screenshot-count N` | Number of screenshots to take (default: 1) |
+| `--screenshot-use-frames` | Use frame counting instead of time |
+| `--screenshot-dir PATH` | Output directory (creates if needed) |
+| `--screenshot-name NAME` | Base filename without extension |
+| `--screenshot-sequential` | Use sequential numbering (e.g., `test_0001.png`) |
+| `--screenshot-no-timestamp` | Disable timestamps for predictable names |
+| `--screenshot-list-paths` | Output file paths to stdout |
+| `--exit-after-screenshots` | Exit after all screenshots taken |
+
+#### AI Testing Integration
+
+```bash
+# Deterministic capture for regression testing
+stardrift --seed 42 --bodies 100 \
+          --screenshot-after 60 --screenshot-use-frames \
+          --screenshot-dir ./test_output \
+          --screenshot-name ui_state \
+          --screenshot-no-timestamp \
+          --screenshot-list-paths
+
+# Output: SCREENSHOT_PATH: ./test_output/ui_state.png
+```
+
+Note: Automated screenshots preserve UI visibility for validation, unlike manual screenshots (key 'S') which hide UI elements.
+
 ### Camera Behavior
 
 - The camera automatically follows the barycenter (center of mass) of the system

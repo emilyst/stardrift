@@ -300,6 +300,48 @@ fn handle_simulation_commands(
 - Benchmark tests for performance-critical code
 - Example: `cargo test test_trails_visibility_toggle`
 
+### Automated Screenshot Testing
+
+The `ScreenshotPlugin` provides automated screenshot capture for UI testing:
+
+#### Quick Examples
+
+```bash
+# Single screenshot after 2 seconds
+./target/debug/stardrift --screenshot-after 2 --screenshot-dir ./test_screenshots \
+                         --screenshot-name test --screenshot-no-timestamp \
+                         --screenshot-list-paths --exit-after-screenshots
+
+# Multiple screenshots at intervals (frame-based for determinism)
+./target/debug/stardrift --screenshot-interval 30 --screenshot-count 5 \
+                         --screenshot-use-frames --screenshot-sequential \
+                         --exit-after-screenshots
+
+# Regression testing with fixed seed
+./target/debug/stardrift --seed 42 --bodies 100 \
+                         --screenshot-after 60 --screenshot-use-frames \
+                         --screenshot-dir ./regression \
+                         --screenshot-name baseline
+```
+
+#### Key Differences from Manual Screenshots
+
+- **Manual (key 'S')**: Hides UI/HUD for clean captures
+- **Automated**: Preserves UI visibility for validation testing
+
+#### Integration with AI Testing
+
+The `--screenshot-list-paths` flag outputs file paths to stdout:
+```
+SCREENSHOT_PATH: ./test_screenshots/ui_test.png
+```
+
+This enables easy integration with scripts:
+```bash
+OUTPUT=$(./target/debug/stardrift --screenshot-after 2 --screenshot-list-paths ...)
+SCREENSHOT_PATH=$(echo "$OUTPUT" | grep "SCREENSHOT_PATH:" | cut -d' ' -f2)
+```
+
 ### Integrator Configuration
 
 Configure integrators in `config.toml`:

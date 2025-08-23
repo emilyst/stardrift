@@ -8,6 +8,9 @@ use bevy::diagnostic::{
 };
 use bevy::{app::TaskPoolThreadAssignmentPolicy, tasks::available_parallelism, window::WindowMode};
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
+use stardrift::plugins::screenshot::{
+    AutomatedScreenshotNaming, AutomatedScreenshotSchedule, ScreenshotPlugin,
+};
 use stardrift::plugins::trails::TrailsPlugin;
 use stardrift::plugins::{
     attribution::AttributionPlugin, camera::CameraPlugin, controls::ControlsPlugin,
@@ -54,6 +57,46 @@ struct Args {
     /// List available integrators and exit
     #[arg(long)]
     list_integrators: bool,
+
+    /// Take screenshot after N seconds (can be fractional)
+    #[arg(long, value_name = "SECONDS")]
+    screenshot_after: Option<f32>,
+
+    /// Take multiple screenshots at intervals (seconds between shots)
+    #[arg(long, value_name = "SECONDS")]
+    screenshot_interval: Option<f32>,
+
+    /// Number of screenshots to take (requires --screenshot-interval)
+    #[arg(long, value_name = "COUNT", default_value = "1")]
+    screenshot_count: usize,
+
+    /// Use frame-based timing instead of time-based
+    #[arg(long)]
+    screenshot_use_frames: bool,
+
+    /// Directory for automated screenshots (creates if needed)
+    #[arg(long, value_name = "PATH")]
+    screenshot_dir: Option<String>,
+
+    /// Base filename for screenshots (without extension)
+    #[arg(long, value_name = "NAME")]
+    screenshot_name: Option<String>,
+
+    /// Disable timestamp in filenames for predictable names
+    #[arg(long)]
+    screenshot_no_timestamp: bool,
+
+    /// Use sequential numbering instead of timestamps
+    #[arg(long)]
+    screenshot_sequential: bool,
+
+    /// Output full paths of created screenshots to stdout
+    #[arg(long)]
+    screenshot_list_paths: bool,
+
+    /// Exit after taking all screenshots
+    #[arg(long)]
+    exit_after_screenshots: bool,
 }
 
 fn main() {
@@ -116,7 +159,7 @@ fn main() {
 
     let mut app = App::new();
 
-    app.add_plugins((
+    app.add_plugins(
         DefaultPlugins
             .set(WindowPlugin {
                 primary_window: Some(Window {
@@ -145,6 +188,9 @@ fn main() {
                     ..default()
                 },
             }),
+    );
+
+    app.add_plugins((
         EmbeddedAssetsPlugin,
         DiagnosticsHudPlugin,
         LogDiagnosticsPlugin {
@@ -156,12 +202,16 @@ fn main() {
         PanOrbitCameraPlugin,
         SimulationDiagnosticsPlugin::default(),
         SystemInformationDiagnosticsPlugin,
+    ));
+
+    app.add_plugins((
         SimulationPlugin::with_config(config),
         CameraPlugin,
         ControlsPlugin,
         VisualizationPlugin,
         AttributionPlugin,
         TrailsPlugin,
+        ScreenshotPlugin,
     ));
 
     // Initialize app states after DefaultPlugins (which includes StatesPlugin)
@@ -170,6 +220,37 @@ fn main() {
     // Start paused if requested
     if args.paused {
         app.insert_resource(NextState::Pending(AppState::Paused));
+    }
+
+    // Set up automated screenshots if requested
+    if let Some(schedule) = AutomatedScreenshotSchedule::new(
+        args.screenshot_after,
+        args.screenshot_interval,
+        args.screenshot_count,
+        args.screenshot_use_frames,
+        args.exit_after_screenshots,
+    ) {
+        app.insert_resource(schedule);
+
+        // Also set up naming if any naming options are provided
+        if args.screenshot_dir.is_some()
+            || args.screenshot_name.is_some()
+            || args.screenshot_no_timestamp
+            || args.screenshot_sequential
+            || args.screenshot_list_paths
+        {
+            // Need to get config from the app world since we've already moved it
+            let config = app.world().resource::<SimulationConfig>().clone();
+            let naming = AutomatedScreenshotNaming::new(
+                args.screenshot_dir,
+                args.screenshot_name,
+                args.screenshot_no_timestamp,
+                args.screenshot_sequential,
+                args.screenshot_list_paths,
+                &config,
+            );
+            app.insert_resource(naming);
+        }
     }
 
     app.run();

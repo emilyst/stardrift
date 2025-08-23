@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Automated screenshot capture system for UI testing and validation
+    - CLI arguments for time-based (`--screenshot-after N`) and frame-based (`--screenshot-use-frames`) capture delays
+    - Multiple screenshot capture with intervals (`--screenshot-interval N --screenshot-count N`)
+    - Configurable output directory (`--screenshot-dir PATH`) with automatic creation
+    - Flexible naming options: timestamps, sequential numbering (`--screenshot-sequential`), or static names (
+      `--screenshot-no-timestamp`)
+    - Machine-readable path output to stdout (`--screenshot-list-paths`)
+    - Auto-exit after capture completion (`--exit-after-screenshots`)
+    - UI elements remain visible in automated screenshots for validation purposes
+
 ## [0.0.36] - 2025-08-17
 
 ### Changed
