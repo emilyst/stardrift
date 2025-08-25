@@ -21,7 +21,7 @@ pub enum PhysicsSet {
 
 /// Rebuild the octree structure from current body positions
 pub fn rebuild_octree(
-    bodies: Query<(Entity, &Position, &Mass), (With<PhysicsBody>, Changed<Position>)>,
+    bodies: Query<(Entity, &Position, &Mass)>,
     mut octree: ResMut<GravitationalOctree>,
 ) {
     if bodies.is_empty() {
@@ -60,7 +60,7 @@ impl<'a> ForceEvaluator for BodyForceEvaluator<'a> {
 
 /// Integrate positions and velocities for all bodies
 pub fn integrate_motions(
-    mut query: Query<(Entity, &mut Position, &mut Velocity, &Mass), With<PhysicsBody>>,
+    mut query: Query<(Entity, &mut Position, &mut Velocity, &Mass)>,
     integrator: Res<CurrentIntegrator>,
     physics_time: Res<PhysicsTime>,
     octree: Res<GravitationalOctree>,
@@ -72,7 +72,6 @@ pub fn integrate_motions(
 
     let dt = physics_time.dt;
     let octree: &Octree = &octree;
-    let g_value: Scalar = **g;
 
     query
         .par_iter_mut()
@@ -82,7 +81,7 @@ pub fn integrate_motions(
                 octree,
                 body_entity: entity,
                 body_mass: mass.value(),
-                g: g_value,
+                g: **g,
             };
 
             // Use the integrator with force evaluator
@@ -95,28 +94,27 @@ pub fn integrate_motions(
 /// Synchronize Transform components from high-precision Position components
 pub fn sync_transform_from_position(
     mut query: Query<(&Position, &mut Transform), (With<PhysicsBody>, Changed<Position>)>,
-    camera_query: Query<&Transform, (With<Camera>, Without<PhysicsBody>)>,
+    camera_query: Query<&Transform, With<Camera>>,
 ) {
-    // Get camera position if available for distance-based culling
-    let camera_pos = camera_query
+    let camera_translation = camera_query
         .iter()
         .next()
         .map(|t| t.translation)
         .unwrap_or(Vec3::ZERO);
 
     for (position, mut transform) in query.iter_mut() {
-        // Only update if difference is significant OR body is near camera
-        let distance_to_camera = (position.value().as_vec3() - camera_pos).length();
+        let position_as_vec3 = position.value().as_vec3();
+        let distance_to_camera = (position_as_vec3 - camera_translation).length();
 
         if position.needs_transform_update(&transform) || distance_to_camera < 100.0 {
-            transform.translation = position.value().as_vec3();
+            transform.translation = position_as_vec3;
         }
     }
 }
 
 /// Counteract barycentric drift to keep simulation centered
 pub fn counteract_barycentric_drift(
-    mut bodies: Query<(&mut Position, &Mass), With<PhysicsBody>>,
+    mut bodies: Query<(&mut Position, &Mass)>,
     mut barycenter: ResMut<Barycenter>,
     config: Res<SimulationConfig>,
 ) {
