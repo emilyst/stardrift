@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Website address: stardrift.run
+
 ## [0.0.39] - 2025-08-23
 
 ### Changed
