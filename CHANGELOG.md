@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Restored `Without<PhysicsBody>` filter in `sync_transform_from_position` system to prevent query conflicts
+    - Fixes panic caused by overlapping `Transform` component access between camera and physics body queries
+    - Restores system stability after previous filter removal in commit 5fad58a
+
 ## [0.0.40] - 2025-08-25
 
 ### Changed

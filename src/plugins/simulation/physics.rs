@@ -94,7 +94,7 @@ pub fn integrate_motions(
 /// Synchronize Transform components from high-precision Position components
 pub fn sync_transform_from_position(
     mut query: Query<(&Position, &mut Transform), (With<PhysicsBody>, Changed<Position>)>,
-    camera_query: Query<&Transform, With<Camera>>,
+    camera_query: Query<&Transform, (With<Camera>, Without<PhysicsBody>)>,
 ) {
     let camera_translation = camera_query
         .iter()
