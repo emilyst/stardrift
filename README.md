@@ -267,6 +267,7 @@ The simulation uses a TOML-based configuration file.
 
 **Integrator Types:** (use snake_case in config)
 
+- `"explicit_euler"` - 1st order explicit integrator, non-symplectic (alias: `"forward_euler"`)
 - `"symplectic_euler"` - 1st order symplectic integrator (aliases: `"euler"`, `"semi_implicit_euler"`)
 - `"velocity_verlet"` - 2nd order symplectic integrator, excellent energy conservation (alias: `"verlet"`)
 - `"heun"` - 2nd order explicit integrator, also known as Improved Euler (alias: `"improved_euler"`)
@@ -300,6 +301,13 @@ The choice of integrator significantly affects simulation accuracy, stability, a
 
 **Explicit Integrators** (General-purpose, not energy-conserving):
 
+- **`explicit_euler`** (1st order) - **WARNING: For educational/comparison use only**
+    - **Pros**: Simplest possible integrator, fast computation
+    - **Cons**: Poor energy conservation, unstable for oscillatory systems, energy drift
+    - **Use Case**: Educational comparisons, debugging, very short simulations
+    - **Algorithm**: Updates position before velocity using current state values
+    - **Warning**: Energy grows/decays exponentially - unsuitable for orbital mechanics
+
 - **`heun`** (2nd order)
     - **Pros**: Better accuracy than Euler, predictor-corrector approach
     - **Cons**: Energy drift in long simulations
@@ -322,6 +330,7 @@ The choice of integrator significantly affects simulation accuracy, stability, a
 
 | Integrator                          | Order | Force Evals/Step | Energy Conservation | Relative Speed |
 |-------------------------------------|-------|------------------|---------------------|----------------|
+| `explicit_euler`                    | 1     | 1                | Very Poor           | Fastest        |
 | `symplectic_euler`                  | 1     | 1                | Good                | Fastest        |
 | `heun`                              | 2     | 2                | Poor                | Fast           |
 | `runge_kutta_second_order_midpoint` | 2     | 2                | Poor                | Fast           |

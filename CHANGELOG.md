@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Explicit Euler integrator for educational and comparison purposes
+    - Provides classic forward Euler integration method
+    - Includes comprehensive warnings about energy drift characteristics
+    - Available as `explicit_euler` with alias `forward_euler`
+    - Documented limitations for orbital mechanics simulations
+
 ## [0.0.41] - 2025-08-26
 
 ### Fixed

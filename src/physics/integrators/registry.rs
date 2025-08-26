@@ -1,8 +1,8 @@
 //! Registry pattern for dynamic integrator management
 
 use super::{
-    Heun, Integrator, Pefrl, RungeKuttaFourthOrder, RungeKuttaSecondOrderMidpoint, SymplecticEuler,
-    VelocityVerlet,
+    ExplicitEuler, Heun, Integrator, Pefrl, RungeKuttaFourthOrder, RungeKuttaSecondOrderMidpoint,
+    SymplecticEuler, VelocityVerlet,
 };
 use bevy::prelude::*;
 use std::collections::HashMap;
@@ -21,6 +21,7 @@ impl IntegratorRegistry {
 
         // Short aliases for convenience
         registry.add_alias("euler", "symplectic_euler");
+        registry.add_alias("forward_euler", "explicit_euler");
         registry.add_alias("semi_implicit_euler", "symplectic_euler");
         registry.add_alias("verlet", "velocity_verlet");
         registry.add_alias("rk4", "runge_kutta_fourth_order");
@@ -41,6 +42,7 @@ impl IntegratorRegistry {
 
         // Simple match statement instead of factory pattern
         match resolved_name {
+            "explicit_euler" => Ok(Box::new(ExplicitEuler)),
             "symplectic_euler" => Ok(Box::new(SymplecticEuler)),
             "velocity_verlet" => Ok(Box::new(VelocityVerlet)),
             "runge_kutta_fourth_order" => Ok(Box::new(RungeKuttaFourthOrder)),
@@ -62,6 +64,7 @@ impl IntegratorRegistry {
 
     pub fn list_available(&self) -> Vec<String> {
         vec![
+            "explicit_euler".to_string(),
             "symplectic_euler".to_string(),
             "velocity_verlet".to_string(),
             "runge_kutta_fourth_order".to_string(),
