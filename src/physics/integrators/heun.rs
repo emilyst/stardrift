@@ -5,7 +5,7 @@
 //! Heun's method provides a good balance of simplicity and accuracy for
 //! short-duration simulations where energy conservation is not critical.
 
-use super::{ForceEvaluator, Integrator};
+use super::{AccelerationField, Integrator};
 use crate::physics::math::{Scalar, Vector};
 
 /// Heun's method (Improved Euler method)
@@ -87,35 +87,54 @@ use crate::physics::math::{Scalar, Vector};
 pub struct Heun;
 
 impl Integrator for Heun {
+    fn clone_box(&self) -> Box<dyn Integrator> {
+        Box::new(self.clone())
+    }
+
     fn step(
         &self,
         position: &mut Vector,
         velocity: &mut Vector,
-        evaluator: &dyn ForceEvaluator,
+        field: &dyn AccelerationField,
         dt: Scalar,
     ) {
-        // Proper Heun's method with force evaluation
+        // Proper Heun's method with acceleration evaluation
         // This is a predictor-corrector method that achieves 2nd order accuracy
 
         // Stage 1: Evaluate at current position (predictor)
         let k1_x = *velocity;
-        let k1_v = evaluator.calc_acceleration(*position);
+        let k1_v = field.at(*position);
 
         // Stage 2: Evaluate at predicted endpoint
         let pos_predicted = *position + k1_x * dt;
         let vel_predicted = *velocity + k1_v * dt;
         let k2_x = vel_predicted;
-        let k2_v = evaluator.calc_acceleration(pos_predicted);
+        let k2_v = field.at(pos_predicted);
 
         // Average the slopes (corrector)
         *position += (k1_x + k2_x) * (dt * 0.5);
         *velocity += (k1_v + k2_v) * (dt * 0.5);
+    }
+
+    fn convergence_order(&self) -> usize {
+        2
+    }
+
+    fn name(&self) -> &'static str {
+        "heun"
+    }
+
+    fn aliases(&self) -> Vec<&'static str> {
+        vec!["improved_euler"]
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::physics::acceleration_functions::{
+        ConstantAcceleration, HarmonicOscillator,
+    };
 
     #[test]
     fn test_heun_basic_step() {
@@ -124,16 +143,11 @@ mod tests {
         let mut velocity = Vector::new(1.0, 0.0, 0.0);
         let dt = 0.01;
 
-        // Test evaluator with constant acceleration
-        struct TestEvaluator;
-        impl ForceEvaluator for TestEvaluator {
-            fn calc_acceleration(&self, _position: Vector) -> Vector {
-                Vector::new(0.0, -9.81, 0.0)
-            }
-        }
-        let evaluator = TestEvaluator;
+        let test_field = ConstantAcceleration {
+            acceleration: Vector::new(0.0, -9.81, 0.0),
+        };
 
-        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+        integrator.step(&mut position, &mut velocity, &test_field, dt);
 
         // Verify movement occurred
         assert!(position.x > 0.0);
@@ -156,16 +170,7 @@ mod tests {
 
         let initial_energy = 0.5 * k * position.length_squared();
 
-        // Spring force evaluator
-        struct SpringEvaluator {
-            k: Scalar,
-        }
-        impl ForceEvaluator for SpringEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                position * (-self.k)
-            }
-        }
-        let evaluator = SpringEvaluator { k };
+        let spring_field = HarmonicOscillator { k };
 
         // Track energy over time
         let mut max_energy = initial_energy;
@@ -173,7 +178,7 @@ mod tests {
 
         // Simulate for many steps
         for _ in 0..5000 {
-            integrator.step(&mut position, &mut velocity, &evaluator, dt);
+            integrator.step(&mut position, &mut velocity, &spring_field, dt);
             let energy = 0.5 * velocity.length_squared() + 0.5 * k * position.length_squared();
             max_energy = max_energy.max(energy);
             min_energy = min_energy.min(energy);
@@ -202,15 +207,7 @@ mod tests {
         let integrator = Heun;
 
         // Test with harmonic oscillator
-        struct SpringEvaluator {
-            k: Scalar,
-        }
-        impl ForceEvaluator for SpringEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                position * (-self.k)
-            }
-        }
-        let evaluator = SpringEvaluator { k: 1.0 };
+        let spring_field = HarmonicOscillator { k: 1.0 };
 
         // Test with two different timesteps
         let dt1 = 0.02;
@@ -225,7 +222,7 @@ mod tests {
         let mut vel1 = initial_vel;
         let steps1 = (final_time / dt1) as usize;
         for _ in 0..steps1 {
-            integrator.step(&mut pos1, &mut vel1, &evaluator, dt1);
+            integrator.step(&mut pos1, &mut vel1, &spring_field, dt1);
         }
 
         // Integrate with dt2
@@ -233,7 +230,7 @@ mod tests {
         let mut vel2 = initial_vel;
         let steps2 = (final_time / dt2) as usize;
         for _ in 0..steps2 {
-            integrator.step(&mut pos2, &mut vel2, &evaluator, dt2);
+            integrator.step(&mut pos2, &mut vel2, &spring_field, dt2);
         }
 
         // Analytical solution: x = cos(t), v = -sin(t)

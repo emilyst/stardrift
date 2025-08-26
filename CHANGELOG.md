@@ -15,11 +15,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Available as `explicit_euler` with alias `forward_euler`
     - Documented limitations for orbital mechanics simulations
 
+- Self-describing integrator capabilities for plugin architecture
+    - Added `clone_box()` method enabling prototype pattern in registry
+    - Added `convergence_order()` method for mathematical order declaration
+    - Added `name()` and `aliases()` methods for self-identification
+    - Registry now uses prototype pattern with no hardcoded type knowledge
+
 ### Changed
+
+- Renamed `AccelerationFunction` trait to `AccelerationField`
+    - Better reflects physics field concept (acceleration fields evaluated at positions)
+    - Renamed method `evaluate()` to `at()` following physics convention
+    - Updated all implementations and documentation to use new naming
+
+- Integrator registry refactored to prototype pattern
+    - Registry stores prototype instances that clone themselves
+    - Integrators are fully self-describing with metadata
+    - Benchmark suite now uses automatic discovery via registry
+    - No registry modifications needed when adding new integrators
 
 - Enhanced documentation for all numerical integrators
     - Standardized documentation structure across all 7 integrator modules
-    - Added comprehensive technical details including algorithm descriptions, mathematical properties, and energy behavior
+    - Added comprehensive technical details including algorithm descriptions, mathematical properties, and energy
+      behavior
     - Expanded comparison tables showing trade-offs between different methods
     - Added historical context and implementation notes where relevant
     - Improved test coverage with energy conservation and convergence order verification tests
@@ -177,8 +195,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - All integrators now support multiple convenient aliases (e.g., `"rk4"`, `"improved_euler"`, `"forest_ruth"`)
     - All new integrators are included in comprehensive benchmark suite
 
-- Force evaluator architecture for accurate multi-stage integration
-    - Added `ForceEvaluator` trait allowing integrators to query forces at arbitrary positions
+- Acceleration field architecture for accurate multi-stage integration
+    - Added `AccelerationField` trait allowing integrators to query accelerations at arbitrary positions
     - Enables mathematically correct implementation of Velocity Verlet, RK4, and other multi-stage methods
     - Forces can now be calculated at intermediate positions without rebuilding the octree
     - All integrators now achieve their theoretical order of convergence
@@ -228,7 +246,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Velocity Verlet integrator implementation
     - Second-order symplectic integrator with excellent energy conservation
-    - Implements `Integrator` trait with force evaluator support
+    - Implements `Integrator` trait with acceleration field support
     - Correctly recalculates forces at new position for true energy conservation
     - Particularly suited for high-precision gravitational n-body simulations
 

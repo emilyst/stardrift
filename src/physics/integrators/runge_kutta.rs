@@ -6,7 +6,7 @@
 //! non-symplectic and exhibit energy drift in conservative systems, making them
 //! less suitable for long-term orbital mechanics than symplectic alternatives.
 
-use super::{ForceEvaluator, Integrator};
+use super::{AccelerationField, Integrator};
 use crate::physics::math::{Scalar, Vector};
 
 /// Second-order Runge-Kutta method (Midpoint method)
@@ -74,29 +74,45 @@ use crate::physics::math::{Scalar, Vector};
 pub struct RungeKuttaSecondOrderMidpoint;
 
 impl Integrator for RungeKuttaSecondOrderMidpoint {
+    fn clone_box(&self) -> Box<dyn Integrator> {
+        Box::new(self.clone())
+    }
+
     fn step(
         &self,
         position: &mut Vector,
         velocity: &mut Vector,
-        evaluator: &dyn ForceEvaluator,
+        field: &dyn AccelerationField,
         dt: Scalar,
     ) {
-        // Proper RK2 Midpoint method with force evaluation
+        // Proper RK2 Midpoint method with acceleration evaluation
         // Achieves true 2nd order accuracy by evaluating at the midpoint
 
         // Stage 1: Evaluate at current position
         let k1_x = *velocity;
-        let k1_v = evaluator.calc_acceleration(*position);
+        let k1_v = field.at(*position);
 
         // Stage 2: Evaluate at midpoint
         let pos_mid = *position + k1_x * (dt * 0.5);
         let vel_mid = *velocity + k1_v * (dt * 0.5);
         let k2_x = vel_mid;
-        let k2_v = evaluator.calc_acceleration(pos_mid);
+        let k2_v = field.at(pos_mid);
 
         // Update using midpoint derivative
         *position += k2_x * dt;
         *velocity += k2_v * dt;
+    }
+
+    fn convergence_order(&self) -> usize {
+        2
+    }
+
+    fn name(&self) -> &'static str {
+        "runge_kutta_second_order_midpoint"
+    }
+
+    fn aliases(&self) -> Vec<&'static str> {
+        vec!["rk2", "midpoint"]
     }
 }
 
@@ -200,47 +216,66 @@ impl Integrator for RungeKuttaSecondOrderMidpoint {
 pub struct RungeKuttaFourthOrder;
 
 impl Integrator for RungeKuttaFourthOrder {
+    fn clone_box(&self) -> Box<dyn Integrator> {
+        Box::new(self.clone())
+    }
+
     fn step(
         &self,
         position: &mut Vector,
         velocity: &mut Vector,
-        evaluator: &dyn ForceEvaluator,
+        field: &dyn AccelerationField,
         dt: Scalar,
     ) {
-        // Proper RK4 with force evaluation at each stage
+        // Proper RK4 with acceleration evaluation at each stage
         // This achieves true 4th order accuracy
 
         // Stage 1: k1 at current position
         let k1_x = *velocity;
-        let k1_v = evaluator.calc_acceleration(*position);
+        let k1_v = field.at(*position);
 
         // Stage 2: k2 at midpoint using k1
         let pos_k2 = *position + k1_x * (dt * 0.5);
         let vel_k2 = *velocity + k1_v * (dt * 0.5);
         let k2_x = vel_k2;
-        let k2_v = evaluator.calc_acceleration(pos_k2);
+        let k2_v = field.at(pos_k2);
 
         // Stage 3: k3 at midpoint using k2
         let pos_k3 = *position + k2_x * (dt * 0.5);
         let vel_k3 = *velocity + k2_v * (dt * 0.5);
         let k3_x = vel_k3;
-        let k3_v = evaluator.calc_acceleration(pos_k3);
+        let k3_v = field.at(pos_k3);
 
         // Stage 4: k4 at endpoint using k3
         let pos_k4 = *position + k3_x * dt;
         let vel_k4 = *velocity + k3_v * dt;
         let k4_x = vel_k4;
-        let k4_v = evaluator.calc_acceleration(pos_k4);
+        let k4_v = field.at(pos_k4);
 
         // Combine stages using RK4 weights: y_n+1 = y_n + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
         *position += (k1_x + k2_x * 2.0 + k3_x * 2.0 + k4_x) * (dt / 6.0);
         *velocity += (k1_v + k2_v * 2.0 + k3_v * 2.0 + k4_v) * (dt / 6.0);
+    }
+
+    fn convergence_order(&self) -> usize {
+        4
+    }
+
+    fn name(&self) -> &'static str {
+        "runge_kutta_fourth_order"
+    }
+
+    fn aliases(&self) -> Vec<&'static str> {
+        vec!["rk4"]
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::physics::acceleration_functions::{
+        ConstantAcceleration, HarmonicOscillator,
+    };
 
     #[test]
     fn test_rk4_basic_step() {
@@ -249,15 +284,9 @@ mod tests {
         let mut velocity = Vector::new(0.0, 1.0, 0.0);
         let dt = 0.01;
 
-        struct TestEvaluator;
-        impl ForceEvaluator for TestEvaluator {
-            fn calc_acceleration(&self, _position: Vector) -> Vector {
-                Vector::new(0.0, 0.0, -9.81)
-            }
-        }
-        let evaluator = TestEvaluator;
+        let test_field = ConstantAcceleration::default();
 
-        rk4.step(&mut position, &mut velocity, &evaluator, dt);
+        rk4.step(&mut position, &mut velocity, &test_field, dt);
 
         // Velocity: for constant acceleration, RK4 gives exact result
         assert_eq!(velocity, Vector::new(0.0, 1.0, -0.0981));
@@ -281,20 +310,12 @@ mod tests {
         let k = 1.0;
         let dt = 0.05; // Larger timestep acceptable due to 4th order
 
-        struct SpringEvaluator {
-            k: Scalar,
-        }
-        impl ForceEvaluator for SpringEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                position * (-self.k)
-            }
-        }
-        let evaluator = SpringEvaluator { k };
+        let spring_field = HarmonicOscillator { k };
 
         // Track drift over long time
         let mut energies = Vec::new();
         for _ in 0..2000 {
-            integrator.step(&mut position, &mut velocity, &evaluator, dt);
+            integrator.step(&mut position, &mut velocity, &spring_field, dt);
             let energy = 0.5 * velocity.length_squared() + 0.5 * k * position.length_squared();
             energies.push(energy);
         }
@@ -319,15 +340,7 @@ mod tests {
         // Verify fourth-order convergence
         let integrator = RungeKuttaFourthOrder;
 
-        struct SpringEvaluator {
-            k: Scalar,
-        }
-        impl ForceEvaluator for SpringEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                position * (-self.k)
-            }
-        }
-        let evaluator = SpringEvaluator { k: 1.0 };
+        let spring_field = HarmonicOscillator { k: 1.0 };
 
         // Test with two different timesteps
         let dt1 = 0.1;
@@ -342,7 +355,7 @@ mod tests {
         let mut vel1 = initial_vel;
         let steps1 = (final_time / dt1) as usize;
         for _ in 0..steps1 {
-            integrator.step(&mut pos1, &mut vel1, &evaluator, dt1);
+            integrator.step(&mut pos1, &mut vel1, &spring_field, dt1);
         }
 
         // Integrate with dt2
@@ -350,7 +363,7 @@ mod tests {
         let mut vel2 = initial_vel;
         let steps2 = (final_time / dt2) as usize;
         for _ in 0..steps2 {
-            integrator.step(&mut pos2, &mut vel2, &evaluator, dt2);
+            integrator.step(&mut pos2, &mut vel2, &spring_field, dt2);
         }
 
         // Analytical solution
@@ -375,16 +388,11 @@ mod tests {
         let mut velocity = Vector::new(1.0, 0.0, 0.0);
         let dt = 0.01;
 
-        // Test evaluator
-        struct TestEvaluator;
-        impl ForceEvaluator for TestEvaluator {
-            fn calc_acceleration(&self, _position: Vector) -> Vector {
-                Vector::new(0.0, -9.81, 0.0)
-            }
-        }
-        let evaluator = TestEvaluator;
+        let test_field = ConstantAcceleration {
+            acceleration: Vector::new(0.0, -9.81, 0.0),
+        };
 
-        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+        integrator.step(&mut position, &mut velocity, &test_field, dt);
 
         // Verify movement occurred
         assert!(position.x > 0.0);
@@ -403,19 +411,11 @@ mod tests {
 
         let initial_energy = 0.5 * k * position.length_squared();
 
-        struct SpringEvaluator {
-            k: Scalar,
-        }
-        impl ForceEvaluator for SpringEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                position * (-self.k)
-            }
-        }
-        let evaluator = SpringEvaluator { k };
+        let spring_field = HarmonicOscillator { k };
 
         // Simulate for many steps
         for _ in 0..5000 {
-            integrator.step(&mut position, &mut velocity, &evaluator, dt);
+            integrator.step(&mut position, &mut velocity, &spring_field, dt);
         }
 
         let final_energy = 0.5 * velocity.length_squared() + 0.5 * k * position.length_squared();

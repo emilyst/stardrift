@@ -5,7 +5,7 @@
 //! accuracy, it often outperforms higher-order non-symplectic methods in
 //! long-term energy conservation.
 
-use super::{ForceEvaluator, Integrator};
+use super::{AccelerationField, Integrator};
 use crate::physics::math::{Scalar, Vector};
 
 /// Symplectic Euler integrator (also known as semi-implicit Euler)
@@ -88,7 +88,7 @@ use crate::physics::math::{Scalar, Vector};
 /// - Establishing baseline energy conservation behavior
 ///
 /// **Consider alternatives:**
-/// - Use Velocity Verlet for production simulations (better accuracy, same cost)
+/// - Use Velocity Verlet for better accuracy, same cost
 /// - Use PEFRL for high-precision orbital mechanics
 /// - Use explicit Euler only for dissipative systems
 ///
@@ -101,15 +101,19 @@ use crate::physics::math::{Scalar, Vector};
 pub struct SymplecticEuler;
 
 impl Integrator for SymplecticEuler {
+    fn clone_box(&self) -> Box<dyn Integrator> {
+        Box::new(self.clone())
+    }
+
     fn step(
         &self,
         position: &mut Vector,
         velocity: &mut Vector,
-        evaluator: &dyn ForceEvaluator,
+        field: &dyn AccelerationField,
         dt: Scalar,
     ) {
         // Calculate acceleration at current position
-        let acceleration = evaluator.calc_acceleration(*position);
+        let acceleration = field.at(*position);
 
         // Update velocity first: v(t+dt) = v(t) + a(t) * dt
         *velocity += acceleration * dt;
@@ -117,31 +121,38 @@ impl Integrator for SymplecticEuler {
         // Then update position using new velocity: x(t+dt) = x(t) + v(t+dt) * dt
         *position += *velocity * dt;
     }
+
+    fn convergence_order(&self) -> usize {
+        1
+    }
+
+    fn name(&self) -> &'static str {
+        "symplectic_euler"
+    }
+
+    fn aliases(&self) -> Vec<&'static str> {
+        vec!["euler", "semi_implicit_euler"]
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::physics::math::Vector;
+    use crate::test_utils::physics::acceleration_functions::{
+        ConstantAcceleration, HarmonicOscillator,
+    };
 
     #[test]
     fn test_symplectic_euler_integrate_single() {
-        // Simple test evaluator that returns constant acceleration
-        struct TestEvaluator;
-        impl ForceEvaluator for TestEvaluator {
-            fn calc_acceleration(&self, _position: Vector) -> Vector {
-                Vector::new(0.0, 0.0, -9.81)
-            }
-        }
-
         let integrator = SymplecticEuler;
-        let evaluator = TestEvaluator;
+        let test_field = ConstantAcceleration::default(); // Uses default gravity
 
         let mut position = Vector::new(1.0, 0.0, 0.0);
         let mut velocity = Vector::new(0.0, 1.0, 0.0);
         let dt = 0.01;
 
-        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+        integrator.step(&mut position, &mut velocity, &test_field, dt);
 
         // Velocity should be updated first
         assert_eq!(velocity, Vector::new(0.0, 1.0, -0.0981));
@@ -163,20 +174,11 @@ mod tests {
 
         let initial_energy = 0.5 * k * position.length_squared();
 
-        // Spring force evaluator
-        struct SpringEvaluator {
-            k: Scalar,
-        }
-        impl ForceEvaluator for SpringEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                position * (-self.k)
-            }
-        }
-        let evaluator = SpringEvaluator { k };
+        let spring_field = HarmonicOscillator { k };
 
         // Simulate for many steps
         for _ in 0..1000 {
-            integrator.step(&mut position, &mut velocity, &evaluator, dt);
+            integrator.step(&mut position, &mut velocity, &spring_field, dt);
         }
 
         // Calculate final energy
@@ -198,15 +200,7 @@ mod tests {
         let integrator = SymplecticEuler;
 
         // Test with harmonic oscillator (known analytical solution)
-        struct SpringEvaluator {
-            k: Scalar,
-        }
-        impl ForceEvaluator for SpringEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                position * (-self.k)
-            }
-        }
-        let evaluator = SpringEvaluator { k: 1.0 };
+        let spring_field = HarmonicOscillator { k: 1.0 };
 
         // Test with two different timesteps
         let dt1 = 0.1;
@@ -221,7 +215,7 @@ mod tests {
         let mut vel1 = initial_vel;
         let steps1 = (final_time / dt1) as usize;
         for _ in 0..steps1 {
-            integrator.step(&mut pos1, &mut vel1, &evaluator, dt1);
+            integrator.step(&mut pos1, &mut vel1, &spring_field, dt1);
         }
 
         // Integrate with dt2
@@ -229,7 +223,7 @@ mod tests {
         let mut vel2 = initial_vel;
         let steps2 = (final_time / dt2) as usize;
         for _ in 0..steps2 {
-            integrator.step(&mut pos2, &mut vel2, &evaluator, dt2);
+            integrator.step(&mut pos2, &mut vel2, &spring_field, dt2);
         }
 
         // Analytical solution at t=1: x = cos(t), v = -sin(t)

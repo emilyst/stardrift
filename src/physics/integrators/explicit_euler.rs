@@ -4,7 +4,7 @@
 //! It exhibits poor energy conservation in conservative systems, with energy typically
 //! drifting exponentially over time.
 
-use super::{ForceEvaluator, Integrator};
+use super::{AccelerationField, Integrator};
 use crate::physics::math::{Scalar, Vector};
 
 /// Explicit Euler integrator (forward Euler method)
@@ -65,7 +65,7 @@ use crate::physics::math::{Scalar, Vector};
 /// | Force evals   | 1              | 1                | 2           | 1               |
 /// | Symplectic    | No             | Yes              | No          | Yes             |
 /// | Energy drift  | Exponential    | Bounded          | Linear      | Bounded         |
-/// | Use case      | Educational    | Simple problems  | Short sims  | Production      |
+/// | Use case      | Educational    | Simple problems  | Short sims  | Long sims       |
 ///
 /// # Use Cases
 ///
@@ -79,7 +79,7 @@ use crate::physics::math::{Scalar, Vector};
 /// - Orbital mechanics or celestial dynamics
 /// - Molecular dynamics simulations
 /// - Any conservative Hamiltonian system
-/// - Production physics simulations
+/// - Scientific physics simulations
 /// - Long-duration integrations
 ///
 /// # Historical Note
@@ -91,18 +91,22 @@ use crate::physics::math::{Scalar, Vector};
 pub struct ExplicitEuler;
 
 impl Integrator for ExplicitEuler {
+    fn clone_box(&self) -> Box<dyn Integrator> {
+        Box::new(self.clone())
+    }
+
     fn step(
         &self,
         position: &mut Vector,
         velocity: &mut Vector,
-        evaluator: &dyn ForceEvaluator,
+        field: &dyn AccelerationField,
         dt: Scalar,
     ) {
         // Store the current velocity for position update
         let current_velocity = *velocity;
 
         // Calculate acceleration at current position
-        let acceleration = evaluator.calc_acceleration(*position);
+        let acceleration = field.at(*position);
 
         // Update position first using CURRENT velocity: x(t+dt) = x(t) + v(t) * dt
         *position += current_velocity * dt;
@@ -110,31 +114,38 @@ impl Integrator for ExplicitEuler {
         // Then update velocity: v(t+dt) = v(t) + a(t) * dt
         *velocity += acceleration * dt;
     }
+
+    fn convergence_order(&self) -> usize {
+        1
+    }
+
+    fn name(&self) -> &'static str {
+        "explicit_euler"
+    }
+
+    fn aliases(&self) -> Vec<&'static str> {
+        vec!["forward_euler"]
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::physics::math::Vector;
+    use crate::test_utils::physics::acceleration_functions::{
+        ConstantAcceleration, HarmonicOscillator,
+    };
 
     #[test]
     fn test_explicit_euler_integrate_single() {
-        // Simple test evaluator that returns constant acceleration (gravity)
-        struct TestEvaluator;
-        impl ForceEvaluator for TestEvaluator {
-            fn calc_acceleration(&self, _position: Vector) -> Vector {
-                Vector::new(0.0, 0.0, -9.81)
-            }
-        }
-
         let integrator = ExplicitEuler;
-        let evaluator = TestEvaluator;
+        let test_field = ConstantAcceleration::default();
 
         let mut position = Vector::new(1.0, 0.0, 0.0);
         let mut velocity = Vector::new(0.0, 1.0, 0.0);
         let dt = 0.01;
 
-        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+        integrator.step(&mut position, &mut velocity, &test_field, dt);
 
         // Position should be updated with OLD velocity
         let expected_position = Vector::new(1.0, 0.01, 0.0);
@@ -146,24 +157,16 @@ mod tests {
 
     #[test]
     fn test_explicit_euler_order_of_operations() {
-        // Test evaluator that makes acceleration depend on position
+        // Test acceleration field that makes acceleration depend on position
         // This helps verify the correct order of operations
-        struct PositionDependentEvaluator;
-        impl ForceEvaluator for PositionDependentEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                // Simple spring force: a = -k * x (with k=1 for simplicity)
-                -position
-            }
-        }
-
         let integrator = ExplicitEuler;
-        let evaluator = PositionDependentEvaluator;
+        let position_dependent_field = HarmonicOscillator { k: 1.0 };
 
         let mut position = Vector::new(1.0, 0.0, 0.0);
         let mut velocity = Vector::new(0.0, 0.0, 0.0);
         let dt = 0.1;
 
-        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+        integrator.step(&mut position, &mut velocity, &position_dependent_field, dt);
 
         // Position uses OLD velocity (which was zero)
         assert_eq!(position, Vector::new(1.0, 0.0, 0.0));
@@ -184,17 +187,7 @@ mod tests {
         let dt = 0.01;
 
         let initial_energy = 0.5 * k * position.length_squared();
-
-        // Spring force evaluator
-        struct SpringEvaluator {
-            k: Scalar,
-        }
-        impl ForceEvaluator for SpringEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                position * (-self.k)
-            }
-        }
-        let evaluator = SpringEvaluator { k };
+        let spring_field = HarmonicOscillator { k };
 
         // Track energy growth
         let mut previous_energy = initial_energy;
@@ -202,7 +195,7 @@ mod tests {
 
         // Simulate and check for exponential growth pattern
         for i in 1..=1000 {
-            integrator.step(&mut position, &mut velocity, &evaluator, dt);
+            integrator.step(&mut position, &mut velocity, &spring_field, dt);
 
             if i % 100 == 0 {
                 let current_energy =

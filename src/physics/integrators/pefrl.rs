@@ -6,7 +6,7 @@
 //! and N-body simulations where energy conservation over millions of timesteps
 //! is critical.
 
-use super::{ForceEvaluator, Integrator};
+use super::{AccelerationField, Integrator};
 use crate::physics::math::{Scalar, Vector};
 
 /// PEFRL integrator - a 4th order symplectic integrator
@@ -136,43 +136,59 @@ impl Pefrl {
 }
 
 impl Integrator for Pefrl {
+    fn clone_box(&self) -> Box<dyn Integrator> {
+        Box::new(self.clone())
+    }
+
     fn step(
         &self,
         position: &mut Vector,
         velocity: &mut Vector,
-        evaluator: &dyn ForceEvaluator,
+        field: &dyn AccelerationField,
         dt: Scalar,
     ) {
         // Stage 1: Position update
         *position += *velocity * (Pefrl::XI * dt);
 
         // Stage 2: Velocity update with first acceleration
-        let accel_1 = evaluator.calc_acceleration(*position);
+        let accel_1 = field.at(*position);
         *velocity += accel_1 * (Pefrl::COEFF_A * dt);
 
         // Stage 3: Position update
         *position += *velocity * (Pefrl::CHI * dt);
 
         // Stage 4: Velocity update with second acceleration
-        let accel_2 = evaluator.calc_acceleration(*position);
+        let accel_2 = field.at(*position);
         *velocity += accel_2 * (Pefrl::LAMBDA * dt);
 
         // Stage 5: Position update (middle stage)
         *position += *velocity * (Pefrl::COEFF_B * dt);
 
         // Stage 6: Velocity update with third acceleration
-        let accel_3 = evaluator.calc_acceleration(*position);
+        let accel_3 = field.at(*position);
         *velocity += accel_3 * (Pefrl::LAMBDA * dt);
 
         // Stage 7: Position update
         *position += *velocity * (Pefrl::CHI * dt);
 
         // Stage 8: Velocity update with fourth acceleration
-        let accel_4 = evaluator.calc_acceleration(*position);
+        let accel_4 = field.at(*position);
         *velocity += accel_4 * (Pefrl::COEFF_A * dt);
 
         // Stage 9: Final position update
         *position += *velocity * (Pefrl::XI * dt);
+    }
+
+    fn convergence_order(&self) -> usize {
+        4
+    }
+
+    fn name(&self) -> &'static str {
+        "pefrl"
+    }
+
+    fn aliases(&self) -> Vec<&'static str> {
+        vec!["forest_ruth"]
     }
 }
 
@@ -180,6 +196,9 @@ impl Integrator for Pefrl {
 mod tests {
     use super::*;
     use crate::physics::math::Vector;
+    use crate::test_utils::physics::acceleration_functions::{
+        ConstantAcceleration, HarmonicOscillator,
+    };
 
     #[test]
     fn test_pefrl_simple_step() {
@@ -189,19 +208,12 @@ mod tests {
         let mut velocity = Vector::new(1.0, 1.0, 0.0); // Give x velocity too
         let dt = 0.01;
 
-        // Test evaluator with constant acceleration
-        struct TestEvaluator;
-        impl ForceEvaluator for TestEvaluator {
-            fn calc_acceleration(&self, _position: Vector) -> Vector {
-                Vector::new(0.0, 0.0, -9.81)
-            }
-        }
-        let evaluator = TestEvaluator;
+        let test_field = ConstantAcceleration::default();
 
         let initial_x = position.x;
         let initial_y = position.y;
 
-        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+        integrator.step(&mut position, &mut velocity, &test_field, dt);
 
         // Verify movement occurred
         assert!(position.x > initial_x, "X position should have increased");
@@ -221,20 +233,11 @@ mod tests {
 
         let initial_energy = 0.5 * k * position.length_squared();
 
-        // Spring force evaluator
-        struct SpringEvaluator {
-            k: Scalar,
-        }
-        impl ForceEvaluator for SpringEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                position * (-self.k)
-            }
-        }
-        let evaluator = SpringEvaluator { k };
+        let spring_field = HarmonicOscillator { k };
 
         // Simulate for many steps
         for _ in 0..1000 {
-            integrator.step(&mut position, &mut velocity, &evaluator, dt);
+            integrator.step(&mut position, &mut velocity, &spring_field, dt);
         }
 
         // Calculate final energy
@@ -256,15 +259,7 @@ mod tests {
         let integrator = Pefrl;
 
         // Test with simple harmonic oscillator
-        struct SpringEvaluator {
-            k: Scalar,
-        }
-        impl ForceEvaluator for SpringEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                position * (-self.k)
-            }
-        }
-        let evaluator = SpringEvaluator { k: 1.0 };
+        let spring_field = HarmonicOscillator { k: 1.0 };
 
         // Test with two different timesteps
         let dt1 = 0.01;
@@ -277,14 +272,14 @@ mod tests {
         let mut pos1 = initial_pos;
         let mut vel1 = initial_vel;
         for _ in 0..10 {
-            integrator.step(&mut pos1, &mut vel1, &evaluator, dt1);
+            integrator.step(&mut pos1, &mut vel1, &spring_field, dt1);
         }
 
         // Integrate with dt2 (twice as many steps)
         let mut pos2 = initial_pos;
         let mut vel2 = initial_vel;
         for _ in 0..20 {
-            integrator.step(&mut pos2, &mut vel2, &evaluator, dt2);
+            integrator.step(&mut pos2, &mut vel2, &spring_field, dt2);
         }
 
         // The error should scale as O(dt^4) for a 4th order method

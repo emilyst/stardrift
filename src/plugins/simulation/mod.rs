@@ -81,7 +81,7 @@ impl Plugin for SimulationPlugin {
         ));
 
         // Create integrator using flexible configuration system
-        let registry = IntegratorRegistry::new();
+        let registry = IntegratorRegistry::new().with_standard_integrators();
         let integrator: Box<dyn crate::physics::integrators::Integrator + Send + Sync> =
             match registry.create(&config.physics.integrator.integrator_type) {
                 Ok(integrator) => integrator,
@@ -94,7 +94,7 @@ impl Plugin for SimulationPlugin {
                 }
             };
         app.insert_resource(CurrentIntegrator(integrator));
-        app.init_resource::<IntegratorRegistry>();
+        app.insert_resource(IntegratorRegistry::default());
 
         app.init_resource::<crate::physics::resources::PhysicsTime>();
 

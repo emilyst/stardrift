@@ -105,7 +105,7 @@ fn main() {
     // Handle list-integrators flag
     if args.list_integrators {
         use stardrift::physics::integrators::registry::IntegratorRegistry;
-        let registry = IntegratorRegistry::new();
+        let registry = IntegratorRegistry::new().with_standard_integrators();
         println!("Available integrators:");
         for name in registry.list_available() {
             println!("  - {name}");

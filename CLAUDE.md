@@ -183,7 +183,7 @@ To add a new numerical integrator to the simulation:
 
 1. **Create the integrator implementation** (`src/physics/integrators/your_integrator.rs`)
    ```rust
-   use super::{ForceEvaluator, Integrator};
+   use super::{AccelerationField, Integrator};
    use crate::physics::math::{Scalar, Vector};
    
    #[derive(Debug, Clone, Default)]
@@ -194,10 +194,22 @@ To add a new numerical integrator to the simulation:
            &self,
            position: &mut Vector,
            velocity: &mut Vector,
-           evaluator: &dyn ForceEvaluator,
+           field: &dyn AccelerationField,
            dt: Scalar,
        ) {
            // Implementation
+       }
+       
+       fn convergence_order(&self) -> usize {
+           2 // Return the mathematical order of your integrator
+       }
+       
+       fn name(&self) -> &'static str {
+           "your_integrator" // Canonical name used in config files
+       }
+       
+       fn aliases(&self) -> Vec<&'static str> {
+           vec!["yi", "your"] // Optional: convenient shortcuts
        }
    }
    ```
@@ -207,10 +219,20 @@ To add a new numerical integrator to the simulation:
     - Add public export: `pub use your_integrator::YourIntegrator;`
 
 3. **Register in the registry** (`src/physics/integrators/registry.rs`)
-    - Import the integrator: Add to the `use super::{...}` statement
-    - Add to `get()` method match statement
-    - Add to `list_available()` method
-    - Add any convenient aliases in `new()` method
+    - Import the integrator in the `with_standard_integrators()` method:
+      ```rust
+      pub fn with_standard_integrators(mut self) -> Self {
+          use super::{
+              // ... existing imports ...
+              YourIntegrator,
+          };
+          
+          // ... existing registrations ...
+          self.register_integrator(Box::new(YourIntegrator));
+          
+          self
+      }
+      ```
 
 4. **Update documentation**
     - **README.md**:
@@ -228,10 +250,8 @@ To add a new numerical integrator to the simulation:
 5. **Add tests and benchmarks** (optional but recommended)
     - Unit tests in the integrator file
     - Integration tests in `tests/`
-    - Add to `benches/integrators.rs`:
-        - Include in imports at top of file
-        - Add to `get_integrators()` function
-        - Add to `get_integrators_with_order()` with expected convergence order
+    - The benchmark suite automatically discovers and tests your integrator:
+        - No changes needed to benchmarks (uses registry discovery)
     - The benchmark suite automatically tests:
         - Performance (raw speed)
         - Accuracy (harmonic oscillator, Kepler orbits)
@@ -473,3 +493,5 @@ Use specialized agents for complex tasks:
   very long time.
 - This project is a one-person side project made in my spare time for enjoyment. It's pre-release and not yet meant for
   general consumption. Backwards compatibility during changes is a low priority.
+- This application is an end-user graphical application made for reference and for fun. It's not a serious scientific
+  project, more of a toy. Avoid references to things like a production environment.

@@ -3,9 +3,8 @@
 //! Tests each integrator against known analytical solutions and verifies
 //! expected order of convergence.
 
-use stardrift::physics::integrators::registry::IntegratorRegistry;
 use stardrift::physics::integrators::{
-    ForceEvaluator, Heun, Integrator, RungeKuttaFourthOrder, RungeKuttaSecondOrderMidpoint,
+    AccelerationField, Heun, Integrator, RungeKuttaFourthOrder, RungeKuttaSecondOrderMidpoint,
     SymplecticEuler, VelocityVerlet,
 };
 use stardrift::physics::math::{Scalar, Vector};
@@ -59,19 +58,19 @@ impl HarmonicOscillator {
     }
 }
 
-/// Force evaluator for harmonic oscillator
-struct HarmonicOscillatorEvaluator {
+/// Acceleration field for harmonic oscillator
+struct HarmonicOscillatorAccelerationField {
     omega: Scalar,
 }
 
-impl HarmonicOscillatorEvaluator {
+impl HarmonicOscillatorAccelerationField {
     fn new(omega: Scalar) -> Self {
         Self { omega }
     }
 }
 
-impl ForceEvaluator for HarmonicOscillatorEvaluator {
-    fn calc_acceleration(&self, position: Vector) -> Vector {
+impl AccelerationField for HarmonicOscillatorAccelerationField {
+    fn at(&self, position: Vector) -> Vector {
         -self.omega * self.omega * position
     }
 }
@@ -85,10 +84,10 @@ fn simulate_harmonic_oscillator(
 ) -> (Vector, Vector, Scalar) {
     let mut position = Vector::new(oscillator.amplitude, 0.0, 0.0);
     let mut velocity = Vector::new(0.0, 0.0, 0.0);
-    let evaluator = HarmonicOscillatorEvaluator::new(oscillator.omega);
+    let harmonic_oscillator_field = HarmonicOscillatorAccelerationField::new(oscillator.omega);
 
     for _ in 0..steps {
-        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+        integrator.step(&mut position, &mut velocity, &harmonic_oscillator_field, dt);
     }
 
     let final_time = dt * steps as Scalar;
@@ -112,12 +111,12 @@ fn test_symplectic_euler_energy_conservation() {
     let mut position = Vector::new(1.0, 0.0, 0.0);
     let mut velocity = Vector::new(0.0, 0.0, 0.0);
     let initial_energy = oscillator.energy(position, velocity);
-    let evaluator = HarmonicOscillatorEvaluator::new(oscillator.omega);
+    let harmonic_oscillator_field = HarmonicOscillatorAccelerationField::new(oscillator.omega);
 
     let mut max_energy_error = 0.0f64;
 
     for _ in 0..steps {
-        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+        integrator.step(&mut position, &mut velocity, &harmonic_oscillator_field, dt);
 
         let current_energy = oscillator.energy(position, velocity);
         let energy_error = ((current_energy - initial_energy) / initial_energy).abs();
@@ -144,12 +143,12 @@ fn test_velocity_verlet_energy_conservation() {
     let mut position = Vector::new(1.0, 0.0, 0.0);
     let mut velocity = Vector::new(0.0, 0.0, 0.0);
     let initial_energy = oscillator.energy(position, velocity);
-    let evaluator = HarmonicOscillatorEvaluator::new(oscillator.omega);
+    let harmonic_oscillator_field = HarmonicOscillatorAccelerationField::new(oscillator.omega);
 
     let mut max_energy_error = 0.0f64;
 
     for _ in 0..steps {
-        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+        integrator.step(&mut position, &mut velocity, &harmonic_oscillator_field, dt);
 
         let current_energy = oscillator.energy(position, velocity);
         let energy_error = ((current_energy - initial_energy) / initial_energy).abs();
@@ -218,7 +217,7 @@ fn test_heun_method_order() {
     for i in 1..errors.len() {
         let order = (errors[i - 1] / errors[i]).log2();
         println!("Heun method convergence order: {:.2}", order);
-        // Heun with ForceEvaluator should achieve near 2nd order accuracy
+        // Heun should achieve near 2nd order accuracy
         assert!(
             order > 1.8 && order < 2.5,
             "Unexpected convergence order: {}",
@@ -246,7 +245,7 @@ fn test_rk2_midpoint_order() {
     for i in 1..errors.len() {
         let order = (errors[i - 1] / errors[i]).log2();
         println!("RK2 Midpoint convergence order: {:.2}", order);
-        // RK2 with ForceEvaluator should achieve near 2nd order accuracy
+        // RK2 should achieve near 2nd order accuracy
         assert!(
             order > 1.8 && order < 2.5,
             "Unexpected convergence order: {}",
@@ -271,7 +270,7 @@ fn test_rk4_order() {
         errors.push(error);
     }
 
-    // RK4 with ForceEvaluator now achieves near 4th order accuracy
+    // RK4 now achieves near 4th order accuracy
     // Calculate and verify convergence order
     for i in 1..errors.len() {
         if errors[i] > 1e-10 {
@@ -307,10 +306,10 @@ fn test_long_term_stability() {
         let mut position = Vector::new(1.0, 0.0, 0.0);
         let mut velocity = Vector::new(0.0, 0.0, 0.0);
         let initial_energy = oscillator.energy(position, velocity);
-        let evaluator = HarmonicOscillatorEvaluator::new(oscillator.omega);
+        let harmonic_oscillator_field = HarmonicOscillatorAccelerationField::new(oscillator.omega);
 
         for _ in 0..steps {
-            integrator.step(&mut position, &mut velocity, &evaluator, dt);
+            integrator.step(&mut position, &mut velocity, &harmonic_oscillator_field, dt);
         }
 
         let final_energy = oscillator.energy(position, velocity);
@@ -367,7 +366,8 @@ fn test_long_term_stability() {
 /// Test integrator registry creation
 #[test]
 fn test_registry_integrator_creation() {
-    let registry = IntegratorRegistry::new();
+    use stardrift::physics::integrators::registry::IntegratorRegistry;
+    let registry = IntegratorRegistry::new().with_standard_integrators();
 
     // Test creating each integrator type using their aliases
     let integrator_names = vec![
@@ -394,7 +394,8 @@ fn test_all_integrators_harmonic_oscillator() {
     let dt = 0.01;
     let steps = 100; // One period
 
-    let registry = IntegratorRegistry::new();
+    use stardrift::physics::integrators::registry::IntegratorRegistry;
+    let registry = IntegratorRegistry::new().with_standard_integrators();
     let integrator_configs = vec![
         "symplectic_euler",
         "velocity_verlet",

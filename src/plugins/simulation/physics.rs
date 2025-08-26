@@ -1,5 +1,5 @@
 use crate::config::SimulationConfig;
-use crate::physics::integrators::ForceEvaluator;
+use crate::physics::integrators::AccelerationField;
 use crate::physics::math::{Scalar, Vector};
 use crate::physics::{
     components::{Mass, PhysicsBody, PhysicsBodyBundle, Position, Velocity},
@@ -35,19 +35,19 @@ pub fn rebuild_octree(
     }));
 }
 
-/// Force evaluator that wraps the octree for a specific body
+/// Acceleration field that wraps the octree for a specific body
 ///
-/// This struct implements the ForceEvaluator trait to allow integrators
-/// to calculate forces at arbitrary positions during multi-stage integration.
-struct BodyForceEvaluator<'a> {
+/// This struct implements the AccelerationField trait to allow integrators
+/// to calculate accelerations at arbitrary positions during multi-stage integration.
+struct BodyAccelerationField<'a> {
     octree: &'a Octree,
     body_entity: Entity,
     body_mass: Scalar,
     g: Scalar,
 }
 
-impl<'a> ForceEvaluator for BodyForceEvaluator<'a> {
-    fn calc_acceleration(&self, position: Vector) -> Vector {
+impl<'a> AccelerationField for BodyAccelerationField<'a> {
+    fn at(&self, position: Vector) -> Vector {
         let force = self.octree.calculate_force_at_position(
             position,
             self.body_mass,
@@ -76,18 +76,16 @@ pub fn integrate_motions(
     query
         .par_iter_mut()
         .for_each(|(entity, mut position, mut velocity, mass)| {
-            // Create a force evaluator for this body
-            let evaluator = BodyForceEvaluator {
+            let field = BodyAccelerationField {
                 octree,
                 body_entity: entity,
                 body_mass: mass.value(),
                 g: **g,
             };
 
-            // Use the integrator with force evaluator
             integrator
                 .0
-                .step(position.value_mut(), velocity.value_mut(), &evaluator, dt);
+                .step(position.value_mut(), velocity.value_mut(), &field, dt);
         });
 }
 
@@ -310,24 +308,24 @@ mod tests {
         let mut euler_pos = Vector::new(0.0, 10.0, 0.0);
         let mut euler_vel = Vector::new(5.0, 0.0, 0.0);
         let euler_integrator = SymplecticEuler;
-        // Simple test evaluator that returns constant acceleration
-        struct TestEvaluator {
+        // Simple test acceleration field that returns constant acceleration
+        struct TestAccelerationField {
             acceleration: Vector,
         }
-        impl ForceEvaluator for TestEvaluator {
-            fn calc_acceleration(&self, _position: Vector) -> Vector {
+        impl AccelerationField for TestAccelerationField {
+            fn at(&self, _: Vector) -> Vector {
                 self.acceleration
             }
         }
-        let evaluator = TestEvaluator { acceleration };
+        let test_field = TestAccelerationField { acceleration };
 
-        euler_integrator.step(&mut euler_pos, &mut euler_vel, &evaluator, dt);
+        euler_integrator.step(&mut euler_pos, &mut euler_vel, &test_field, dt);
 
         // Test with RK4
         let mut rk4_pos = Vector::new(0.0, 10.0, 0.0);
         let mut rk4_vel = Vector::new(5.0, 0.0, 0.0);
         let rk4_integrator = RungeKuttaFourthOrder;
-        rk4_integrator.step(&mut rk4_pos, &mut rk4_vel, &evaluator, dt);
+        rk4_integrator.step(&mut rk4_pos, &mut rk4_vel, &test_field, dt);
 
         // Print the values for debugging
         println!("Euler pos: {:?}, vel: {:?}", euler_pos, euler_vel);
@@ -355,28 +353,25 @@ mod tests {
     fn test_rk4_multi_stage_integration() {
         use crate::physics::integrators::Integrator;
 
-        // This test verifies that RK4 works correctly after removing MultiStageIntegrator.
-        // RK4 now handles all its stages internally using the ForceEvaluator.
-
         let integrator = RungeKuttaFourthOrder;
         let mut position = Vector::new(0.0, 10.0, 0.0);
         let mut velocity = Vector::new(5.0, 0.0, 0.0);
         let dt = 1.0 / 60.0;
 
-        // Simple constant acceleration evaluator
-        struct TestEvaluator;
-        impl ForceEvaluator for TestEvaluator {
-            fn calc_acceleration(&self, _position: Vector) -> Vector {
+        // Simple constant acceleration field
+        struct TestAccelerationField;
+        impl AccelerationField for TestAccelerationField {
+            fn at(&self, _: Vector) -> Vector {
                 Vector::new(0.0, -9.81, 0.0)
             }
         }
-        let evaluator = TestEvaluator;
+        let test_field = TestAccelerationField;
 
         let initial_pos = position;
         let initial_vel = velocity;
 
         // Run one integration step
-        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+        integrator.step(&mut position, &mut velocity, &test_field, dt);
 
         // Check that position and velocity changed
         assert_ne!(position, initial_pos, "Position should change");

@@ -146,7 +146,7 @@ cargo install trunk
 # Development build with hot-reloading
 trunk serve
 
-# Production build
+# Release build
 trunk build --release
 ```
 
@@ -155,7 +155,7 @@ The built files will be in the `dist/` directory, ready for deployment. Trunk au
 - WASM compilation and optimization
 - Asset bundling and injection
 - Development server with hot-reloading
-- Gzip compression for production builds
+- Gzip compression for release builds
 
 ## Usage
 
@@ -547,7 +547,7 @@ The physics module implements:
 - **`physics/math.rs`**: Mathematical utilities for sphere distribution and physics calculations
 - **`physics/components.rs`**: Core physics components (Mass, Velocity, Acceleration)
 - **`physics/resources.rs`**: Physics resources and runtime configuration
-- **`physics/integrators/`**: Six numerical integration methods with force evaluator architecture and registry system
+- **`physics/integrators/`**: Six numerical integration methods with acceleration field architecture and registry system
 - **`config.rs`**: Centralized configuration management with serialization support
 - **`states.rs`**: Application state management and transitions
 - **`physics/octree.rs`**: High-performance Barnes-Hut spatial partitioning implementation

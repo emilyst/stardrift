@@ -12,14 +12,15 @@
 //! to work with Criterion's framework. Lower values indicate better accuracy.
 
 use criterion::{BenchmarkId, Criterion, PlotConfiguration, criterion_group, criterion_main};
+use std::hint::black_box;
 
 extern crate stardrift;
-use stardrift::physics::integrators::{
-    ForceEvaluator, Heun, Integrator, Pefrl, RungeKuttaFourthOrder, RungeKuttaSecondOrderMidpoint,
-    SymplecticEuler, VelocityVerlet,
-};
+use stardrift::physics::integrators::Integrator;
 use stardrift::physics::math::{Scalar, Vector};
 use stardrift::physics::octree::{Octree, OctreeBody};
+use stardrift::test_utils::physics::acceleration_functions::{
+    CentralForce, HarmonicOscillator, NBodyAcceleration,
+};
 
 const PI: Scalar = std::f64::consts::PI;
 
@@ -27,72 +28,36 @@ const PI: Scalar = std::f64::consts::PI;
 // Helper Functions and Test Scenarios
 // =============================================================================
 
-/// Get all integrators to test
-fn get_integrators() -> Vec<(&'static str, Box<dyn Integrator>)> {
-    vec![
-        ("symplectic_euler", Box::new(SymplecticEuler)),
-        ("velocity_verlet", Box::new(VelocityVerlet)),
-        ("heun", Box::new(Heun)),
-        ("rk2_midpoint", Box::new(RungeKuttaSecondOrderMidpoint)),
-        ("rk4", Box::new(RungeKuttaFourthOrder)),
-        ("pefrl", Box::new(Pefrl)),
-    ]
+/// Get all integrators to test using the registry
+fn get_integrators() -> Vec<(String, Box<dyn Integrator>)> {
+    use stardrift::physics::integrators::registry::IntegratorRegistry;
+    let registry = IntegratorRegistry::new().with_standard_integrators();
+    let mut integrators = Vec::new();
+
+    // Get all available integrators from the registry
+    for name in registry.list_available() {
+        if let Ok(integrator) = registry.create(&name) {
+            integrators.push((name, integrator));
+        }
+    }
+
+    integrators
 }
 
 /// Get integrators with their expected convergence orders
-fn get_integrators_with_order() -> Vec<(&'static str, Box<dyn Integrator>, usize)> {
-    vec![
-        ("symplectic_euler", Box::new(SymplecticEuler), 1),
-        ("velocity_verlet", Box::new(VelocityVerlet), 2),
-        ("heun", Box::new(Heun), 2),
-        ("rk2_midpoint", Box::new(RungeKuttaSecondOrderMidpoint), 2),
-        ("rk4", Box::new(RungeKuttaFourthOrder), 4),
-        ("pefrl", Box::new(Pefrl), 4),
-    ]
-}
+fn get_integrators_with_order() -> Vec<(String, Box<dyn Integrator>, usize)> {
+    use stardrift::physics::integrators::registry::IntegratorRegistry;
+    let registry = IntegratorRegistry::new().with_standard_integrators();
+    let mut integrators = Vec::new();
 
-/// Harmonic oscillator for accuracy testing
-struct HarmonicOscillator {
-    omega: Scalar,
-}
-
-impl ForceEvaluator for HarmonicOscillator {
-    fn calc_acceleration(&self, position: Vector) -> Vector {
-        -self.omega * self.omega * position
-    }
-}
-
-/// Kepler problem (central force)
-struct KeplerProblem {
-    mu: Scalar, // GM for central body
-}
-
-impl ForceEvaluator for KeplerProblem {
-    fn calc_acceleration(&self, position: Vector) -> Vector {
-        let r = position.length();
-        if r > 1e-10 {
-            -position * (self.mu / (r * r * r))
-        } else {
-            Vector::ZERO
+    for name in registry.list_available() {
+        if let Ok(integrator) = registry.create(&name) {
+            let order = integrator.convergence_order();
+            integrators.push((name, integrator, order));
         }
     }
-}
 
-/// N-body evaluator using octree
-struct NBodyEvaluator<'a> {
-    octree: &'a Octree,
-    entity: bevy::ecs::entity::Entity,
-    mass: Scalar,
-    g: Scalar,
-}
-
-impl<'a> ForceEvaluator for NBodyEvaluator<'a> {
-    fn calc_acceleration(&self, position: Vector) -> Vector {
-        let force =
-            self.octree
-                .calculate_force_at_position(position, self.mass, self.entity, self.g);
-        force / self.mass
-    }
+    integrators
 }
 
 // =============================================================================
@@ -106,17 +71,18 @@ fn bench_integrator_performance(c: &mut Criterion) {
         .plot_config(PlotConfiguration::default().summary_scale(criterion::AxisScale::Logarithmic));
 
     let integrators = get_integrators();
-    let evaluator = HarmonicOscillator { omega: 1.0 };
+    let oscillator = HarmonicOscillator::from_omega(1.0);
 
     for (name, integrator) in &integrators {
-        group.bench_function(*name, |b| {
-            let mut position = Vector::new(1.0, 0.0, 0.0);
-            let mut velocity = Vector::new(0.0, 1.0, 0.0);
-            let dt = 0.01;
-
+        group.bench_function(name.as_str(), |b| {
             b.iter(|| {
-                integrator.step(&mut position, &mut velocity, &evaluator, dt);
-                (position, velocity);
+                let mut position = black_box(Vector::new(1.0, 0.0, 0.0));
+                let mut velocity = black_box(Vector::new(0.0, 1.0, 0.0));
+                let dt = black_box(0.01);
+
+                integrator.step(&mut position, &mut velocity, &oscillator, dt);
+                black_box(position);
+                black_box(velocity);
             });
         });
     }
@@ -138,10 +104,10 @@ fn bench_integrator_accuracy(c: &mut Criterion) {
     let integrators = get_integrators();
 
     // Test with harmonic oscillator (has analytical solution)
-    let oscillator = HarmonicOscillator { omega: 2.0 * PI };
+    let oscillator = HarmonicOscillator::from_omega(2.0 * PI);
 
     for (name, integrator) in &integrators {
-        group.bench_function(BenchmarkId::new("harmonic", *name), |b| {
+        group.bench_function(BenchmarkId::new("harmonic", name.as_str()), |b| {
             b.iter_custom(|iters| {
                 let mut total_error = 0.0;
 
@@ -149,7 +115,7 @@ fn bench_integrator_accuracy(c: &mut Criterion) {
                     let mut position = Vector::new(1.0, 0.0, 0.0);
                     let mut velocity = Vector::new(0.0, 0.0, 0.0);
                     let dt = 0.01;
-                    let steps = 100; // One period
+                    let steps = 100; // One period (T = 2π/ω = 2π/(2π) = 1.0 seconds)
 
                     for _ in 0..steps {
                         integrator.step(&mut position, &mut velocity, &oscillator, dt);
@@ -157,7 +123,9 @@ fn bench_integrator_accuracy(c: &mut Criterion) {
 
                     // Compare with analytical solution
                     let t = dt * steps as Scalar;
-                    let exact_pos = Vector::new((oscillator.omega * t).cos(), 0.0, 0.0);
+                    // For harmonic oscillator: omega = sqrt(k)
+                    let omega = oscillator.k.sqrt();
+                    let exact_pos = Vector::new((omega * t).cos(), 0.0, 0.0);
                     let error = (position - exact_pos).length();
                     total_error += error;
                 }
@@ -184,11 +152,11 @@ fn bench_convergence_order(c: &mut Criterion) {
         .plot_config(PlotConfiguration::default().summary_scale(criterion::AxisScale::Logarithmic));
 
     let integrators = get_integrators_with_order();
-    let oscillator = HarmonicOscillator { omega: 1.0 };
+    let oscillator = HarmonicOscillator::from_omega(1.0);
     let timesteps = vec![0.1, 0.05, 0.025, 0.0125];
 
     for (name, integrator, expected_order) in &integrators {
-        group.bench_function(*name, |b| {
+        group.bench_function(name.as_str(), |b| {
             b.iter_custom(|iters| {
                 let mut total_order_error = 0.0;
 
@@ -209,10 +177,12 @@ fn bench_convergence_order(c: &mut Criterion) {
                         errors.push(error);
                     }
 
-                    // Calculate convergence order
+                    // Calculate convergence order (since timesteps halve each time)
                     let mut orders = Vec::new();
                     for i in 1..errors.len() {
-                        if errors[i] > 1e-10 {
+                        if errors[i] > 1e-10 && errors[i - 1] > 1e-10 {
+                            // Order = log(error_ratio) / log(timestep_ratio)
+                            // Since timesteps halve: log2(error_ratio)
                             let order = (errors[i - 1] / errors[i]).log2();
                             orders.push(order);
                         }
@@ -253,10 +223,10 @@ fn bench_integrator_stability(c: &mut Criterion) {
         .plot_config(PlotConfiguration::default().summary_scale(criterion::AxisScale::Logarithmic));
 
     let integrators = get_integrators();
-    let oscillator = HarmonicOscillator { omega: 2.0 * PI };
+    let oscillator = HarmonicOscillator::from_omega(2.0 * PI);
 
     for (name, integrator) in &integrators {
-        group.bench_function(BenchmarkId::new("energy_drift", *name), |b| {
+        group.bench_function(BenchmarkId::new("energy_drift", name.as_str()), |b| {
             b.iter_custom(|iters| {
                 let mut total_energy_drift = 0.0;
 
@@ -266,14 +236,15 @@ fn bench_integrator_stability(c: &mut Criterion) {
                     let dt = 0.01;
                     let steps = 10000; // Long simulation
 
-                    let initial_energy = 0.5 * oscillator.omega * oscillator.omega;
+                    // Initial total energy: E = 0.5*k*x^2 + 0.5*v^2 (with x=1, v=0)
+                    let initial_energy = 0.5 * oscillator.k * 1.0;
 
                     for _ in 0..steps {
                         integrator.step(&mut position, &mut velocity, &oscillator, dt);
                     }
 
                     let final_energy = 0.5 * velocity.length_squared()
-                        + 0.5 * oscillator.omega * oscillator.omega * position.length_squared();
+                        + 0.5 * oscillator.k * position.length_squared();
                     let energy_drift = ((final_energy - initial_energy) / initial_energy).abs();
 
                     total_energy_drift += energy_drift;
@@ -304,10 +275,10 @@ fn bench_kepler_orbit(c: &mut Criterion) {
     let mu: Scalar = 1.0; // GM
     let radius: Scalar = 1.0;
     let orbital_velocity = (mu / radius).sqrt();
-    let kepler = KeplerProblem { mu };
+    let kepler = CentralForce { mu };
 
     for (name, integrator) in &integrators {
-        group.bench_function(*name, |b| {
+        group.bench_function(name.as_str(), |b| {
             b.iter_custom(|iters| {
                 let mut total_conservation_error = 0.0;
 
@@ -318,7 +289,8 @@ fn bench_kepler_orbit(c: &mut Criterion) {
                     let orbital_period: Scalar = 2.0 * PI * (radius.powi(3) / mu).sqrt();
                     let steps = (orbital_period / dt) as usize;
 
-                    let initial_energy = -mu / (2.0 * radius); // Specific orbital energy
+                    // Specific orbital energy for circular orbit: E = -μ/(2r)
+                    let initial_energy = -mu / (2.0 * radius);
                     let initial_angular_momentum = radius * orbital_velocity;
 
                     for _ in 0..steps {
@@ -369,36 +341,39 @@ fn bench_work_precision(c: &mut Criterion) {
     let timesteps = vec![0.1, 0.05, 0.01, 0.005, 0.001];
     let integrators = get_integrators();
 
-    let oscillator = HarmonicOscillator { omega: 1.0 };
+    let oscillator = HarmonicOscillator::from_omega(1.0);
     let final_time = 10.0; // Simulate for 10 time units
 
     for (name, integrator) in &integrators {
         for &dt in &timesteps {
             let steps = (final_time / dt) as usize;
 
-            group.bench_function(BenchmarkId::new(*name, format!("dt_{:.3}", dt)), |b| {
-                b.iter_custom(|iters| {
-                    let mut total_error = 0.0;
+            group.bench_function(
+                BenchmarkId::new(name.as_str(), format!("dt_{:.3}", dt)),
+                |b| {
+                    b.iter_custom(|iters| {
+                        let mut total_error = 0.0;
 
-                    for _ in 0..iters {
-                        let mut position = Vector::new(1.0, 0.0, 0.0);
-                        let mut velocity = Vector::new(0.0, 0.0, 0.0);
+                        for _ in 0..iters {
+                            let mut position = Vector::new(1.0, 0.0, 0.0);
+                            let mut velocity = Vector::new(0.0, 0.0, 0.0);
 
-                        for _ in 0..steps {
-                            integrator.step(&mut position, &mut velocity, &oscillator, dt);
+                            for _ in 0..steps {
+                                integrator.step(&mut position, &mut velocity, &oscillator, dt);
+                            }
+
+                            // Calculate error
+                            let exact_pos = Vector::new(final_time.cos(), 0.0, 0.0);
+                            let error = (position - exact_pos).length();
+                            total_error += error;
                         }
 
-                        // Calculate error
-                        let exact_pos = Vector::new(final_time.cos(), 0.0, 0.0);
-                        let error = (position - exact_pos).length();
-                        total_error += error;
-                    }
-
-                    // Return average position error as Duration
-                    let avg_error = total_error / iters as f64;
-                    std::time::Duration::from_nanos((avg_error * 1e9) as u64)
-                });
-            });
+                        // Return average position error as Duration
+                        let avg_error = total_error / iters as f64;
+                        std::time::Duration::from_nanos((avg_error * 1e9) as u64)
+                    });
+                },
+            );
         }
     }
 
@@ -438,10 +413,10 @@ fn bench_nbody_realistic(c: &mut Criterion) {
     let integrators = get_integrators();
 
     for (name, integrator) in &integrators {
-        group.bench_function(*name, |b| {
+        group.bench_function(name.as_str(), |b| {
             // Test on middle body
             let test_body = &bodies[body_count / 2];
-            let evaluator = NBodyEvaluator {
+            let field = NBodyAcceleration {
                 octree: &octree,
                 entity: test_body.entity,
                 mass: test_body.mass,
@@ -449,15 +424,16 @@ fn bench_nbody_realistic(c: &mut Criterion) {
             };
 
             b.iter(|| {
-                let mut position = test_body.position;
-                let mut velocity = Vector::new(0.1, 0.0, 0.0); // Small initial velocity
-                let dt = 0.01;
+                let mut position = black_box(test_body.position);
+                let mut velocity = black_box(Vector::new(0.1, 0.0, 0.0)); // Small initial velocity
+                let dt = black_box(0.01);
 
                 for _ in 0..10 {
-                    integrator.step(&mut position, &mut velocity, &evaluator, dt);
+                    integrator.step(&mut position, &mut velocity, &field, dt);
                 }
 
-                (position, velocity);
+                black_box(position);
+                black_box(velocity);
             });
         });
     }

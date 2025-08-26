@@ -5,7 +5,7 @@
 //! conservation. This second-order symplectic integrator is widely regarded
 //! as the best general-purpose method for Hamiltonian systems.
 
-use super::{ForceEvaluator, Integrator};
+use super::{AccelerationField, Integrator};
 use crate::physics::math::{Scalar, Vector};
 
 /// Velocity Verlet integrator
@@ -97,29 +97,45 @@ use crate::physics::math::{Scalar, Vector};
 pub struct VelocityVerlet;
 
 impl Integrator for VelocityVerlet {
+    fn clone_box(&self) -> Box<dyn Integrator> {
+        Box::new(self.clone())
+    }
+
     fn step(
         &self,
         position: &mut Vector,
         velocity: &mut Vector,
-        evaluator: &dyn ForceEvaluator,
+        field: &dyn AccelerationField,
         dt: Scalar,
     ) {
-        // Proper Velocity Verlet with force recalculation
+        // Proper Velocity Verlet with acceleration recalculation
         // This is the mathematically correct implementation that conserves energy
 
         // Calculate acceleration at current position
-        let accel_old = evaluator.calc_acceleration(*position);
+        let accel_old = field.at(*position);
 
         // Update position using current velocity and acceleration
         // x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt²
         *position += *velocity * dt + accel_old * (0.5 * dt * dt);
 
         // Calculate acceleration at new position
-        let accel_new = evaluator.calc_acceleration(*position);
+        let accel_new = field.at(*position);
 
         // Update velocity using average of old and new acceleration
         // v(t+dt) = v(t) + 0.5*(a(t) + a(t+dt))*dt
         *velocity += (accel_old + accel_new) * (0.5 * dt);
+    }
+
+    fn convergence_order(&self) -> usize {
+        2
+    }
+
+    fn name(&self) -> &'static str {
+        "velocity_verlet"
+    }
+
+    fn aliases(&self) -> Vec<&'static str> {
+        vec!["verlet"]
     }
 }
 
@@ -127,6 +143,9 @@ impl Integrator for VelocityVerlet {
 mod tests {
     use super::*;
     use crate::physics::math::Vector;
+    use crate::test_utils::physics::acceleration_functions::{
+        ConstantAcceleration, HarmonicOscillator,
+    };
 
     #[test]
     fn test_velocity_verlet_simple_step() {
@@ -136,16 +155,9 @@ mod tests {
         let mut velocity = Vector::new(0.0, 1.0, 0.0);
         let dt = 0.01;
 
-        // Test evaluator
-        struct TestEvaluator;
-        impl ForceEvaluator for TestEvaluator {
-            fn calc_acceleration(&self, _position: Vector) -> Vector {
-                Vector::new(0.0, 0.0, -9.81)
-            }
-        }
-        let evaluator = TestEvaluator;
+        let test_field = ConstantAcceleration::default(); // Uses default gravity
 
-        integrator.step(&mut position, &mut velocity, &evaluator, dt);
+        integrator.step(&mut position, &mut velocity, &test_field, dt);
 
         // Position should be updated with velocity and half acceleration
         let expected_x = 1.0;
@@ -172,21 +184,12 @@ mod tests {
 
         let initial_energy = 0.5 * k * position.length_squared();
 
-        // Spring force evaluator
-        struct SpringEvaluator {
-            k: Scalar,
-        }
-        impl ForceEvaluator for SpringEvaluator {
-            fn calc_acceleration(&self, position: Vector) -> Vector {
-                position * (-self.k)
-            }
-        }
-        let evaluator = SpringEvaluator { k };
+        let spring_field = HarmonicOscillator { k };
 
         // Simulate for many steps
         for _ in 0..1000 {
             // Integrate
-            integrator.step(&mut position, &mut velocity, &evaluator, dt);
+            integrator.step(&mut position, &mut velocity, &spring_field, dt);
         }
 
         // Calculate final energy
