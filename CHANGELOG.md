@@ -15,6 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Available as `explicit_euler` with alias `forward_euler`
     - Documented limitations for orbital mechanics simulations
 
+### Changed
+
+- Enhanced documentation for all numerical integrators
+    - Standardized documentation structure across all 7 integrator modules
+    - Added comprehensive technical details including algorithm descriptions, mathematical properties, and energy behavior
+    - Expanded comparison tables showing trade-offs between different methods
+    - Added historical context and implementation notes where relevant
+    - Improved test coverage with energy conservation and convergence order verification tests
+    - Fixed compilation warnings from unused variables in test code
+
 ## [0.0.41] - 2025-08-26
 
 ### Fixed
