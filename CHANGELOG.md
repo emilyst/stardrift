@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.42] - 2025-08-28
+
 ### Added
 
 - Explicit Euler integrator for educational and comparison purposes
