@@ -559,8 +559,9 @@ impl TrailsPlugin {
                 let g = base_color.green;
                 let b = base_color.blue;
 
-                // Calculate luminance using ITU-R BT.601 formula
-                let luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+                // Calculate luminance using simple average for bloom (artistic effect)
+                // This ensures all vibrant trail colors produce visible bloom
+                let luminance = (r + g + b) / 3.0;
                 let scale_factor = bloom_intensity * luminance + 1.0;
 
                 // For premultiplied alpha, we need to handle colors differently

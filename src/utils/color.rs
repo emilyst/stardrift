@@ -199,8 +199,8 @@ pub fn create_emissive_material(
 fn enhance_saturation(rgb: (f32, f32, f32), saturation_factor: f32) -> (f32, f32, f32) {
     let (r, g, b) = rgb;
 
-    // Calculate grayscale using ITU-R BT.601 luminance formula
-    let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+    // Calculate grayscale using ITU-R BT.709 (HDTV) luminance formula for perceptual accuracy
+    let gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
     let enhanced_r = gray + (r - gray) * saturation_factor;
     let enhanced_g = gray + (g - gray) * saturation_factor;
@@ -254,8 +254,9 @@ fn enhance_saturation(rgb: (f32, f32, f32), saturation_factor: f32) -> (f32, f32
 pub fn intensify_for_bloom(rgb: (f32, f32, f32), intensity: f32) -> (f32, f32, f32) {
     let (r, g, b) = rgb;
 
-    // Scale using ITU-R BT.601 luminance formula
-    let luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+    // Scale using simple average for bloom (for artistic effect, not perceptual accuracy)
+    // This ensures all vibrant colors produce visible bloom, including blues
+    let luminance = (r + g + b) / 3.0;
     let scale_factor = intensity * luminance + 1.0;
     (r * scale_factor, g * scale_factor, b * scale_factor)
 }
