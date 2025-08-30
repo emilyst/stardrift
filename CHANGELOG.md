@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.48] - 2025-08-30
+
 ### Added
 
 - Comprehensive set of pride flag color schemes for bodies
