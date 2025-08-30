@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Changed luminance formula calcs to use simple average for trails and bloom and
+  ITU-R BT.709 for bodies.
+
 ## [0.0.46] - 2025-08-30
 
 ### Added
