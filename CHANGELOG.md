@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Configurable color schemes for bodies
+    - New `color_scheme` configuration option in `[rendering]` section
+    - `"black_body"` (default): Physics-based black body radiation colors
+    - `"rainbow"`: Random vibrant colors using full HSL spectrum
+    - Color generation separated from material creation
+
 ## [0.0.42] - 2025-08-28
 
 ### Added

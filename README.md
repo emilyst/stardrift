@@ -355,13 +355,20 @@ The choice of integrator significantly affects simulation accuracy, stability, a
 
 ##### Rendering Configuration (`[rendering]`)
 
-| Field                      | Type  | Default   | Description                                           |
-|----------------------------|-------|-----------|-------------------------------------------------------|
-| `min_temperature`          | `f32` | `3000.0`  | Minimum stellar temperature in Kelvin (affects color) |
-| `max_temperature`          | `f32` | `15000.0` | Maximum stellar temperature in Kelvin (affects color) |
-| `bloom_intensity`          | `f32` | `250.0`   | Intensity of bloom visual effect                      |
-| `saturation_intensity`     | `f32` | `3.0`     | Color saturation multiplier                           |
-| `camera_radius_multiplier` | `f32` | `4.0`     | Camera distance multiplier relative to system size    |
+| Field                      | Type     | Default        | Description                                                       |
+|----------------------------|----------|----------------|-------------------------------------------------------------------|
+| `color_scheme`             | `string` | `"black_body"` | Color scheme for bodies: `"black_body"` or `"rainbow"`            |
+| `min_temperature`          | `f32`    | `3000.0`       | Minimum stellar temperature in Kelvin (for `"black_body"` scheme) |
+| `max_temperature`          | `f32`    | `15000.0`      | Maximum stellar temperature in Kelvin (for `"black_body"` scheme) |
+| `bloom_intensity`          | `f32`    | `250.0`        | Intensity of bloom visual effect                                  |
+| `saturation_intensity`     | `f32`    | `3.0`          | Color saturation multiplier                                       |
+| `camera_radius_multiplier` | `f32`    | `4.0`          | Camera distance multiplier relative to system size                |
+
+###### Color Schemes
+
+- **BlackBody**: Physics-based colors derived from black body radiation temperatures. Smaller bodies appear hotter (
+  blue-white), larger bodies appear cooler (red-orange).
+- **Rainbow**: Random vibrant colors using the full spectrum with high saturation for visually distinct bodies.
 
 ##### Trail Configuration (`[trails]`)
 

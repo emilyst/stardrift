@@ -30,6 +30,7 @@ pub mod factory {
     }
 
     /// Calculates temperature based on radius using inverse relationship.
+    /// Used for BlackBody color scheme.
     pub fn calculate_temperature(radius: f32, config: &SimulationConfig) -> f32 {
         let min_temp = config.rendering.min_temperature;
         let max_temp = config.rendering.max_temperature;

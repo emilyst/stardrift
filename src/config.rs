@@ -6,6 +6,17 @@ use macros::ConfigDefaults;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// Color scheme selection for celestial bodies
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ColorScheme {
+    /// Physics-based black body radiation colors
+    #[default]
+    BlackBody,
+    /// Random vibrant colors using full spectrum
+    Rainbow,
+}
+
 #[derive(Resource, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct SimulationConfig {
     pub physics: PhysicsConfig,
@@ -102,6 +113,9 @@ pub struct IntegratorConfig {
 #[derive(ConfigDefaults, Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct RenderingConfig {
+    #[default(ColorScheme::BlackBody)]
+    pub color_scheme: ColorScheme,
+
     #[default(3000.0)]
     pub min_temperature: f32,
 

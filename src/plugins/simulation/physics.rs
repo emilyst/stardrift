@@ -168,17 +168,27 @@ pub fn spawn_bodies(
     config: &SimulationConfig,
 ) {
     use super::components::factory;
-    use crate::utils::color::emissive_material_for_temp;
+    use crate::config::ColorScheme;
+    use crate::utils::color::{create_emissive_material, random_rainbow_color, rgb_for_temp};
 
     for _ in 0..body_count {
         let position = factory::random_position(rng, body_count, config);
         let radius = factory::random_radius(rng, config);
-        let temperature = factory::calculate_temperature(radius, config);
         let velocity = factory::random_velocity(rng, position, config);
 
-        let material = emissive_material_for_temp(
+        // Generate color based on selected scheme
+        let color = match config.rendering.color_scheme {
+            ColorScheme::BlackBody => {
+                let temperature = factory::calculate_temperature(radius, config);
+                rgb_for_temp(temperature)
+            }
+            ColorScheme::Rainbow => random_rainbow_color(rng),
+        };
+
+        // Create material from color (single API path)
+        let material = create_emissive_material(
             materials,
-            temperature,
+            color,
             config.rendering.bloom_intensity,
             config.rendering.saturation_intensity,
         );

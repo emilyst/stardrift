@@ -1,17 +1,16 @@
-//! Color utilities for temperature-based color conversion and bloom effects.
+//! Color utilities for material creation and color generation.
 //!
-//! This module provides comprehensive color management capabilities for the N-body simulation,
-//! focusing on physically-based color temperature conversion and visual enhancement through
-//! bloom effects. It enables realistic color representation of celestial bodies based on their
-//! temperature characteristics.
+//! This module provides color management capabilities for the N-body simulation,
+//! including physically-based color temperature conversion, random color generation,
+//! and material creation with bloom effects.
 //!
 //! # Key Features
 //!
 //! - **Temperature-to-RGB conversion**: Converts color temperatures (in Kelvin) to normalized RGB
-//!   values using Tanner Helland's approximation algorithm
-//! - **Bloom effect generation**: Creates enhanced colors for emissive materials with configurable
-//!   intensity
-//! - **Bevy integration**: Integration with Bevy's material and color systems
+//!   values using Tanner Helland's approximation algorithm for black body radiation
+//! - **Rainbow color generation**: Creates random vibrant colors using Bevy's HSL color space
+//! - **Material creation**: Unified API for creating emissive materials with bloom effects
+//! - **Bevy integration**: Full integration with Bevy's color and material systems
 //!
 //! # Temperature Ranges
 //!
@@ -25,23 +24,37 @@
 //!
 //! # Main Functions
 //!
-//! - [`emissive_material_for_temp`]: Creates Bevy materials with temperature-based colors and bloom
+//! - [`create_emissive_material`]: Creates Bevy materials from RGB colors with bloom effects
 //! - [`rgb_for_temp`]: Converts color temperature (Kelvin) to normalized RGB values
+//! - [`random_rainbow_color`]: Generates random vibrant colors using HSL color space
 //! - [`intensify_for_bloom`]: Applies luminance-based intensity scaling for bloom effects
 //!
 //! # Usage
 //!
 //! ```rust
 //! # use bevy::prelude::*;
-//! use stardrift::utils::color::emissive_material_for_temp;
+//! use stardrift::utils::color::{create_emissive_material, rgb_for_temp, random_rainbow_color};
 //!
-//! fn create_star_material(mut materials: ResMut<Assets<StandardMaterial>>) {
-//!     // Create a material for a star at 5778K (Sun's temperature)
-//!     let material = emissive_material_for_temp(
+//! fn create_materials(
+//!     mut materials: ResMut<Assets<StandardMaterial>>,
+//!     mut rng: ResMut<SharedRng>
+//! ) {
+//!     // Create material from temperature (black body radiation)
+//!     let star_color = rgb_for_temp(5778.0);  // Sun's temperature
+//!     let star_material = create_emissive_material(
 //!         &mut materials,
-//!         5778.0,  // Temperature in Kelvin
-//!         2.0,     // Bloom intensity multiplier
-//!         1.0      // Saturation intensity multiplier
+//!         star_color,
+//!         2.0,  // Bloom intensity
+//!         1.0   // Saturation
+//!     );
+//!     
+//!     // Create material from random rainbow color
+//!     let rainbow_color = random_rainbow_color(&mut rng);
+//!     let rainbow_material = create_emissive_material(
+//!         &mut materials,
+//!         rainbow_color,
+//!         2.0,
+//!         1.0
 //!     );
 //! }
 //! ```
@@ -74,59 +87,72 @@ const BLUE_COEFFICIENT: f32 = 138.517_73;
 const BLUE_OFFSET: f32 = -305.044_8;
 const BLUE_LOG_OFFSET: f32 = 10.0;
 
-/// Creates a Bevy `StandardMaterial` with temperature-based colors and bloom effects.
+/// Generates a random rainbow color using Bevy's HSL color space.
 ///
-/// This function combines temperature-to-color conversion with bloom enhancement to create
-/// realistic emissive materials for celestial bodies or other temperature-based objects.
-/// The resulting material has both a base color derived from the temperature and an
-/// emissive component enhanced for bloom effects.
+/// Creates vibrant colors with random hue, high saturation, and balanced lightness.
+///
+/// # Arguments
+///
+/// * `rng` - Random number generator for hue selection
+///
+/// # Returns
+///
+/// A tuple `(r, g, b)` of normalized RGB values in the range `[0.0, 1.0]`.
+#[must_use]
+pub fn random_rainbow_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+    use rand::prelude::*;
+
+    let hue = rng.random_range(0.0..=360.0);
+    let saturation = rng.random_range(0.8..=1.0); // High saturation for vibrant colors
+    let lightness = rng.random_range(0.4..=0.6); // Balanced lightness
+
+    // Use Bevy's built-in HSL to RGB conversion
+    let color = Color::hsl(hue, saturation, lightness);
+
+    // Convert to LinearRgba for consistent color space
+    let linear_rgba = LinearRgba::from(color);
+    (linear_rgba.red, linear_rgba.green, linear_rgba.blue)
+}
+
+/// Creates a Bevy `StandardMaterial` with emissive colors and bloom effects.
+///
+/// This function creates emissive materials for celestial bodies with bloom enhancement.
+/// The resulting material has both a base color and an emissive component enhanced for bloom effects.
 ///
 /// # Arguments
 ///
 /// * `materials` - Mutable reference to Bevy's material asset storage
-/// * `temperature` - Color temperature in Kelvin (clamped to 1000K - 40000K range)
+/// * `rgb` - Normalized RGB color values (0.0 - 1.0)
 /// * `bloom_intensity` - Multiplier for bloom effect intensity (typically 1.0 - 5.0)
 /// * `saturation_intensity` - Multiplier for color saturation (typically 1.0 - 3.0)
 ///
 /// # Returns
 ///
 /// A `Handle<StandardMaterial>` that can be used with Bevy's rendering system.
-/// The material includes:
-/// - `base_color`: The natural color at the given temperature
-/// - `emissive`: An intensified version of the color for bloom effects
 ///
 /// # Examples
 ///
 /// ```rust
 /// # use bevy::prelude::*;
-/// use stardrift::utils::color::emissive_material_for_temp;
+/// use stardrift::utils::color::create_emissive_material;
 ///
-/// fn create_star_materials(mut materials: ResMut<Assets<StandardMaterial>>) {
-///     // Create a material for the Sun (5778K) with moderate bloom
-///     let sun_material = emissive_material_for_temp(
+/// fn create_materials(mut materials: ResMut<Assets<StandardMaterial>>) {
+///     // Create from any RGB color
+///     let material = create_emissive_material(
 ///         &mut materials,
-///         5778.0,
+///         (1.0, 0.5, 0.2),
 ///         2.5,
 ///         1.0
 ///     );
-///
-///     // Create a material for a red giant star (3500K) with intense bloom and saturation
-///     let red_giant_material = emissive_material_for_temp(
-///         &mut materials,
-///         3500.0,
-///         4.0,
-///         2.0
-///     );
 /// }
 /// ```
-pub fn emissive_material_for_temp(
+pub fn create_emissive_material(
     materials: &mut ResMut<Assets<StandardMaterial>>,
-    temperature: f32,
+    rgb: (f32, f32, f32),
     bloom_intensity: f32,
     saturation_intensity: f32,
 ) -> Handle<StandardMaterial> {
-    let base_rgb = rgb_for_temp(temperature);
-    let saturated_rgb = enhance_saturation(base_rgb, saturation_intensity);
+    let saturated_rgb = enhance_saturation(rgb, saturation_intensity);
 
     let bloom_color = {
         let (r, g, b) = intensify_for_bloom(saturated_rgb, bloom_intensity);
