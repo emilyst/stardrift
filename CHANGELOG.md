@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Command-line option `--color-scheme` to override the color scheme for bodies
+    - Accepts any of the 14 available color schemes in snake_case format
+    - Provides helpful error message listing all valid options for invalid input
+    - Overrides the configuration file setting when specified
+
 ## [0.0.45] - 2025-08-30
 
 ### Added

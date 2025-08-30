@@ -135,6 +135,62 @@ cargo run -p stardrift
 cargo run -p stardrift --release
 ```
 
+### Command-Line Options
+
+```bash
+stardrift [OPTIONS]
+```
+
+#### General Options
+
+| Option                  | Description                                     | Example                  |
+|-------------------------|-------------------------------------------------|--------------------------|
+| `--config FILE`         | Path to configuration file (TOML format)        | `--config custom.toml`   |
+| `--bodies COUNT`        | Number of bodies to simulate (overrides config) | `--bodies 100`           |
+| `--gravity VALUE`       | Gravitational constant (overrides config)       | `--gravity 0.05`         |
+| `--integrator TYPE`     | Integrator type (overrides config)              | `--integrator rk4`       |
+| `--seed SEED`           | Random seed for deterministic generation        | `--seed 42`              |
+| `--color-scheme SCHEME` | Color scheme for bodies (overrides config)      | `--color-scheme viridis` |
+| `--paused`              | Start simulation paused                         | `--paused`               |
+| `--verbose`             | Enable verbose logging                          | `--verbose`              |
+| `--list-integrators`    | List available integrators and exit             | `--list-integrators`     |
+| `--help`                | Print help information                          | `--help`                 |
+| `--version`             | Print version information                       | `--version`              |
+
+#### Color Scheme Options
+
+Available color schemes for the `--color-scheme` flag:
+
+- `black_body` (default) - Physics-based black body radiation
+- `rainbow` - Random vibrant colors
+- `deuteranopia_safe` - Red-green colorblind safe
+- `protanopia_safe` - Red-blindness safe
+- `tritanopia_safe` - Blue-yellow colorblind safe
+- `high_contrast` - Maximum distinguishability
+- `viridis` - Scientific perceptually uniform gradient
+- `plasma` - Magenta-purple-pink-yellow gradient
+- `inferno` - Black-red-yellow-white heat map
+- `turbo` - Google's improved rainbow
+- `pastel` - Soft, low-saturation colors
+- `neon` - Bright cyberpunk colors
+- `monochrome` - Grayscale variations
+- `vaporwave` - Retrofuturistic pink-purple-cyan
+
+#### Example Commands
+
+```bash
+# Run with specific configuration
+stardrift --bodies 50 --seed 123 --color-scheme viridis
+
+# Test different integrators
+stardrift --integrator velocity_verlet --bodies 100
+
+# Generate identical simulations with different colors
+for scheme in viridis plasma inferno turbo; do
+    stardrift --seed 42 --bodies 50 --color-scheme $scheme
+done
+```
+
 ### WebAssembly Build
 
 The project uses [trunk](https://trunkrs.dev/) for WebAssembly builds:

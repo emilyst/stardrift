@@ -46,6 +46,10 @@ struct Args {
     #[arg(short = 's', long, value_name = "SEED")]
     seed: Option<u64>,
 
+    /// Color scheme for bodies (e.g., black_body, viridis, rainbow)
+    #[arg(long, value_name = "SCHEME")]
+    color_scheme: Option<String>,
+
     /// Start paused
     #[arg(short = 'p', long)]
     paused: bool,
@@ -148,6 +152,37 @@ fn main() {
     if let Some(seed) = args.seed {
         println!("Using random seed: {seed}");
         config.physics.initial_seed = Some(seed);
+    }
+
+    if let Some(color_scheme_str) = args.color_scheme {
+        // Parse the color scheme string to ColorScheme enum
+        match serde_json::from_value::<stardrift::config::ColorScheme>(serde_json::json!(
+            color_scheme_str
+        )) {
+            Ok(color_scheme) => {
+                println!("Using color scheme: {color_scheme_str}");
+                config.rendering.color_scheme = color_scheme;
+            }
+            Err(_) => {
+                eprintln!("Invalid color scheme: '{color_scheme_str}'");
+                eprintln!("Available color schemes:");
+                eprintln!("  - black_body (default) - Physics-based black body radiation");
+                eprintln!("  - rainbow - Random vibrant colors");
+                eprintln!("  - deuteranopia_safe - Red-green colorblind safe");
+                eprintln!("  - protanopia_safe - Red-blindness safe");
+                eprintln!("  - tritanopia_safe - Blue-yellow colorblind safe");
+                eprintln!("  - high_contrast - Maximum distinguishability");
+                eprintln!("  - viridis - Scientific perceptually uniform gradient");
+                eprintln!("  - plasma - Magenta-purple-pink-yellow gradient");
+                eprintln!("  - inferno - Black-red-yellow-white heat map");
+                eprintln!("  - turbo - Google's improved rainbow");
+                eprintln!("  - pastel - Soft, low-saturation colors");
+                eprintln!("  - neon - Bright cyberpunk colors");
+                eprintln!("  - monochrome - Grayscale variations");
+                eprintln!("  - vaporwave - Retrofuturistic pink-purple-cyan");
+                std::process::exit(1);
+            }
+        }
     }
 
     // Set up logging

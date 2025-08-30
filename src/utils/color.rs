@@ -34,11 +34,11 @@
 //! ```rust
 //! # use bevy::prelude::*;
 //! use stardrift::utils::color::{create_emissive_material, rgb_for_temp, random_rainbow_color};
-//! use stardrift::resources::SharedRng;
+//! use stardrift::resources::RenderingRng;
 //!
 //! fn create_materials(
 //!     mut materials: ResMut<Assets<StandardMaterial>>,
-//!     mut rng: ResMut<SharedRng>
+//!     mut rng: ResMut<RenderingRng>
 //! ) {
 //!     // Create material from temperature (black body radiation)
 //!     let star_color = rgb_for_temp(5778.0);  // Sun's temperature
