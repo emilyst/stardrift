@@ -172,12 +172,7 @@ pub fn spawn_bodies(
 ) {
     use super::components::factory;
     use crate::config::ColorScheme;
-    use crate::utils::color::{
-        create_emissive_material, deuteranopia_safe_color, high_contrast_color, inferno_color,
-        monochrome_color, neon_color, pastel_color, plasma_color, protanopia_safe_color,
-        random_rainbow_color, rgb_for_temp, tritanopia_safe_color, turbo_color, vaporwave_color,
-        viridis_color,
-    };
+    use crate::utils::color::*;
 
     for _ in 0..body_count {
         // Use physics RNG for position, radius, and velocity (physics determinism)
@@ -207,6 +202,16 @@ pub fn spawn_bodies(
             ColorScheme::Neon => neon_color(rendering_rng),
             ColorScheme::Monochrome => monochrome_color(rendering_rng),
             ColorScheme::Vaporwave => vaporwave_color(rendering_rng),
+            // Pride flag color schemes
+            ColorScheme::Bisexual => bisexual_pride_color(rendering_rng),
+            ColorScheme::Transgender => transgender_pride_color(rendering_rng),
+            ColorScheme::Lesbian => lesbian_pride_color(rendering_rng),
+            ColorScheme::Pansexual => pansexual_pride_color(rendering_rng),
+            ColorScheme::Nonbinary => nonbinary_pride_color(rendering_rng),
+            ColorScheme::Asexual => asexual_pride_color(rendering_rng),
+            ColorScheme::Genderfluid => genderfluid_pride_color(rendering_rng),
+            ColorScheme::Aromantic => aromantic_pride_color(rendering_rng),
+            ColorScheme::Agender => agender_pride_color(rendering_rng),
         };
 
         // Create material from color (single API path)

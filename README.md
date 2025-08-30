@@ -452,6 +452,18 @@ The simulation supports multiple color schemes for celestial bodies, grouped int
 - `monochrome` - Grayscale variations (excludes pure black and white for visibility)
 - `vaporwave` - Retrofuturistic pink-purple-cyan palette with weighted distribution for authentic 80s aesthetic
 
+**Pride Flag Themes:**
+
+- `bisexual` - Bisexual pride flag colors (pink-purple-blue) with smooth gradient interpolation maintaining 2:1:2 proportions
+- `transgender` - Transgender pride flag colors (light blue-pink-white) designed by Monica Helms
+- `lesbian` - Lesbian pride flag colors using the 2018 orange-to-pink sunset flag design
+- `pansexual` - Pansexual pride flag colors (pink-yellow-blue) representing attraction regardless of gender
+- `nonbinary` - Non-binary pride flag colors (yellow-white-purple-black) created by Kye Rowan
+- `asexual` - Asexual pride flag colors (black-gray-white-purple) representing the ace spectrum
+- `genderfluid` - Genderfluid pride flag colors (pink-white-purple-black-blue) representing gender fluidity
+- `aromantic` - Aromantic pride flag colors (green-white-gray-black) for the aromantic spectrum
+- `agender` - Agender pride flag colors (black-gray-white-green) in symmetric pattern
+
 ##### Trail Configuration (`[trails]`)
 
 Trail visualization configuration options.

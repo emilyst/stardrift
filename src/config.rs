@@ -45,6 +45,26 @@ pub enum ColorScheme {
     Monochrome,
     /// Vaporwave aesthetic with pink-purple-cyan palette
     Vaporwave,
+
+    // Pride flag color schemes
+    /// Bisexual pride flag colors (pink-purple-blue gradient)
+    Bisexual,
+    /// Transgender pride flag colors (light blue-pink-white)
+    Transgender,
+    /// Lesbian pride flag colors (orange to pink gradient)
+    Lesbian,
+    /// Pansexual pride flag colors (pink-yellow-blue)
+    Pansexual,
+    /// Non-binary pride flag colors (yellow-white-purple-black)
+    Nonbinary,
+    /// Asexual pride flag colors (black-gray-white-purple)
+    Asexual,
+    /// Genderfluid pride flag colors (pink-white-purple-black-blue)
+    Genderfluid,
+    /// Aromantic pride flag colors (green-white-gray-black)
+    Aromantic,
+    /// Agender pride flag colors (black-gray-white-green symmetric)
+    Agender,
 }
 
 #[derive(Resource, Serialize, Deserialize, Clone, Debug, Default)]

@@ -180,6 +180,15 @@ fn main() {
                 eprintln!("  - neon - Bright cyberpunk colors");
                 eprintln!("  - monochrome - Grayscale variations");
                 eprintln!("  - vaporwave - Retrofuturistic pink-purple-cyan");
+                eprintln!("  - bisexual - Bisexual pride flag colors");
+                eprintln!("  - transgender - Transgender pride flag colors");
+                eprintln!("  - lesbian - Lesbian pride flag colors");
+                eprintln!("  - pansexual - Pansexual pride flag colors");
+                eprintln!("  - nonbinary - Non-binary pride flag colors");
+                eprintln!("  - asexual - Asexual pride flag colors");
+                eprintln!("  - genderfluid - Genderfluid pride flag colors");
+                eprintln!("  - aromantic - Aromantic pride flag colors");
+                eprintln!("  - agender - Agender pride flag colors");
                 std::process::exit(1);
             }
         }

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Comprehensive set of pride flag color schemes for bodies
+    - `bisexual` - Pink-purple-blue with smooth gradient interpolation (2:1:2 proportions)
+    - `transgender` - Light blue-pink-white stripes (Monica Helms design)
+    - `lesbian` - Orange-to-pink gradient (2018 sunset flag)
+    - `pansexual` - Pink-yellow-blue representing attraction regardless of gender
+    - `nonbinary` - Yellow-white-purple-black (Kye Rowan design)
+    - `asexual` - Black-gray-white-purple for the ace spectrum
+    - `genderfluid` - Pink-white-purple-black-blue for gender fluidity
+    - `aromantic` - Green-white-gray-black for the aromantic spectrum  
+    - `agender` - Black-gray-white-green in symmetric pattern
+    - All pride schemes use gradient interpolation for smooth color transitions
+    - Black stripes rendered as dark gray for visibility against space background
+
 ## [0.0.47] - 2025-08-30
 
 ### Changed

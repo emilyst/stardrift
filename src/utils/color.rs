@@ -100,7 +100,7 @@ const BLUE_LOG_OFFSET: f32 = 10.0;
 ///
 /// A tuple `(r, g, b)` of normalized RGB values in the range `[0.0, 1.0]`.
 #[must_use]
-pub fn random_rainbow_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn random_rainbow_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let hue = rng.random_range(0.0..=360.0);
@@ -385,7 +385,7 @@ fn blue_channel_for_temp(temp: f32) -> f32 {
 ///
 /// Optimized for red-green colorblindness (affects ~8% of males).
 /// Uses blue, orange, yellow, and white colors that are easily distinguishable.
-pub fn deuteranopia_safe_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn deuteranopia_safe_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let colors = [
@@ -405,7 +405,7 @@ pub fn deuteranopia_safe_color(rng: &mut crate::resources::RenderingRng) -> (f32
 /// Generates a random color from the protanopia-safe palette.
 ///
 /// Optimized for red-blindness. Uses blue, yellow, and teal colors.
-pub fn protanopia_safe_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn protanopia_safe_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let colors = [
@@ -425,7 +425,7 @@ pub fn protanopia_safe_color(rng: &mut crate::resources::RenderingRng) -> (f32, 
 /// Generates a random color from the tritanopia-safe palette.
 ///
 /// Optimized for blue-yellow colorblindness (rare). Uses red, green, and magenta.
-pub fn tritanopia_safe_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn tritanopia_safe_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let colors = [
@@ -445,7 +445,7 @@ pub fn tritanopia_safe_color(rng: &mut crate::resources::RenderingRng) -> (f32, 
 /// Generates a random high-contrast color for maximum distinguishability.
 ///
 /// Uses widely separated hues with high saturation differences.
-pub fn high_contrast_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn high_contrast_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let colors = [
@@ -469,7 +469,7 @@ pub fn high_contrast_color(rng: &mut crate::resources::RenderingRng) -> (f32, f3
 /// Generates a random color from the Viridis colormap.
 ///
 /// Purple-blue-green-yellow gradient that is perceptually uniform and colorblind-safe.
-pub fn viridis_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn viridis_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let t = rng.random::<f32>();
@@ -499,7 +499,7 @@ fn viridis_gradient(t: f32) -> (f32, f32, f32) {
 /// Generates a random color from the Plasma colormap.
 ///
 /// Magenta-purple-pink-yellow gradient with high visual appeal.
-pub fn plasma_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn plasma_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let t = rng.random::<f32>();
@@ -529,7 +529,7 @@ fn plasma_gradient(t: f32) -> (f32, f32, f32) {
 /// Generates a random color from the Inferno colormap.
 ///
 /// Black-red-yellow-white heat map for intensity visualization.
-pub fn inferno_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn inferno_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let t = rng.random::<f32>();
@@ -559,7 +559,7 @@ fn inferno_gradient(t: f32) -> (f32, f32, f32) {
 /// Generates a random color from the Turbo colormap.
 ///
 /// Google's improved rainbow colormap with better perceptual properties.
-pub fn turbo_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn turbo_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     let t = rng.random::<f32>();
     turbo_gradient(t)
 }
@@ -600,7 +600,7 @@ fn turbo_gradient(t: f32) -> (f32, f32, f32) {
 /// Generates a random pastel color.
 ///
 /// Soft, low-saturation colors with high lightness.
-pub fn pastel_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn pastel_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let hue = rng.random_range(0.0..=360.0);
@@ -615,7 +615,7 @@ pub fn pastel_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32)
 /// Generates a random neon color.
 ///
 /// High saturation, bright cyberpunk-style colors with electric appearance.
-pub fn neon_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn neon_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     // Limited hue ranges for cohesive neon palette
@@ -640,7 +640,7 @@ pub fn neon_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
 /// Generates a random monochrome (grayscale) color.
 ///
 /// Different lightness levels with no hue or saturation.
-pub fn monochrome_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn monochrome_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     // Avoid pure black and white for better visibility
@@ -652,7 +652,7 @@ pub fn monochrome_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, 
 ///
 /// Retrofuturistic aesthetic with signature pink-purple-cyan palette.
 /// Colors are electric yet dreamy, capturing 1980s Miami neon meets Japanese city pop.
-pub fn vaporwave_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
+pub fn vaporwave_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     // Vaporwave signature color ranges with weighted selection
@@ -687,6 +687,591 @@ pub fn vaporwave_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f
     let color = Color::hsl(hue, saturation, lightness);
     let linear_rgba = LinearRgba::from(color);
     (linear_rgba.red, linear_rgba.green, linear_rgba.blue)
+}
+
+/// Generates a random bisexual pride color.
+///
+/// Based on the bisexual pride flag colors: pink, purple, and blue.
+/// The flag represents attraction to same gender (pink), different genders (blue),
+/// and the overlap representing attraction to multiple genders (purple).
+/// Uses interpolation to create a smooth gradient between the three main colors,
+/// providing visual variety while maintaining the flag's identity.
+pub fn bisexual_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
+    use rand::prelude::*;
+
+    // Official bisexual pride flag colors
+    let pink = (0.839, 0.008, 0.439); // #D60270
+    let purple = (0.608, 0.310, 0.588); // #9B4F96
+    let blue = (0.000, 0.220, 0.659); // #0038A8
+
+    // Generate a random position along the flag (0.0 to 1.0)
+    let position = rng.random::<f32>();
+
+    // The flag has 3 stripes with a 2:1:2 ratio (pink:purple:blue)
+    // We divide the position space into 5 sections to maintain these proportions
+    // Map position to color with smooth interpolation
+    let color = if position < 0.2 {
+        // Pink stripe (first 20% of the 40% pink portion)
+        // Pure pink with slight variations
+        let variation: f32 = rng.random_range(0.9..=1.1);
+        (
+            (pink.0 * variation).clamp(0.0, 1.0),
+            (pink.1 * variation).clamp(0.0, 1.0),
+            (pink.2 * variation).clamp(0.0, 1.0),
+        )
+    } else if position < 0.4 {
+        // Pink stripe (second 20% of the 40% pink portion)
+        // Transitioning toward purple for smooth blending
+        let t = (position - 0.2) / 0.2;
+        lerp_rgb(pink, purple, t * 0.5) // Only go halfway to purple
+    } else if position < 0.6 {
+        // Purple stripe (20% width, center of the flag)
+        // Add variation and transitions to adjacent colors
+        let t = (position - 0.4) / 0.2;
+        if t < 0.5 {
+            // Coming from pink side
+            lerp_rgb(pink, purple, 0.5 + t)
+        } else {
+            // Going to blue side
+            lerp_rgb(purple, blue, (t - 0.5) * 2.0 * 0.5)
+        }
+    } else if position < 0.8 {
+        // Blue stripe (first 20% of the 40% blue portion)
+        // Transitioning from purple
+        let t = (position - 0.6) / 0.2;
+        lerp_rgb(purple, blue, 0.5 + t * 0.5)
+    } else {
+        // Blue stripe (second 20% of the 40% blue portion)
+        // Pure blue with slight variations
+        let variation = rng.random_range(0.9..=1.1);
+        (
+            (blue.0 * variation).clamp(0.0, 1.0),
+            (blue.1 * variation + 0.05).clamp(0.0, 1.0), // Add tiny bit of green for variety
+            (blue.2 * variation).clamp(0.0, 1.0),
+        )
+    };
+
+    // Apply subtle saturation and lightness variations for more visual interest
+    let saturation_variation = rng.random_range(0.92..=1.08);
+    let lightness_variation = rng.random_range(0.95..=1.05);
+
+    (
+        (color.0 * saturation_variation * lightness_variation).clamp(0.0, 1.0),
+        (color.1 * saturation_variation * lightness_variation).clamp(0.0, 1.0),
+        (color.2 * saturation_variation * lightness_variation).clamp(0.0, 1.0),
+    )
+}
+
+/// Generates a random transgender pride color.
+///
+/// Based on the transgender pride flag designed by Monica Helms.
+/// Light blue, pink, and white stripes representing traditional colors
+/// for boys and girls, with white for those who are transitioning or non-binary.
+pub fn transgender_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
+    use rand::prelude::*;
+
+    // Transgender pride flag colors - enhanced saturation for better visibility in 3D space
+    // Original: #5BCEFA (light blue), #F5A9C5 (pink)
+    // Enhanced: Increased saturation while maintaining hue relationships
+    let light_blue = (0.365, 0.808, 0.988); // #5BCEFA - kept original (already saturated)
+    let pink = (0.980, 0.580, 0.720); // Enhanced pink - more saturated for visibility
+    let white = (1.0, 1.0, 1.0); // #FFFFFF
+
+    // Generate position along the flag (5 stripes: blue, pink, white, pink, blue)
+    let position = rng.random::<f32>();
+
+    let color = if position < 0.2 {
+        // Light blue stripe
+        let variation: f32 = rng.random_range(0.95..=1.05);
+        (
+            (light_blue.0 * variation).clamp(0.0, 1.0),
+            (light_blue.1 * variation).clamp(0.0, 1.0),
+            (light_blue.2 * variation).clamp(0.0, 1.0),
+        )
+    } else if position < 0.4 {
+        // Pink stripe (transitioning from blue)
+        let t = (position - 0.2) / 0.2;
+        lerp_rgb(light_blue, pink, t)
+    } else if position < 0.6 {
+        // White stripe (center)
+        let t = (position - 0.4) / 0.2;
+        if t < 0.5 {
+            lerp_rgb(pink, white, t * 2.0)
+        } else {
+            lerp_rgb(white, pink, (t - 0.5) * 2.0)
+        }
+    } else if position < 0.8 {
+        // Pink stripe (transitioning to blue)
+        let t = (position - 0.6) / 0.2;
+        lerp_rgb(pink, light_blue, t)
+    } else {
+        // Light blue stripe
+        let variation: f32 = rng.random_range(0.95..=1.05);
+        (
+            (light_blue.0 * variation).clamp(0.0, 1.0),
+            (light_blue.1 * variation).clamp(0.0, 1.0),
+            (light_blue.2 * variation).clamp(0.0, 1.0),
+        )
+    };
+
+    // Apply subtle variations
+    let saturation_variation = rng.random_range(0.95..=1.05);
+    (
+        (color.0 * saturation_variation).clamp(0.0, 1.0),
+        (color.1 * saturation_variation).clamp(0.0, 1.0),
+        (color.2 * saturation_variation).clamp(0.0, 1.0),
+    )
+}
+
+/// Generates a random lesbian pride color.
+///
+/// Based on the 2018 orange-to-pink lesbian flag, which has become
+/// the most widely recognized version. Colors range from dark orange
+/// through light orange, white, light pink to dark pink.
+pub fn lesbian_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
+    use rand::prelude::*;
+
+    // Lesbian pride flag colors (2018 sunset flag - most common)
+    let dark_orange = (0.831, 0.239, 0.055); // #D43E0E
+    let orange = (0.992, 0.608, 0.314); // #FD9B50
+    let light_orange = (1.0, 0.824, 0.608); // #FFD29B
+    let white = (1.0, 1.0, 1.0); // #FFFFFF
+    let light_pink = (0.984, 0.698, 0.875); // #FBB2DF
+    let pink = (0.957, 0.518, 0.682); // #F484AE
+    let dark_pink = (0.655, 0.184, 0.369); // #A7175E
+
+    // Generate position along the flag (7 stripes)
+    let position = rng.random::<f32>();
+
+    let color = if position < 0.14 {
+        // Dark orange
+        apply_variation(dark_orange, rng)
+    } else if position < 0.28 {
+        // Orange (transitioning)
+        let t = (position - 0.14) / 0.14;
+        lerp_rgb(dark_orange, orange, t)
+    } else if position < 0.42 {
+        // Light orange (transitioning)
+        let t = (position - 0.28) / 0.14;
+        lerp_rgb(orange, light_orange, t)
+    } else if position < 0.5 {
+        // White (center, narrower)
+        let t = (position - 0.42) / 0.08;
+        if t < 0.5 {
+            lerp_rgb(light_orange, white, t * 2.0)
+        } else {
+            lerp_rgb(white, light_pink, (t - 0.5) * 2.0)
+        }
+    } else if position < 0.64 {
+        // Light pink
+        let t = (position - 0.5) / 0.14;
+        lerp_rgb(light_pink, pink, t)
+    } else if position < 0.78 {
+        // Pink
+        let t = (position - 0.64) / 0.14;
+        lerp_rgb(pink, dark_pink, t)
+    } else {
+        // Dark pink
+        apply_variation(dark_pink, rng)
+    };
+
+    color
+}
+
+/// Generates a random pansexual pride color.
+///
+/// Based on the pansexual pride flag: pink (attraction to women),
+/// yellow (attraction to non-binary people), and blue (attraction to men).
+pub fn pansexual_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
+    use rand::prelude::*;
+
+    // Pansexual pride flag colors
+    let pink = (1.0, 0.129, 0.549); // #FF218C
+    let yellow = (1.0, 0.859, 0.0); // #FFD800
+    let blue = (0.129, 0.694, 1.0); // #21B1FF
+
+    // Generate position along the flag (3 equal stripes)
+    let position = rng.random::<f32>();
+
+    let color = if position < 0.33 {
+        // Pink stripe
+        let t = position / 0.33;
+        if t < 0.5 {
+            apply_variation(pink, rng)
+        } else {
+            // Transition toward yellow
+            lerp_rgb(pink, yellow, (t - 0.5) * 2.0 * 0.5)
+        }
+    } else if position < 0.67 {
+        // Yellow stripe
+        let t = (position - 0.33) / 0.34;
+        if t < 0.5 {
+            // Coming from pink
+            lerp_rgb(pink, yellow, 0.5 + t)
+        } else {
+            // Going to blue
+            lerp_rgb(yellow, blue, (t - 0.5) * 2.0 * 0.5)
+        }
+    } else {
+        // Blue stripe
+        let t = (position - 0.67) / 0.33;
+        if t < 0.5 {
+            // Transition from yellow
+            lerp_rgb(yellow, blue, 0.5 + t)
+        } else {
+            apply_variation(blue, rng)
+        }
+    };
+
+    color
+}
+
+/// Generates a random non-binary pride color.
+///
+/// Based on the non-binary pride flag created by Kye Rowan in 2014.
+/// Yellow represents those outside the binary, white for many genders,
+/// purple for mixed genders, and black for no gender.
+pub fn nonbinary_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
+    use rand::prelude::*;
+
+    // Non-binary pride flag colors
+    let yellow = (0.988, 0.957, 0.0); // #FCF434
+    let white = (1.0, 1.0, 1.0); // #FFFFFF
+    let purple = (0.608, 0.345, 0.824); // #9B58D1
+    let black = (0.25, 0.25, 0.25); // Dark gray for visibility against black background
+
+    // Generate position along the flag (4 equal stripes)
+    let position = rng.random::<f32>();
+
+    let color = if position < 0.25 {
+        // Yellow stripe
+        let t = position / 0.25;
+        if t < 0.7 {
+            apply_variation(yellow, rng)
+        } else {
+            lerp_rgb(yellow, white, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.5 {
+        // White stripe
+        let t = (position - 0.25) / 0.25;
+        if t < 0.3 {
+            lerp_rgb(yellow, white, t / 0.3)
+        } else if t < 0.7 {
+            white
+        } else {
+            lerp_rgb(white, purple, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.75 {
+        // Purple stripe
+        let t = (position - 0.5) / 0.25;
+        if t < 0.3 {
+            lerp_rgb(white, purple, t / 0.3)
+        } else if t < 0.7 {
+            apply_variation(purple, rng)
+        } else {
+            lerp_rgb(purple, black, (t - 0.7) / 0.3)
+        }
+    } else {
+        // Black stripe
+        let t = (position - 0.75) / 0.25;
+        if t < 0.3 {
+            lerp_rgb(purple, black, t / 0.3)
+        } else {
+            apply_variation(black, rng)
+        }
+    };
+
+    color
+}
+
+/// Generates a random asexual pride color.
+///
+/// Based on the asexual pride flag: black (asexuality), gray (gray-asexuality),
+/// white (sexuality), and purple (community).
+pub fn asexual_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
+    use rand::prelude::*;
+
+    // Asexual pride flag colors
+    let black = (0.25, 0.25, 0.25); // Dark gray for visibility against black background
+    let gray = (0.639, 0.639, 0.639); // #A3A3A3
+    let white = (1.0, 1.0, 1.0); // #FFFFFF
+    let purple = (0.502, 0.0, 0.502); // #810081
+
+    // Generate position along the flag (4 equal stripes)
+    let position = rng.random::<f32>();
+
+    let color = if position < 0.25 {
+        // Black stripe
+        let t = position / 0.25;
+        if t < 0.8 {
+            apply_variation(black, rng)
+        } else {
+            lerp_rgb(black, gray, (t - 0.8) / 0.2)
+        }
+    } else if position < 0.5 {
+        // Gray stripe
+        let t = (position - 0.25) / 0.25;
+        if t < 0.3 {
+            lerp_rgb(black, gray, t / 0.3)
+        } else if t < 0.7 {
+            gray
+        } else {
+            lerp_rgb(gray, white, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.75 {
+        // White stripe
+        let t = (position - 0.5) / 0.25;
+        if t < 0.3 {
+            lerp_rgb(gray, white, t / 0.3)
+        } else if t < 0.7 {
+            white
+        } else {
+            lerp_rgb(white, purple, (t - 0.7) / 0.3)
+        }
+    } else {
+        // Purple stripe
+        let t = (position - 0.75) / 0.25;
+        if t < 0.2 {
+            lerp_rgb(white, purple, t / 0.2)
+        } else {
+            apply_variation(purple, rng)
+        }
+    };
+
+    color
+}
+
+/// Generates a random genderfluid pride color.
+///
+/// Based on the genderfluid pride flag: pink (femininity), white (all genders),
+/// purple (combination of masculinity and femininity), black (lack of gender),
+/// and blue (masculinity).
+pub fn genderfluid_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
+    use rand::prelude::*;
+
+    // Genderfluid pride flag colors
+    let pink = (1.0, 0.459, 0.643); // #FF759F
+    let white = (1.0, 1.0, 1.0); // #FFFFFF
+    let purple = (0.745, 0.118, 0.882); // #BE1EE1
+    let black = (0.25, 0.25, 0.25); // Dark gray for visibility against black background
+    let blue = (0.196, 0.235, 0.745); // #323CBE
+
+    // Generate position along the flag (5 equal stripes)
+    let position = rng.random::<f32>();
+
+    let color = if position < 0.2 {
+        // Pink stripe
+        let t = position / 0.2;
+        if t < 0.7 {
+            apply_variation(pink, rng)
+        } else {
+            lerp_rgb(pink, white, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.4 {
+        // White stripe
+        let t = (position - 0.2) / 0.2;
+        if t < 0.3 {
+            lerp_rgb(pink, white, t / 0.3)
+        } else if t < 0.7 {
+            white
+        } else {
+            lerp_rgb(white, purple, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.6 {
+        // Purple stripe
+        let t = (position - 0.4) / 0.2;
+        if t < 0.3 {
+            lerp_rgb(white, purple, t / 0.3)
+        } else if t < 0.7 {
+            apply_variation(purple, rng)
+        } else {
+            lerp_rgb(purple, black, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.8 {
+        // Black stripe
+        let t = (position - 0.6) / 0.2;
+        if t < 0.3 {
+            lerp_rgb(purple, black, t / 0.3)
+        } else if t < 0.7 {
+            apply_variation(black, rng)
+        } else {
+            lerp_rgb(black, blue, (t - 0.7) / 0.3)
+        }
+    } else {
+        // Blue stripe
+        let t = (position - 0.8) / 0.2;
+        if t < 0.3 {
+            lerp_rgb(black, blue, t / 0.3)
+        } else {
+            apply_variation(blue, rng)
+        }
+    };
+
+    color
+}
+
+/// Generates a random aromantic pride color.
+///
+/// Based on the aromantic pride flag: dark green and light green (aromantic spectrum),
+/// white (platonic and aesthetic attraction), gray (gray-aromantic), and black (sexuality spectrum).
+pub fn aromantic_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
+    use rand::prelude::*;
+
+    // Aromantic pride flag colors
+    let dark_green = (0.239, 0.533, 0.267); // #3D884A
+    let light_green = (0.663, 0.824, 0.475); // #A9D279
+    let white = (1.0, 1.0, 1.0); // #FFFFFF
+    let gray = (0.639, 0.639, 0.639); // #A3A3A3
+    let black = (0.25, 0.25, 0.25); // Dark gray for visibility against black background
+
+    // Generate position along the flag (5 equal stripes)
+    let position = rng.random::<f32>();
+
+    let color = if position < 0.2 {
+        // Dark green stripe
+        let t = position / 0.2;
+        if t < 0.7 {
+            apply_variation(dark_green, rng)
+        } else {
+            lerp_rgb(dark_green, light_green, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.4 {
+        // Light green stripe
+        let t = (position - 0.2) / 0.2;
+        if t < 0.3 {
+            lerp_rgb(dark_green, light_green, t / 0.3)
+        } else if t < 0.7 {
+            light_green
+        } else {
+            lerp_rgb(light_green, white, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.6 {
+        // White stripe
+        let t = (position - 0.4) / 0.2;
+        if t < 0.5 {
+            lerp_rgb(light_green, white, t * 2.0)
+        } else {
+            lerp_rgb(white, gray, (t - 0.5) * 2.0)
+        }
+    } else if position < 0.8 {
+        // Gray stripe
+        let t = (position - 0.6) / 0.2;
+        if t < 0.3 {
+            lerp_rgb(white, gray, t / 0.3)
+        } else if t < 0.7 {
+            gray
+        } else {
+            lerp_rgb(gray, black, (t - 0.7) / 0.3)
+        }
+    } else {
+        // Black stripe
+        let t = (position - 0.8) / 0.2;
+        if t < 0.3 {
+            lerp_rgb(gray, black, t / 0.3)
+        } else {
+            apply_variation(black, rng)
+        }
+    };
+
+    color
+}
+
+/// Generates a random agender pride color.
+///
+/// Based on the agender pride flag: black and white (absence of gender),
+/// gray (semi-genderless), and green (non-binary gender).
+pub fn agender_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
+    use rand::prelude::*;
+
+    // Agender pride flag colors (7 stripes, symmetric)
+    let black = (0.25, 0.25, 0.25); // Dark gray for visibility against black background
+    let gray = (0.737, 0.757, 0.761); // #BCBFC1
+    let white = (1.0, 1.0, 1.0); // #FFFFFF
+    let green = (0.718, 0.957, 0.424); // #B7F46C
+
+    // Generate position along the flag (7 stripes: black, gray, white, green, white, gray, black)
+    let position = rng.random::<f32>();
+
+    let color = if position < 0.14 {
+        // First black stripe
+        let t = position / 0.14;
+        if t < 0.7 {
+            apply_variation(black, rng)
+        } else {
+            lerp_rgb(black, gray, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.28 {
+        // First gray stripe
+        let t = (position - 0.14) / 0.14;
+        if t < 0.3 {
+            lerp_rgb(black, gray, t / 0.3)
+        } else if t < 0.7 {
+            gray
+        } else {
+            lerp_rgb(gray, white, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.42 {
+        // First white stripe
+        let t = (position - 0.28) / 0.14;
+        if t < 0.3 {
+            lerp_rgb(gray, white, t / 0.3)
+        } else if t < 0.7 {
+            white
+        } else {
+            lerp_rgb(white, green, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.58 {
+        // Green stripe (center, slightly wider)
+        let t = (position - 0.42) / 0.16;
+        if t < 0.2 {
+            lerp_rgb(white, green, t / 0.2)
+        } else if t < 0.8 {
+            apply_variation(green, rng)
+        } else {
+            lerp_rgb(green, white, (t - 0.8) / 0.2)
+        }
+    } else if position < 0.72 {
+        // Second white stripe
+        let t = (position - 0.58) / 0.14;
+        if t < 0.3 {
+            lerp_rgb(green, white, t / 0.3)
+        } else if t < 0.7 {
+            white
+        } else {
+            lerp_rgb(white, gray, (t - 0.7) / 0.3)
+        }
+    } else if position < 0.86 {
+        // Second gray stripe
+        let t = (position - 0.72) / 0.14;
+        if t < 0.3 {
+            lerp_rgb(white, gray, t / 0.3)
+        } else if t < 0.7 {
+            gray
+        } else {
+            lerp_rgb(gray, black, (t - 0.7) / 0.3)
+        }
+    } else {
+        // Second black stripe
+        let t = (position - 0.86) / 0.14;
+        if t < 0.3 {
+            lerp_rgb(gray, black, t / 0.3)
+        } else {
+            apply_variation(black, rng)
+        }
+    };
+
+    color
+}
+
+/// Helper function to apply slight color variations
+fn apply_variation(color: (f32, f32, f32), rng: &mut RenderingRng) -> (f32, f32, f32) {
+    use rand::prelude::*;
+    let variation: f32 = rng.random_range(0.95..=1.05);
+    (
+        (color.0 * variation).clamp(0.0, 1.0),
+        (color.1 * variation).clamp(0.0, 1.0),
+        (color.2 * variation).clamp(0.0, 1.0),
+    )
 }
 
 // ============================================================================
