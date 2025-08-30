@@ -4,7 +4,7 @@ resolver = "2"
 
 [package]
 name = "stardrift"
-version = "0.0.44"
+version = "0.0.45"
 edition = "2024"
 license = "CC0-1.0"
 repository = "https://github.com/emilyst/stardrift"
