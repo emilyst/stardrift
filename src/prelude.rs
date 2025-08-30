@@ -5,6 +5,7 @@
 
 // External crate re-exports
 pub use bevy::prelude::*;
+pub use rand::prelude::*;
 
 // Physics math types
 pub use crate::physics::math::{Scalar, Vector};

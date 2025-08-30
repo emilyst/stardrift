@@ -357,7 +357,7 @@ The choice of integrator significantly affects simulation accuracy, stability, a
 
 | Field                      | Type     | Default        | Description                                                       |
 |----------------------------|----------|----------------|-------------------------------------------------------------------|
-| `color_scheme`             | `string` | `"black_body"` | Color scheme for bodies: `"black_body"` or `"rainbow"`            |
+| `color_scheme`             | `string` | `"black_body"` | Color scheme for bodies (see Color Schemes section below)         |
 | `min_temperature`          | `f32`    | `3000.0`       | Minimum stellar temperature in Kelvin (for `"black_body"` scheme) |
 | `max_temperature`          | `f32`    | `15000.0`      | Maximum stellar temperature in Kelvin (for `"black_body"` scheme) |
 | `bloom_intensity`          | `f32`    | `250.0`        | Intensity of bloom visual effect                                  |
@@ -366,9 +366,35 @@ The choice of integrator significantly affects simulation accuracy, stability, a
 
 ###### Color Schemes
 
-- **BlackBody**: Physics-based colors derived from black body radiation temperatures. Smaller bodies appear hotter (
-  blue-white), larger bodies appear cooler (red-orange).
-- **Rainbow**: Random vibrant colors using the full spectrum with high saturation for visually distinct bodies.
+The simulation supports multiple color schemes for celestial bodies, grouped into categories:
+
+**Physics-Based:**
+
+- `black_body` (default) - Colors based on black body radiation temperatures. Smaller bodies appear hotter (blue-white),
+  larger bodies appear cooler (red-orange)
+
+**Colorblind-Safe Palettes:**
+
+- `deuteranopia_safe` - Optimized for red-green colorblindness (most common, ~8% of males). Uses blue, orange, yellow,
+  and teal colors
+- `protanopia_safe` - Optimized for red-blindness. Uses blue, yellow, and teal colors
+- `tritanopia_safe` - Optimized for blue-yellow colorblindness (rare). Uses red, green, and magenta
+- `high_contrast` - Maximum distinguishability with widely separated hues and high saturation differences
+
+**Scientific Colormaps (Perceptually Uniform):**
+
+- `viridis` - Purple-blue-green-yellow gradient. Industry standard for scientific visualization, colorblind-safe
+- `plasma` - Magenta-purple-pink-yellow gradient with high visual appeal
+- `inferno` - Black-red-yellow-white heat map for intensity visualization
+- `turbo` - Google's improved rainbow colormap with better perceptual properties than standard rainbow
+
+**Aesthetic Themes:**
+
+- `rainbow` - Random vibrant colors using the full HSL spectrum with high saturation
+- `pastel` - Soft, low-saturation colors (S: 0.3-0.5, L: 0.7-0.85)
+- `neon` - High saturation cyberpunk-style colors with limited hue ranges
+- `monochrome` - Grayscale variations (excludes pure black and white for visibility)
+- `vaporwave` - Retrofuturistic pink-purple-cyan palette with weighted distribution for authentic 80s aesthetic
 
 ##### Trail Configuration (`[trails]`)
 

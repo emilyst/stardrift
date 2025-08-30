@@ -15,6 +15,36 @@ pub enum ColorScheme {
     BlackBody,
     /// Random vibrant colors using full spectrum
     Rainbow,
+
+    // Colorblind-safe palettes
+    /// Optimized for red-green colorblindness (most common)
+    DeuteranopiaSafe,
+    /// Optimized for red-blindness
+    ProtanopiaSafe,
+    /// Optimized for blue-yellow colorblindness
+    TritanopiaSafe,
+    /// High contrast for maximum distinguishability
+    HighContrast,
+
+    // Scientific colormaps
+    /// Purple-blue-green-yellow gradient (perceptually uniform)
+    Viridis,
+    /// Magenta-purple-pink-yellow gradient
+    Plasma,
+    /// Black-red-yellow-white heat map
+    Inferno,
+    /// Improved rainbow (perceptually better than standard rainbow)
+    Turbo,
+
+    // Aesthetic themes
+    /// Soft, low-saturation colors
+    Pastel,
+    /// High saturation cyberpunk-style colors
+    Neon,
+    /// Grayscale variations
+    Monochrome,
+    /// Vaporwave aesthetic with pink-purple-cyan palette
+    Vaporwave,
 }
 
 #[derive(Resource, Serialize, Deserialize, Clone, Debug, Default)]

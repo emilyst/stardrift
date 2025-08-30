@@ -169,7 +169,12 @@ pub fn spawn_bodies(
 ) {
     use super::components::factory;
     use crate::config::ColorScheme;
-    use crate::utils::color::{create_emissive_material, random_rainbow_color, rgb_for_temp};
+    use crate::utils::color::{
+        create_emissive_material, deuteranopia_safe_color, high_contrast_color, inferno_color,
+        monochrome_color, neon_color, pastel_color, plasma_color, protanopia_safe_color,
+        random_rainbow_color, rgb_for_temp, tritanopia_safe_color, turbo_color, vaporwave_color,
+        viridis_color,
+    };
 
     for _ in 0..body_count {
         let position = factory::random_position(rng, body_count, config);
@@ -183,6 +188,21 @@ pub fn spawn_bodies(
                 rgb_for_temp(temperature)
             }
             ColorScheme::Rainbow => random_rainbow_color(rng),
+            // Colorblind-safe palettes
+            ColorScheme::DeuteranopiaSafe => deuteranopia_safe_color(rng),
+            ColorScheme::ProtanopiaSafe => protanopia_safe_color(rng),
+            ColorScheme::TritanopiaSafe => tritanopia_safe_color(rng),
+            ColorScheme::HighContrast => high_contrast_color(rng),
+            // Scientific colormaps
+            ColorScheme::Viridis => viridis_color(rng),
+            ColorScheme::Plasma => plasma_color(rng),
+            ColorScheme::Inferno => inferno_color(rng),
+            ColorScheme::Turbo => turbo_color(rng),
+            // Aesthetic themes
+            ColorScheme::Pastel => pastel_color(rng),
+            ColorScheme::Neon => neon_color(rng),
+            ColorScheme::Monochrome => monochrome_color(rng),
+            ColorScheme::Vaporwave => vaporwave_color(rng),
         };
 
         // Create material from color (single API path)

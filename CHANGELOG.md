@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Expanded color scheme system with 12 new color generation modes
+    - **Colorblind-safe palettes**: `deuteranopia_safe`, `protanopia_safe`, `tritanopia_safe`, `high_contrast`
+    - **Scientific colormaps**: `viridis`, `plasma`, `inferno`, `turbo` (perceptually uniform gradients)
+    - **Aesthetic themes**: `pastel`, `neon`, `monochrome`, `vaporwave`
+    - All schemes follow existing spawn-time color assignment architecture
+    - Color selection maintains deterministic behavior with seeded RNG
+
 ## [0.0.44] - 2025-08-30
 
 ## [0.0.43] - 2025-08-30
