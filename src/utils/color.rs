@@ -34,6 +34,7 @@
 //! ```rust
 //! # use bevy::prelude::*;
 //! use stardrift::utils::color::{create_emissive_material, rgb_for_temp, random_rainbow_color};
+//! use stardrift::resources::SharedRng;
 //!
 //! fn create_materials(
 //!     mut materials: ResMut<Assets<StandardMaterial>>,
