@@ -18,7 +18,7 @@ pub use crate::states::AppState;
 
 // Internal re-exports - Resources (most commonly used)
 pub use crate::resources::{
-    Barycenter, BodyCount, GravitationalConstant, GravitationalOctree, SharedRng,
+    Barycenter, BodyCount, GravitationalConstant, GravitationalOctree, RenderingRng, SharedRng,
 };
 
 // Internal re-exports - Visualization

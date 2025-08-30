@@ -6,7 +6,9 @@ use crate::physics::{
     octree::{Octree, OctreeBody},
     resources::{CurrentIntegrator, PhysicsTime},
 };
-use crate::resources::{Barycenter, GravitationalConstant, GravitationalOctree, SharedRng};
+use crate::resources::{
+    Barycenter, GravitationalConstant, GravitationalOctree, RenderingRng, SharedRng,
+};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::Mesh3d;
 use bevy::prelude::*;
@@ -163,7 +165,8 @@ pub fn spawn_bodies(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
-    rng: &mut ResMut<SharedRng>,
+    physics_rng: &mut ResMut<SharedRng>,
+    rendering_rng: &mut ResMut<RenderingRng>,
     body_count: usize,
     config: &SimulationConfig,
 ) {
@@ -177,32 +180,33 @@ pub fn spawn_bodies(
     };
 
     for _ in 0..body_count {
-        let position = factory::random_position(rng, body_count, config);
-        let radius = factory::random_radius(rng, config);
-        let velocity = factory::random_velocity(rng, position, config);
+        // Use physics RNG for position, radius, and velocity (physics determinism)
+        let position = factory::random_position(physics_rng, body_count, config);
+        let radius = factory::random_radius(physics_rng, config);
+        let velocity = factory::random_velocity(physics_rng, position, config);
 
-        // Generate color based on selected scheme
+        // Use rendering RNG for color generation (visual determinism, independent of physics)
         let color = match config.rendering.color_scheme {
             ColorScheme::BlackBody => {
                 let temperature = factory::calculate_temperature(radius, config);
                 rgb_for_temp(temperature)
             }
-            ColorScheme::Rainbow => random_rainbow_color(rng),
+            ColorScheme::Rainbow => random_rainbow_color(rendering_rng),
             // Colorblind-safe palettes
-            ColorScheme::DeuteranopiaSafe => deuteranopia_safe_color(rng),
-            ColorScheme::ProtanopiaSafe => protanopia_safe_color(rng),
-            ColorScheme::TritanopiaSafe => tritanopia_safe_color(rng),
-            ColorScheme::HighContrast => high_contrast_color(rng),
+            ColorScheme::DeuteranopiaSafe => deuteranopia_safe_color(rendering_rng),
+            ColorScheme::ProtanopiaSafe => protanopia_safe_color(rendering_rng),
+            ColorScheme::TritanopiaSafe => tritanopia_safe_color(rendering_rng),
+            ColorScheme::HighContrast => high_contrast_color(rendering_rng),
             // Scientific colormaps
-            ColorScheme::Viridis => viridis_color(rng),
-            ColorScheme::Plasma => plasma_color(rng),
-            ColorScheme::Inferno => inferno_color(rng),
-            ColorScheme::Turbo => turbo_color(rng),
+            ColorScheme::Viridis => viridis_color(rendering_rng),
+            ColorScheme::Plasma => plasma_color(rendering_rng),
+            ColorScheme::Inferno => inferno_color(rendering_rng),
+            ColorScheme::Turbo => turbo_color(rendering_rng),
             // Aesthetic themes
-            ColorScheme::Pastel => pastel_color(rng),
-            ColorScheme::Neon => neon_color(rng),
-            ColorScheme::Monochrome => monochrome_color(rng),
-            ColorScheme::Vaporwave => vaporwave_color(rng),
+            ColorScheme::Pastel => pastel_color(rendering_rng),
+            ColorScheme::Neon => neon_color(rendering_rng),
+            ColorScheme::Monochrome => monochrome_color(rendering_rng),
+            ColorScheme::Vaporwave => vaporwave_color(rendering_rng),
         };
 
         // Create material from color (single API path)
@@ -232,7 +236,8 @@ pub fn spawn_simulation_bodies(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<SharedRng>,
+    mut physics_rng: ResMut<SharedRng>,
+    mut rendering_rng: ResMut<RenderingRng>,
     body_count: Res<crate::resources::BodyCount>,
     config: Res<SimulationConfig>,
 ) {
@@ -240,7 +245,8 @@ pub fn spawn_simulation_bodies(
         &mut commands,
         &mut meshes,
         &mut materials,
-        &mut rng,
+        &mut physics_rng,
+        &mut rendering_rng,
         **body_count,
         &config,
     );

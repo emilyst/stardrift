@@ -17,7 +17,8 @@ pub fn handle_restart_simulation_event(
     trail_renderers: Query<Entity, With<crate::plugins::trails::TrailRenderer>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<SharedRng>,
+    mut physics_rng: ResMut<SharedRng>,
+    mut rendering_rng: ResMut<RenderingRng>,
     body_count: Res<BodyCount>,
     mut barycenter: ResMut<Barycenter>,
     mut octree: ResMut<GravitationalOctree>,
@@ -45,13 +46,15 @@ pub fn handle_restart_simulation_event(
         pan_orbit_camera.target_focus = Vec3::ZERO;
         pan_orbit_camera.force_update = true;
 
-        *rng = SharedRng::default();
+        *physics_rng = SharedRng::default();
+        *rendering_rng = RenderingRng::default();
 
         spawn_bodies(
             &mut commands,
             &mut meshes,
             &mut materials,
-            &mut rng,
+            &mut physics_rng,
+            &mut rendering_rng,
             **body_count,
             &config,
         );

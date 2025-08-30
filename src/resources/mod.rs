@@ -23,6 +23,34 @@ impl Default for SharedRng {
     }
 }
 
+/// Separate RNG for rendering operations (colors, visual effects).
+/// This ensures that color scheme changes don't affect physics determinism.
+#[derive(Resource, Deref, DerefMut, Debug, Clone, PartialEq)]
+pub struct RenderingRng(pub ChaCha8Rng);
+
+impl RenderingRng {
+    pub fn from_seed(seed: u64) -> Self {
+        // Use a different base seed for rendering to ensure independence
+        // Add a large prime to differentiate from physics seed
+        Self(ChaCha8Rng::seed_from_u64(
+            seed.wrapping_add(0x9E3779B97F4A7C15),
+        ))
+    }
+
+    pub fn from_optional_seed(seed: Option<u64>) -> Self {
+        match seed {
+            Some(seed) => Self::from_seed(seed),
+            None => Self::default(),
+        }
+    }
+}
+
+impl Default for RenderingRng {
+    fn default() -> Self {
+        Self(ChaCha8Rng::from_rng(&mut rand::rng()))
+    }
+}
+
 #[derive(Resource, Deref, DerefMut, Copy, Clone, PartialEq, Debug)]
 pub struct GravitationalConstant(pub Scalar);
 

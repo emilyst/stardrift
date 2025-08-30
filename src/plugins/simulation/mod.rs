@@ -68,6 +68,9 @@ impl Plugin for SimulationPlugin {
 
         app.insert_resource(config.clone());
         app.insert_resource(SharedRng::from_optional_seed(config.physics.initial_seed));
+        app.insert_resource(RenderingRng::from_optional_seed(
+            config.physics.initial_seed,
+        ));
         app.insert_resource(GravitationalConstant(config.physics.gravitational_constant));
         app.insert_resource(BodyCount(config.physics.body_count));
         app.init_resource::<Barycenter>();

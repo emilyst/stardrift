@@ -100,7 +100,7 @@ const BLUE_LOG_OFFSET: f32 = 10.0;
 ///
 /// A tuple `(r, g, b)` of normalized RGB values in the range `[0.0, 1.0]`.
 #[must_use]
-pub fn random_rainbow_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn random_rainbow_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let hue = rng.random_range(0.0..=360.0);
@@ -384,7 +384,7 @@ fn blue_channel_for_temp(temp: f32) -> f32 {
 ///
 /// Optimized for red-green colorblindness (affects ~8% of males).
 /// Uses blue, orange, yellow, and white colors that are easily distinguishable.
-pub fn deuteranopia_safe_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn deuteranopia_safe_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let colors = [
@@ -404,7 +404,7 @@ pub fn deuteranopia_safe_color(rng: &mut crate::resources::SharedRng) -> (f32, f
 /// Generates a random color from the protanopia-safe palette.
 ///
 /// Optimized for red-blindness. Uses blue, yellow, and teal colors.
-pub fn protanopia_safe_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn protanopia_safe_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let colors = [
@@ -424,7 +424,7 @@ pub fn protanopia_safe_color(rng: &mut crate::resources::SharedRng) -> (f32, f32
 /// Generates a random color from the tritanopia-safe palette.
 ///
 /// Optimized for blue-yellow colorblindness (rare). Uses red, green, and magenta.
-pub fn tritanopia_safe_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn tritanopia_safe_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let colors = [
@@ -444,7 +444,7 @@ pub fn tritanopia_safe_color(rng: &mut crate::resources::SharedRng) -> (f32, f32
 /// Generates a random high-contrast color for maximum distinguishability.
 ///
 /// Uses widely separated hues with high saturation differences.
-pub fn high_contrast_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn high_contrast_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let colors = [
@@ -468,7 +468,7 @@ pub fn high_contrast_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, 
 /// Generates a random color from the Viridis colormap.
 ///
 /// Purple-blue-green-yellow gradient that is perceptually uniform and colorblind-safe.
-pub fn viridis_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn viridis_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let t = rng.random::<f32>();
@@ -498,7 +498,7 @@ fn viridis_gradient(t: f32) -> (f32, f32, f32) {
 /// Generates a random color from the Plasma colormap.
 ///
 /// Magenta-purple-pink-yellow gradient with high visual appeal.
-pub fn plasma_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn plasma_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let t = rng.random::<f32>();
@@ -528,7 +528,7 @@ fn plasma_gradient(t: f32) -> (f32, f32, f32) {
 /// Generates a random color from the Inferno colormap.
 ///
 /// Black-red-yellow-white heat map for intensity visualization.
-pub fn inferno_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn inferno_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let t = rng.random::<f32>();
@@ -558,7 +558,7 @@ fn inferno_gradient(t: f32) -> (f32, f32, f32) {
 /// Generates a random color from the Turbo colormap.
 ///
 /// Google's improved rainbow colormap with better perceptual properties.
-pub fn turbo_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn turbo_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     let t = rng.random::<f32>();
     turbo_gradient(t)
 }
@@ -599,7 +599,7 @@ fn turbo_gradient(t: f32) -> (f32, f32, f32) {
 /// Generates a random pastel color.
 ///
 /// Soft, low-saturation colors with high lightness.
-pub fn pastel_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn pastel_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     let hue = rng.random_range(0.0..=360.0);
@@ -614,7 +614,7 @@ pub fn pastel_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
 /// Generates a random neon color.
 ///
 /// High saturation, bright cyberpunk-style colors with electric appearance.
-pub fn neon_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn neon_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     // Limited hue ranges for cohesive neon palette
@@ -639,7 +639,7 @@ pub fn neon_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
 /// Generates a random monochrome (grayscale) color.
 ///
 /// Different lightness levels with no hue or saturation.
-pub fn monochrome_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn monochrome_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     // Avoid pure black and white for better visibility
@@ -651,7 +651,7 @@ pub fn monochrome_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32
 ///
 /// Retrofuturistic aesthetic with signature pink-purple-cyan palette.
 /// Colors are electric yet dreamy, capturing 1980s Miami neon meets Japanese city pop.
-pub fn vaporwave_color(rng: &mut crate::resources::SharedRng) -> (f32, f32, f32) {
+pub fn vaporwave_color(rng: &mut crate::resources::RenderingRng) -> (f32, f32, f32) {
     use rand::prelude::*;
 
     // Vaporwave signature color ranges with weighted selection
