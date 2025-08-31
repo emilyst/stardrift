@@ -40,6 +40,7 @@ pub struct AutomatedScreenshotSchedule {
     timer: Timer,
     frame_counter: u32,
     state: AutoScreenshotState,
+    frames_since_last_screenshot: u32,
 }
 
 impl AutomatedScreenshotSchedule {
@@ -87,6 +88,7 @@ impl AutomatedScreenshotSchedule {
             } else {
                 AutoScreenshotState::WaitingForInterval
             },
+            frames_since_last_screenshot: 0,
         })
     }
 
@@ -106,6 +108,7 @@ impl AutomatedScreenshotSchedule {
                     if self.should_trigger(delay) {
                         self.reset_timer();
                         self.remaining_count = self.remaining_count.saturating_sub(1);
+                        self.frames_since_last_screenshot = 0;
 
                         if self.remaining_count > 0 && self.interval.is_some() {
                             self.state = AutoScreenshotState::WaitingForInterval;
@@ -130,6 +133,7 @@ impl AutomatedScreenshotSchedule {
                     if self.should_trigger(interval) {
                         self.reset_timer();
                         self.remaining_count = self.remaining_count.saturating_sub(1);
+                        self.frames_since_last_screenshot = 0;
 
                         if self.remaining_count == 0 {
                             self.state = AutoScreenshotState::Complete;
@@ -262,6 +266,9 @@ pub fn process_automated_screenshots(
         ScreenshotTimingMode::Frames => 1.0, // Count frames
     };
 
+    // Track frames since last screenshot for exit timing
+    schedule.frames_since_last_screenshot += 1;
+
     if schedule.tick(delta) {
         // Generate path for screenshot
         let path_string = if let Some(ref mut naming) = naming {
@@ -294,14 +301,12 @@ pub fn process_automated_screenshots(
     }
 
     if schedule.is_complete() && schedule.exit_after_completion {
-        // Add small delay to ensure screenshot completes (wait a few frames)
-        if schedule.remaining_count == 0 {
-            // Increment frame counter after completion
-            schedule.frame_counter += 1;
-            if schedule.frame_counter > 5 {
-                info!("All automated screenshots completed, exiting...");
-                app_exit_events.write(AppExit::Success);
-            }
+        // Wait sufficient frames after the last screenshot to ensure it saves
+        // Testing shows 3 frames is the minimum, but we use 5 for safety margin
+        // to account for system load variations and ensure reliable saves
+        if schedule.frames_since_last_screenshot > 5 {
+            info!("All automated screenshots completed, exiting...");
+            app_exit_events.write(AppExit::Success);
         }
     }
 }

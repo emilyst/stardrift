@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed automated screenshots occasionally failing to save when application exits immediately
+    - Added sufficient frame delay after final screenshot to ensure asynchronous save completes
+    - Resolves intermittent issue where window focus changes affected screenshot capture
+
 ## [0.0.48] - 2025-08-30
 
 ### Added
