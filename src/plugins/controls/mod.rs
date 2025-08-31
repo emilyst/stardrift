@@ -104,36 +104,6 @@ fn keyboard_input_handler(
                     "d" => {
                         commands.write(SimulationCommand::ToggleDiagnosticsHud);
                     }
-                    "0" => {
-                        commands.write(SimulationCommand::SetOctreeMaxDepth(None));
-                    }
-                    "1" => {
-                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(1)));
-                    }
-                    "2" => {
-                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(2)));
-                    }
-                    "3" => {
-                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(3)));
-                    }
-                    "4" => {
-                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(4)));
-                    }
-                    "5" => {
-                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(5)));
-                    }
-                    "6" => {
-                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(6)));
-                    }
-                    "7" => {
-                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(7)));
-                    }
-                    "8" => {
-                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(8)));
-                    }
-                    "9" => {
-                        commands.write(SimulationCommand::SetOctreeMaxDepth(Some(9)));
-                    }
                     _ => {}
                 }
             }

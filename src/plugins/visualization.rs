@@ -30,11 +30,7 @@ impl Plugin for VisualizationPlugin {
             Update,
             (
                 handle_visualization_commands,
-                visualize_octree.run_if(resource_exists_and_equals(OctreeVisualizationSettings {
-                    enabled: true,
-                    max_depth: None,
-                    line_color: Color::srgba(0.0, 0.0, 0.0, 0.0), // Dummy value, only enabled is compared
-                })),
+                visualize_octree,
                 draw_barycenter_gizmo.run_if(resource_exists_and_equals(
                     BarycenterGizmoVisibility { enabled: true },
                 )),
@@ -94,13 +90,6 @@ fn handle_visualization_commands(
                     }
                 );
             }
-            SimulationCommand::SetOctreeMaxDepth(depth) => {
-                octree_settings.max_depth = depth.map(|d| d as usize);
-                info!(
-                    "Octree max depth set to {}",
-                    depth.map_or("all".to_string(), |d| d.to_string())
-                );
-            }
             SimulationCommand::ToggleDiagnosticsHud => {
                 diagnostics_hud_settings.enabled = !diagnostics_hud_settings.enabled;
                 info!(
@@ -118,19 +107,23 @@ fn handle_visualization_commands(
 }
 
 /// Visualizes the octree structure using debug gizmos
+/// Only runs when settings or octree changes to avoid unnecessary work
 fn visualize_octree(
     mut gizmos: Gizmos,
     octree: Res<GravitationalOctree>,
     settings: Res<OctreeVisualizationSettings>,
 ) {
+    // Early exit if visualization is disabled
     if !settings.enabled {
         return;
     }
 
-    // Explicit dereference to avoid false positives in IDE code analysis
-    let bounds = octree.as_ref().bounds(settings.max_depth);
+    // Only process if settings or octree has changed
+    if !settings.is_changed() && !octree.is_changed() {
+        return;
+    }
 
-    for aabb in bounds {
+    for aabb in octree.bounds() {
         draw_bounding_box_wireframe_gizmo(&mut gizmos, &aabb, settings.line_color);
     }
 }
@@ -194,7 +187,6 @@ fn draw_barycenter_gizmo(
 #[derive(Resource)]
 pub struct OctreeVisualizationSettings {
     pub enabled: bool,
-    pub max_depth: Option<usize>, // None means show all levels
     pub line_color: Color,
 }
 
@@ -202,7 +194,6 @@ impl Default for OctreeVisualizationSettings {
     fn default() -> Self {
         Self {
             enabled: false,
-            max_depth: None,
             line_color: Color::srgba(1.0, 1.0, 1.0, 0.5),
         }
     }

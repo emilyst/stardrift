@@ -15,7 +15,6 @@ pub enum SimulationCommand {
     ToggleTrailsVisualization,
     ToggleDiagnosticsHud,
     TakeScreenshot,
-    SetOctreeMaxDepth(Option<u8>),
     #[cfg(not(target_arch = "wasm32"))]
     Quit,
 }

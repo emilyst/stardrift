@@ -182,18 +182,10 @@ impl Octree {
         self.node_pool.clear();
     }
 
-    pub fn bounds(&self, max_depth: Option<usize>) -> Vec<Aabb3d> {
-        // Estimate capacity based on max_depth (8^depth nodes at each level)
-        let estimated_capacity = match max_depth {
-            Some(depth) => (0..=depth)
-                .map(|d| 8_usize.pow(d as u32))
-                .sum::<usize>()
-                .min(1024),
-            None => 64, // Conservative estimate for unbounded depth
-        };
-        let mut bounds = Vec::with_capacity(estimated_capacity);
+    pub fn bounds(&self) -> Vec<Aabb3d> {
+        let mut bounds = Vec::with_capacity(64);
         if let Some(root) = &self.root {
-            root.collect_bounds(&mut bounds, 0, max_depth);
+            root.collect_bounds(&mut bounds);
         }
         bounds
     }
@@ -455,23 +447,12 @@ impl OctreeNode {
         }
     }
 
-    pub fn collect_bounds(
-        &self,
-        bounds: &mut Vec<Aabb3d>,
-        current_depth: usize,
-        max_depth: Option<usize>,
-    ) {
-        if let Some(max_depth) = max_depth
-            && current_depth > max_depth
-        {
-            return;
-        }
-
+    pub fn collect_bounds(&self, bounds: &mut Vec<Aabb3d>) {
         bounds.push(self.bounds());
 
         if let OctreeNode::Internal { children, .. } = self {
             children.iter().flatten().for_each(|child| {
-                child.collect_bounds(bounds, current_depth + 1, max_depth);
+                child.collect_bounds(bounds);
             });
         }
     }
@@ -1082,24 +1063,12 @@ mod tests {
         octree.build(bodies);
         let root = octree.root.as_ref().unwrap();
 
-        // Test collecting bounds without depth limit
+        // Test collecting bounds
         let mut bounds = Vec::new();
-        root.collect_bounds(&mut bounds, 0, None);
+        root.collect_bounds(&mut bounds);
         assert!(
             !bounds.is_empty(),
             "Should collect at least the root bounds"
-        );
-
-        // Test collecting bounds with depth limit
-        let mut bounds_depth_0 = Vec::new();
-        root.collect_bounds(&mut bounds_depth_0, 0, Some(0));
-        assert_eq!(bounds_depth_0.len(), 1, "Depth 0 should only include root");
-
-        let mut bounds_depth_1 = Vec::new();
-        root.collect_bounds(&mut bounds_depth_1, 0, Some(1));
-        assert!(
-            bounds_depth_1.len() >= bounds_depth_0.len(),
-            "Depth 1 should include at least as many bounds as depth 0"
         );
 
         // Test that all bounds are valid
@@ -1119,7 +1088,7 @@ mod tests {
         octree.build(single_body);
         let root = octree.root.as_ref().unwrap();
         let mut single_bounds = Vec::new();
-        root.collect_bounds(&mut single_bounds, 0, None);
+        root.collect_bounds(&mut single_bounds);
         assert_eq!(
             single_bounds.len(),
             1,
@@ -1147,27 +1116,13 @@ mod tests {
 
         octree.build(bodies);
 
-        // Test get_bounds without depth limit
-        let bounds_unlimited = octree.bounds(None);
-        assert!(!bounds_unlimited.is_empty(), "Should return bounds");
-
-        // Test get_bounds with depth limit
-        let bounds_depth_0 = octree.bounds(Some(0));
-        assert_eq!(
-            bounds_depth_0.len(),
-            1,
-            "Depth 0 should return only root bounds"
-        );
-
-        let bounds_depth_1 = octree.bounds(Some(1));
-        assert!(
-            bounds_depth_1.len() >= bounds_depth_0.len(),
-            "Higher depth should return at least as many bounds"
-        );
+        // Test get_bounds returns all bounds
+        let bounds = octree.bounds();
+        assert!(!bounds.is_empty(), "Should return bounds");
 
         // Test with empty octree
         octree.build(vec![]);
-        let empty_bounds = octree.bounds(None);
+        let empty_bounds = octree.bounds();
         assert!(
             empty_bounds.is_empty(),
             "Empty octree should return no bounds"

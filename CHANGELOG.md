@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- Removed octree visualization depth control
+    - Removed keyboard shortcuts (0-9) for setting octree visualization depth
+    - Octree visualization now always shows all levels when enabled
+    - Simplified visualization system by removing unnecessary complexity
+
 ### Fixed
 
 - Fixed automated screenshots occasionally failing to save when application exits immediately

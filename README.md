@@ -228,7 +228,6 @@ The built files will be in the `dist/` directory, ready for deployment. Trunk au
 | **T**           | Toggle trail visibility on/off                  |
 | **D**           | Toggle diagnostics HUD visibility on/off        |
 | **S**           | Take screenshot (hides UI and HUD)              |
-| **0-9**         | Set octree visualization depth (0 = all levels) |
 | **Escape**      | Quit application                                |
 | **Touch**       | Pan, orbit, and zoom (mobile/tablet)            |
 
