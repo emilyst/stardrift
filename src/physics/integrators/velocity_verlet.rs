@@ -93,12 +93,12 @@ use crate::physics::math::{Scalar, Vector};
 /// implementations store the acceleration between steps for efficiency,
 /// but this requires careful state management. The current approach is
 /// simpler and more robust.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct VelocityVerlet;
 
 impl Integrator for VelocityVerlet {
     fn clone_box(&self) -> Box<dyn Integrator> {
-        Box::new(self.clone())
+        Box::new(*self)
     }
 
     fn step(

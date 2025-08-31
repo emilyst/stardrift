@@ -124,7 +124,7 @@ use crate::physics::math::{Scalar, Vector};
 /// Omelyan, Mryglod, Folk (2002) "Optimized Forest-Ruth- and Suzuki-like algorithms
 /// for integration of motion in many-body systems", Computer Physics Communications
 /// 146(2), 188-202. DOI: 10.1016/S0010-4655(02)00451-4
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Pefrl;
 
 impl Pefrl {
@@ -137,7 +137,7 @@ impl Pefrl {
 
 impl Integrator for Pefrl {
     fn clone_box(&self) -> Box<dyn Integrator> {
-        Box::new(self.clone())
+        Box::new(*self)
     }
 
     fn step(

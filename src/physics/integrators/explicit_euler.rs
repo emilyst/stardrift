@@ -87,12 +87,12 @@ use crate::physics::math::{Scalar, Vector};
 /// Named after Leonhard Euler (1768), this was the first numerical method for
 /// differential equations. Its limitations led to development of improved methods,
 /// particularly symplectic integrators for Hamiltonian systems.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ExplicitEuler;
 
 impl Integrator for ExplicitEuler {
     fn clone_box(&self) -> Box<dyn Integrator> {
-        Box::new(self.clone())
+        Box::new(*self)
     }
 
     fn step(

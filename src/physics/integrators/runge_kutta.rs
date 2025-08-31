@@ -75,7 +75,7 @@ pub struct RungeKuttaSecondOrderMidpoint;
 
 impl Integrator for RungeKuttaSecondOrderMidpoint {
     fn clone_box(&self) -> Box<dyn Integrator> {
-        Box::new(self.clone())
+        Box::new(*self)
     }
 
     fn step(
@@ -212,12 +212,12 @@ impl Integrator for RungeKuttaSecondOrderMidpoint {
 /// Developed by German mathematicians C. Runge and M.W. Kutta around 1900,
 /// RK4 became the standard integration method before the importance of
 /// symplectic integration for Hamiltonian systems was recognized.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct RungeKuttaFourthOrder;
 
 impl Integrator for RungeKuttaFourthOrder {
     fn clone_box(&self) -> Box<dyn Integrator> {
-        Box::new(self.clone())
+        Box::new(*self)
     }
 
     fn step(

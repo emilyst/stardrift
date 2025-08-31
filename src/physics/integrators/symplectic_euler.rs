@@ -97,12 +97,12 @@ use crate::physics::math::{Scalar, Vector};
 /// Also called semi-implicit Euler or Euler-Cromer method. The symplectic
 /// property was recognized later, leading to its adoption in computational
 /// physics despite its low order of accuracy.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct SymplecticEuler;
 
 impl Integrator for SymplecticEuler {
     fn clone_box(&self) -> Box<dyn Integrator> {
-        Box::new(self.clone())
+        Box::new(*self)
     }
 
     fn step(

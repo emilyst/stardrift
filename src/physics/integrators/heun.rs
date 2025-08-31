@@ -88,7 +88,7 @@ pub struct Heun;
 
 impl Integrator for Heun {
     fn clone_box(&self) -> Box<dyn Integrator> {
-        Box::new(self.clone())
+        Box::new(*self)
     }
 
     fn step(
