@@ -3,6 +3,18 @@ use crate::physics::math::{Scalar, Vector};
 use bevy::prelude::Entity;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+/// A body in the octree with position, mass, and entity identifier
+///
+/// The Entity field is required for self-exclusion during force calculations.
+/// While position-based exclusion might seem simpler (comparing positions with ==),
+/// it fails in practice because:
+/// 1. Bodies need to exclude themselves when calculating forces
+/// 2. During multi-stage integration, forces are evaluated at intermediate positions
+/// 3. Floating-point precision means a body's query position may not exactly match its stored position
+/// 4. Without reliable self-exclusion, bodies calculate forces on themselves, causing instability
+///
+/// The Entity provides a robust identifier that remains consistent regardless of
+/// numerical precision or intermediate calculations.
 #[derive(Debug, Clone, Copy)]
 pub struct OctreeBody {
     pub position: Vector,
