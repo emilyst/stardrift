@@ -4286,7 +4286,7 @@ checksum = "6eae92052b72ef70dafa16eddbabffc77e5ca3574be2f7bc1127b36f0a7ad7f2"
 
 [[package]]
 name = "stardrift"
-version = "0.0.48"
+version = "0.0.49"
 dependencies = [
  "bevy",
  "bevy_panorbit_camera",
