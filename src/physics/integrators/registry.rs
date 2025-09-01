@@ -5,8 +5,9 @@
 //! convergence order. The registry queries this metadata during initialization
 //! to build lookup tables for name resolution and instantiation.
 //!
-//! The registry uses a prototype pattern, storing instances that can clone
-//! themselves, eliminating any hardcoded knowledge of integrator types.
+//! The registry stores integrator instances indexed by name. Since all integrators
+//! are zero-sized types (ZSTs), cloning simply creates new Box allocations
+//! without any state copying.
 
 use super::Integrator;
 use bevy::prelude::*;
@@ -14,20 +15,20 @@ use std::collections::HashMap;
 
 /// Registry for runtime integrator registration
 ///
-/// The registry maintains prototype instances of each integrator. When an integrator
-/// is requested, the registry clones the appropriate prototype. This design allows
-/// the registry to operate without any hardcoded knowledge of integrator types.
+/// The registry maintains instances of each integrator indexed by name. When an integrator
+/// is requested, the registry creates a new boxed instance via `clone_box()`. Since all
+/// integrators are stateless ZSTs, this is essentially just creating a new Box allocation.
 #[derive(Resource)]
 pub struct IntegratorRegistry {
-    /// Maps names (canonical and aliases) to prototype instances
-    prototypes: HashMap<String, Box<dyn Integrator>>,
+    /// Maps names (canonical and aliases) to integrator instances
+    integrators: HashMap<String, Box<dyn Integrator>>,
 }
 
 impl IntegratorRegistry {
     /// Create an empty registry without any pre-registered integrators.
     pub fn new() -> Self {
         Self {
-            prototypes: HashMap::new(),
+            integrators: HashMap::new(),
         }
     }
 
@@ -64,21 +65,21 @@ impl IntegratorRegistry {
     pub fn register_integrator(&mut self, integrator: Box<dyn Integrator>) {
         let name = integrator.name();
 
-        // Store the prototype with its canonical name
-        self.prototypes
+        // Store the integrator with its canonical name
+        self.integrators
             .insert(name.to_string(), integrator.clone_box());
 
-        // Also store prototypes for each alias
+        // Also store integrators for each alias
         for alias in integrator.aliases() {
-            self.prototypes
+            self.integrators
                 .insert(alias.to_string(), integrator.clone_box());
         }
     }
 
     pub fn create(&self, name: &str) -> Result<Box<dyn Integrator>, String> {
-        self.prototypes
+        self.integrators
             .get(name)
-            .map(|prototype| prototype.clone_box())
+            .map(|integrator| integrator.clone_box())
             .ok_or_else(|| {
                 let available = self.list_available();
                 let aliases = self.list_aliases();
@@ -95,9 +96,9 @@ impl IntegratorRegistry {
     pub fn list_available(&self) -> Vec<String> {
         let mut canonical_names = std::collections::HashSet::new();
 
-        // Get unique canonical names by querying each prototype
-        for prototype in self.prototypes.values() {
-            canonical_names.insert(prototype.name().to_string());
+        // Get unique canonical names by querying each integrator
+        for integrator in self.integrators.values() {
+            canonical_names.insert(integrator.name().to_string());
         }
 
         let mut names: Vec<String> = canonical_names.into_iter().collect();
@@ -109,8 +110,8 @@ impl IntegratorRegistry {
         let mut aliases: Vec<(String, String)> = Vec::new();
 
         // Check each entry to see if it's an alias
-        for (key, prototype) in &self.prototypes {
-            let canonical_name = prototype.name();
+        for (key, integrator) in &self.integrators {
+            let canonical_name = integrator.name();
             if key != canonical_name {
                 // It's an alias, not a canonical name
                 aliases.push((key.clone(), canonical_name.to_string()));
@@ -303,7 +304,7 @@ mod tests {
     fn test_clone_creates_new_box() {
         let registry = create_test_registry();
 
-        // Create two instances from same prototype
+        // Create two instances from same integrator
         let integrator1 = registry.create("test_a").unwrap();
         let integrator2 = registry.create("test_a").unwrap();
 
