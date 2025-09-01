@@ -51,6 +51,7 @@ pub trait Integrator: Send + Sync {
     /// This enables the registry to create new instances without knowing
     /// the concrete type, supporting true generic discovery.
     fn clone_box(&self) -> Box<dyn Integrator>;
+
     /// Advance a single body's state by one time step using an acceleration field
     ///
     /// This method calculates accelerations at intermediate positions as needed for
