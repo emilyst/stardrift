@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **CRITICAL**: Fixed gravitational force calculation missing inverse-square law
+    - Force calculation was missing division by r² in `calculate_force_from_point`
+    - All gravitational interactions were calculating F = G·m₁·m₂ instead of F = G·m₁·m₂/r²
+    - Bodies at any distance experienced the same force magnitude (only direction varied)
+    - Adjusted default gravitational constant from 0.001 to 1000.0 to compensate for the now-correct 1/r² scaling
+    - The previous low G value (0.001) only worked because forces weren't decaying with distance
+    - Added comprehensive physics verification tests to prevent regression
+    - Error likely introduced when custom physics replaced Avian3D (early August 2025)
+
 - Fixed automated screenshots occasionally failing to save when application exits immediately
     - Added sufficient frame delay after final screenshot to ensure asynchronous save completes
     - Resolves intermittent issue where window focus changes affected screenshot capture

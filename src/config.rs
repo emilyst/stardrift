@@ -78,7 +78,7 @@ pub struct SimulationConfig {
 #[derive(ConfigDefaults, Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct PhysicsConfig {
-    #[default(0.001)]
+    #[default(1000.0)]
     pub gravitational_constant: Scalar,
 
     #[default(100)]

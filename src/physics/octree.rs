@@ -340,7 +340,7 @@ impl Octree {
 
         let distance = distance_squared.sqrt();
         let direction_normalized = direction / distance;
-        let force_magnitude = g * body.mass * point_mass;
+        let force_magnitude = g * body.mass * point_mass / distance_squared;
         let force_magnitude = force_magnitude.min(self.max_force);
 
         direction_normalized * force_magnitude
@@ -1239,5 +1239,144 @@ mod tests {
             stats.node_count, 5,
             "Four bodies should create five nodes (including the root node)"
         );
+    }
+
+    #[test]
+    fn test_gravitational_force_calculation_is_correct() {
+        // THIS TEST VERIFIES WHETHER THE GRAVITATIONAL FORCE CALCULATION IS MATHEMATICALLY CORRECT
+
+        // Newton's law of universal gravitation states:
+        // F = G * m1 * m2 / r^2
+        //
+        // The acceleration experienced by m1 is:
+        // a1 = F / m1 = G * m2 / r^2
+
+        // Test setup: Two bodies
+        let g: Scalar = 100.0; // Gravitational constant
+        let m1: Scalar = 5.0; // Mass of body 1  
+        let m2: Scalar = 3.0; // Mass of body 2
+        let separation: Scalar = 10.0; // Distance between bodies
+
+        // Create two bodies separated along the x-axis
+        let body1 = OctreeBody {
+            position: Vector::new(0.0, 0.0, 0.0),
+            mass: m1,
+            entity: Entity::from_raw(1),
+        };
+
+        let body2 = OctreeBody {
+            position: Vector::new(separation, 0.0, 0.0),
+            mass: m2,
+            entity: Entity::from_raw(2),
+        };
+
+        // Build octree with both bodies
+        let mut octree = Octree::new(
+            0.0,  // theta: 0 forces exact calculation (no Barnes-Hut approximation)
+            0.01, // min_distance
+            1e10, // max_force
+        );
+
+        octree.build(vec![body1, body2]);
+
+        // Calculate the force on body1 due to body2
+        let calculated_force =
+            octree.calculate_force_at_position(body1.position, body1.mass, body1.entity, g);
+
+        // Expected force calculation according to Newton's law
+        let r_squared = separation * separation;
+        let expected_force_magnitude = g * m1 * m2 / r_squared;
+        let expected_force = Vector::new(expected_force_magnitude, 0.0, 0.0);
+
+        // Calculate the acceleration (what the integrators actually use)
+        let calculated_acceleration = calculated_force / m1;
+        let _expected_acceleration = expected_force / m1;
+        let expected_acceleration_simplified = g * m2 / r_squared;
+
+        // CRITICAL ASSERTION: Check if the calculation matches physics
+        let force_error = (calculated_force - expected_force).length();
+        let acceleration_error =
+            (calculated_acceleration.length() - expected_acceleration_simplified).abs();
+
+        // The force should match Newton's law within numerical precision
+        // If this assertion fails, the gravitational calculation is WRONG
+        assert!(
+            force_error < 1e-6,
+            "GRAVITATIONAL FORCE CALCULATION IS INCORRECT!\n\
+             Calculated: {:?}\n\
+             Expected: {:?}\n\
+             Error: {}",
+            calculated_force,
+            expected_force,
+            force_error
+        );
+
+        assert!(
+            acceleration_error < 1e-6,
+            "GRAVITATIONAL ACCELERATION IS INCORRECT!\n\
+             Calculated: {}\n\
+             Expected: {}\n\
+             Error: {}",
+            calculated_acceleration.length(),
+            expected_acceleration_simplified,
+            acceleration_error
+        );
+    }
+
+    #[test]
+    fn test_inverse_square_law() {
+        // Test that force follows inverse square law
+        let g: Scalar = 1.0;
+        let m1: Scalar = 1.0;
+        let m2: Scalar = 1.0;
+
+        let distances = vec![1.0, 2.0, 4.0, 8.0];
+        let mut forces = Vec::new();
+
+        for distance in &distances {
+            let body1 = OctreeBody {
+                position: Vector::new(0.0, 0.0, 0.0),
+                mass: m1,
+                entity: Entity::from_raw(1),
+            };
+
+            let body2 = OctreeBody {
+                position: Vector::new(*distance, 0.0, 0.0),
+                mass: m2,
+                entity: Entity::from_raw(2),
+            };
+
+            let mut octree = Octree::new(
+                0.0,  // theta: 0 for exact calculation
+                0.01, // min_distance
+                1e10, // max_force
+            );
+
+            octree.build(vec![body1, body2]);
+
+            let force =
+                octree.calculate_force_at_position(body1.position, body1.mass, body1.entity, g);
+
+            forces.push(force.length());
+        }
+
+        let first_force = forces[0];
+        for (i, (distance, force)) in distances.iter().zip(forces.iter()).enumerate() {
+            if i > 0 {
+                // Each doubling of distance should quarter the force
+                let expected_ratio = (distances[0] / distance).powi(2);
+                let actual_ratio = force / first_force;
+                let ratio_error = (actual_ratio - expected_ratio).abs();
+
+                assert!(
+                    ratio_error < 1e-6,
+                    "Force does not follow inverse square law!\n\
+                     At distance {}: expected ratio {}, got {}",
+                    distance,
+                    expected_ratio,
+                    actual_ratio
+                );
+            }
+        }
     }
 }
