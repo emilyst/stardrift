@@ -3,6 +3,12 @@ use crate::physics::math::{Scalar, Vector, VectorExt};
 use bevy::prelude::Entity;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+/// Maximum depth allowed for the octree to prevent stack overflow
+/// and performance degradation. Depth of 24 provides spatial resolution
+/// down to ~10^-7 of the root node size, which is sufficient for any
+/// realistic simulation while preventing pathological cases.
+const MAX_OCTREE_DEPTH: usize = 24;
+
 /// Represents one of the eight octants in 3D space relative to a center point
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -300,6 +306,7 @@ impl Octree {
             bodies_vec,
             self.leaf_threshold,
             &mut self.node_pool,
+            0, // Start at depth 0
         ));
     }
 
@@ -308,8 +315,9 @@ impl Octree {
         bodies: Vec<OctreeBody>,
         leaf_threshold: usize,
         pool: &mut OctreeNodePool,
+        depth: usize,
     ) -> OctreeNode {
-        if bodies.len() <= leaf_threshold {
+        if depth >= MAX_OCTREE_DEPTH || bodies.len() <= leaf_threshold {
             let pooled_bodies = pool.get_external_bodies(bodies.len());
             let mut external_bodies = pooled_bodies;
 
@@ -364,6 +372,7 @@ impl Octree {
                         bodies_in_octant,
                         leaf_threshold,
                         pool,
+                        depth + 1, // Increment depth for child nodes
                     )));
                 } else {
                     pool.return_external_bodies(bodies_in_octant);
@@ -385,6 +394,39 @@ impl Octree {
         } else {
             bounds.center()
         };
+
+        // Debug assertions to verify invariants
+        #[cfg(debug_assertions)]
+        {
+            // Total mass should be non-negative
+            debug_assert!(
+                total_mass >= 0.0,
+                "Total mass must be non-negative, got {}",
+                total_mass
+            );
+
+            // Center of mass should be within bounds (with small tolerance for numerical errors)
+            if total_mass > 0.0 {
+                let tolerance = (bounds.max - bounds.min).length() * 0.01;
+                debug_assert!(
+                    center_of_mass.x >= bounds.min.x - tolerance
+                        && center_of_mass.x <= bounds.max.x + tolerance
+                        && center_of_mass.y >= bounds.min.y - tolerance
+                        && center_of_mass.y <= bounds.max.y + tolerance
+                        && center_of_mass.z >= bounds.min.z - tolerance
+                        && center_of_mass.z <= bounds.max.z + tolerance,
+                    "Center of mass {:?} outside bounds {:?}",
+                    center_of_mass,
+                    bounds
+                );
+            }
+
+            // At least one child should exist if we created an internal node
+            debug_assert!(
+                children.iter().any(|c| c.is_some()),
+                "Internal node must have at least one child"
+            );
+        }
 
         OctreeNode::Internal {
             bounds,
@@ -1122,6 +1164,249 @@ mod tests {
                     "Error should generally increase with theta"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn test_multiple_bodies_same_position() {
+        // Test that multiple bodies at identical positions are handled gracefully
+        // This edge case can occur when bodies spawn at the same location
+        let mut octree = Octree::new(0.0, 0.01, 1e6);
+
+        let position = Vector::new(100.0, 200.0, 300.0);
+        let bodies = vec![
+            OctreeBody {
+                position,
+                mass: 50.0,
+                entity: Entity::from_raw(1),
+            },
+            OctreeBody {
+                position, // Exact same position
+                mass: 75.0,
+                entity: Entity::from_raw(2),
+            },
+            OctreeBody {
+                position, // Yet another at same position
+                mass: 100.0,
+                entity: Entity::from_raw(3),
+            },
+        ];
+
+        // Should build without panic or infinite recursion
+        octree.build(bodies.clone());
+        assert!(octree.root.is_some(), "Tree should be built");
+
+        // Test force calculation from a nearby point
+        let test_position = Vector::new(101.0, 200.0, 300.0);
+        let force =
+            octree.calculate_force_at_position(test_position, 10.0, Entity::from_raw(4), 1.0);
+
+        // Force should be finite (no NaN or infinity)
+        assert!(force.is_finite(), "Force should be finite: {:?}", force);
+
+        // Force should point towards the coincident bodies
+        let direction = position - test_position;
+        let dot_product = force.normalize().dot(direction.normalize());
+        assert!(
+            dot_product > 0.99,
+            "Force should point towards coincident bodies"
+        );
+    }
+
+    #[test]
+    fn test_extreme_mass_ratios() {
+        // Test numerical stability with extreme mass ratios (>1e10)
+        let mut octree = Octree::new(0.0, 0.01, 1e20);
+
+        let bodies = vec![
+            OctreeBody {
+                position: Vector::new(0.0, 0.0, 0.0),
+                mass: 1e-5, // Very small mass
+                entity: Entity::from_raw(1),
+            },
+            OctreeBody {
+                position: Vector::new(10.0, 0.0, 0.0),
+                mass: 1e15, // Huge mass (ratio of 1e20)
+                entity: Entity::from_raw(2),
+            },
+        ];
+
+        octree.build(bodies);
+
+        // Calculate force on small mass
+        let force_on_small = octree.calculate_force_at_position(
+            Vector::new(0.0, 0.0, 0.0),
+            1e-5,
+            Entity::from_raw(1),
+            1.0,
+        );
+
+        // Calculate force on large mass
+        let force_on_large = octree.calculate_force_at_position(
+            Vector::new(10.0, 0.0, 0.0),
+            1e15,
+            Entity::from_raw(2),
+            1.0,
+        );
+
+        // Both forces should be finite
+        assert!(
+            force_on_small.is_finite(),
+            "Force on small mass should be finite: {:?}",
+            force_on_small
+        );
+        assert!(
+            force_on_large.is_finite(),
+            "Force on large mass should be finite: {:?}",
+            force_on_large
+        );
+
+        // Forces should still obey Newton's third law (within numerical precision)
+        // Note: with extreme ratios, we allow more tolerance
+        let sum = force_on_small + force_on_large;
+        let relative_error = sum.length() / force_on_small.length().max(force_on_large.length());
+        assert!(
+            relative_error < 1e-6,
+            "Forces should sum to near zero even with extreme mass ratios"
+        );
+    }
+
+    #[test]
+    fn test_extreme_distances() {
+        // Test with very large and very small distances
+        let mut octree = Octree::new(0.0, 1e-15, 1e30);
+
+        // Test very large distances
+        let bodies_far = vec![
+            OctreeBody {
+                position: Vector::new(-1e10, 0.0, 0.0),
+                mass: 100.0,
+                entity: Entity::from_raw(1),
+            },
+            OctreeBody {
+                position: Vector::new(1e10, 0.0, 0.0),
+                mass: 100.0,
+                entity: Entity::from_raw(2),
+            },
+        ];
+
+        octree.build(bodies_far);
+        let force_far = octree.calculate_force_at_position(
+            Vector::new(-1e10, 0.0, 0.0),
+            100.0,
+            Entity::from_raw(1),
+            1.0,
+        );
+
+        assert!(
+            force_far.is_finite(),
+            "Force at extreme distance should be finite: {:?}",
+            force_far
+        );
+
+        // Force should be very small but non-zero
+        assert!(
+            force_far.length() > 0.0 && force_far.length() < 1e-10,
+            "Force at extreme distance should be tiny but non-zero: {}",
+            force_far.length()
+        );
+
+        // Test very small distances (handled by min_distance)
+        let bodies_close = vec![
+            OctreeBody {
+                position: Vector::new(0.0, 0.0, 0.0),
+                mass: 100.0,
+                entity: Entity::from_raw(3),
+            },
+            OctreeBody {
+                position: Vector::new(1e-12, 0.0, 0.0), // Extremely close
+                mass: 100.0,
+                entity: Entity::from_raw(4),
+            },
+        ];
+
+        let mut octree_close = Octree::new(0.0, 1e-10, 1e30); // min_distance prevents singularity
+        octree_close.build(bodies_close);
+
+        let force_close = octree_close.calculate_force_at_position(
+            Vector::new(0.0, 0.0, 0.0),
+            100.0,
+            Entity::from_raw(3),
+            1.0,
+        );
+
+        assert!(
+            force_close.is_finite(),
+            "Force at tiny distance should be finite: {:?}",
+            force_close
+        );
+    }
+
+    #[test]
+    fn test_pathological_tree_depth() {
+        // Create a configuration that would cause very deep tree without depth limits
+        // Bodies positioned at exponentially decreasing separations
+        let mut octree = Octree::new(0.0, 1e-15, 1e6);
+
+        // Create bodies with exponentially decreasing separations
+        // This forces subdivision at each level to separate them
+        let mut bodies = Vec::new();
+
+        for i in 0..30 {
+            // Each body is exponentially closer to origin
+            let position = 1.0 / (2.0_f64).powi(i);
+            bodies.push(OctreeBody {
+                position: Vector::new(position, 0.0, 0.0),
+                mass: 100.0,
+                entity: Entity::from_raw(i as u32),
+            });
+        }
+
+        // Should build without stack overflow or excessive recursion
+        octree.build(bodies.clone());
+        assert!(octree.root.is_some(), "Tree should be built");
+
+        // Test force calculation doesn't cause stack overflow during traversal
+        let force = octree.calculate_force_at_position(
+            Vector::new(2.0, 0.0, 0.0),
+            50.0,
+            Entity::from_raw(100),
+            1.0,
+        );
+
+        assert!(force.is_finite(), "Force should be finite");
+    }
+
+    #[test]
+    fn test_empty_octree() {
+        // Verify force calculation on empty tree returns zero
+        let mut octree = Octree::new(0.5, 0.01, 1e6);
+
+        // Build with empty vector
+        octree.build(vec![]);
+
+        // Tree should have no root for empty input
+        assert!(octree.root.is_none(), "Empty octree should have no root");
+
+        // Force calculation should return zero
+        let force = octree.calculate_force_at_position(
+            Vector::new(0.0, 0.0, 0.0),
+            100.0,
+            Entity::from_raw(1),
+            1.0,
+        );
+
+        assert_eq!(
+            force,
+            Vector::ZERO,
+            "Force from empty octree should be zero"
+        );
+
+        // Should handle multiple queries without issues
+        for i in 0..10 {
+            let test_pos = Vector::new(i as f64, i as f64 * 2.0, i as f64 * 3.0);
+            let f = octree.calculate_force_at_position(test_pos, 50.0, Entity::from_raw(i), 1.0);
+            assert_eq!(f, Vector::ZERO, "All forces from empty tree should be zero");
         }
     }
 
