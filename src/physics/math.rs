@@ -7,6 +7,35 @@ pub type Scalar = f64;
 /// 3D vector type for positions, velocities, and forces
 pub type Vector = bevy::math::DVec3;
 
+/// Extension trait for Vector operations
+pub trait VectorExt {
+    /// Returns component-wise minimum of two vectors
+    fn component_min(self, other: Self) -> Self;
+
+    /// Returns component-wise maximum of two vectors
+    fn component_max(self, other: Self) -> Self;
+}
+
+impl VectorExt for Vector {
+    #[inline]
+    fn component_min(self, other: Self) -> Self {
+        Vector::new(
+            self.x.min(other.x),
+            self.y.min(other.y),
+            self.z.min(other.z),
+        )
+    }
+
+    #[inline]
+    fn component_max(self, other: Self) -> Self {
+        Vector::new(
+            self.x.max(other.x),
+            self.y.max(other.y),
+            self.z.max(other.z),
+        )
+    }
+}
+
 /// Re-export commonly used math constants
 use crate::prelude::Vec3;
 
@@ -75,6 +104,36 @@ pub fn random_unit_vector(rng: &mut SharedRng) -> Vec3 {
 #[cfg(test)]
 mod math_tests {
     use super::*;
+
+    #[test]
+    fn test_vector_component_min_max() {
+        let v1 = Vector::new(1.0, 5.0, 3.0);
+        let v2 = Vector::new(4.0, 2.0, 6.0);
+
+        let min = v1.component_min(v2);
+        assert_eq!(min.x, 1.0);
+        assert_eq!(min.y, 2.0);
+        assert_eq!(min.z, 3.0);
+
+        let max = v1.component_max(v2);
+        assert_eq!(max.x, 4.0);
+        assert_eq!(max.y, 5.0);
+        assert_eq!(max.z, 6.0);
+
+        // Test with negative values
+        let v3 = Vector::new(-2.0, -1.0, 0.0);
+        let v4 = Vector::new(-1.0, -3.0, 1.0);
+
+        let min2 = v3.component_min(v4);
+        assert_eq!(min2.x, -2.0);
+        assert_eq!(min2.y, -3.0);
+        assert_eq!(min2.z, 0.0);
+
+        let max2 = v3.component_max(v4);
+        assert_eq!(max2.x, -1.0);
+        assert_eq!(max2.y, -1.0);
+        assert_eq!(max2.z, 1.0);
+    }
 
     // Alternative test using coordinate moments
     #[test]
