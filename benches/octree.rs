@@ -217,31 +217,6 @@ fn bench_realworld_60fps_target(c: &mut Criterion) {
 }
 
 // =============================================================================
-// Special Performance Characteristics
-// =============================================================================
-
-fn bench_stats_overhead(c: &mut Criterion) {
-    let mut group = c.benchmark_group("stats_overhead");
-
-    let body_counts = [100, 1_000, 10_000];
-
-    for &count in &body_counts {
-        let bodies = generate_test_bodies_spherical(count, 42, 500.0);
-        let mut octree = Octree::new(0.5, 10.0, 1e4);
-        octree.build(bodies.iter().copied());
-
-        group.bench_with_input(BenchmarkId::new("bodies", count), &count, |b, _| {
-            b.iter(|| {
-                let stats = octree.octree_stats();
-                black_box(stats);
-            });
-        });
-    }
-
-    group.finish();
-}
-
-// =============================================================================
 // Benchmark Groups
 // =============================================================================
 
@@ -259,6 +234,4 @@ criterion_group!(
 
 criterion_group!(realworld, bench_realworld_60fps_target);
 
-criterion_group!(characteristics, bench_stats_overhead);
-
-criterion_main!(construction, physics, realworld, characteristics);
+criterion_main!(construction, physics, realworld);
