@@ -1,7 +1,8 @@
-/.claude
-/.idea
-/.run
-/dist
-/docs
-/target
+**/*.local.*
+**/.claude
+**/.idea
+**/.run
+**/.zed/
+**/dist
+**/docs
 /**/target
