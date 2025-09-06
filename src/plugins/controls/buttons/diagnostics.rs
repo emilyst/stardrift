@@ -26,38 +26,23 @@ impl ButtonWithLabel for DiagnosticsHudToggleButton {
     }
 }
 
-pub fn initialize_diagnostics_button_text(
+pub fn sync_diagnostics_button_text(
     settings: Res<DiagnosticsHudSettings>,
-    mut query: Query<(&DiagnosticsHudToggleButton, &Children)>,
+    mut initialized: Local<bool>,
+    mut button_children_query: Query<&Children, With<DiagnosticsHudToggleButton>>,
     mut text_query: Query<&mut Text>,
 ) {
-    let text_str = if settings.enabled {
-        "Hide Diagnostics (D)"
-    } else {
-        "Show Diagnostics (D)"
-    };
-    for (_, children) in &mut query {
-        for child in children {
-            if let Ok(mut text) = text_query.get_mut(*child) {
-                *text = Text::new(text_str.to_string());
-                break;
-            }
-        }
-    }
-}
+    // Sync on first run or when settings change
+    if !*initialized || settings.is_changed() {
+        *initialized = true;
 
-pub fn update_diagnostics_button_text(
-    settings: Res<DiagnosticsHudSettings>,
-    mut query: Query<(&DiagnosticsHudToggleButton, &Children)>,
-    mut text_query: Query<&mut Text>,
-) {
-    if settings.is_changed() {
         let text_str = if settings.enabled {
             "Hide Diagnostics (D)"
         } else {
             "Show Diagnostics (D)"
         };
-        for (_, children) in &mut query {
+
+        for children in button_children_query.iter_mut() {
             for child in children {
                 if let Ok(mut text) = text_query.get_mut(*child) {
                     *text = Text::new(text_str.to_string());

@@ -25,38 +25,23 @@ impl ButtonWithLabel for BarycenterGizmoToggleButton {
     }
 }
 
-pub fn initialize_barycenter_button_text(
+pub fn sync_barycenter_button_text(
     settings: Res<BarycenterGizmoVisibility>,
-    mut query: Query<(&BarycenterGizmoToggleButton, &Children)>,
+    mut initialized: Local<bool>,
+    mut button_children_query: Query<&Children, With<BarycenterGizmoToggleButton>>,
     mut text_query: Query<&mut Text>,
 ) {
-    let text_str = if settings.enabled {
-        "Hide Barycenter (C)"
-    } else {
-        "Show Barycenter (C)"
-    };
-    for (_, children) in &mut query {
-        for child in children {
-            if let Ok(mut text) = text_query.get_mut(*child) {
-                *text = Text::new(text_str.to_string());
-                break;
-            }
-        }
-    }
-}
+    // Sync on first run or when settings change
+    if !*initialized || settings.is_changed() {
+        *initialized = true;
 
-pub fn update_barycenter_button_text(
-    settings: Res<BarycenterGizmoVisibility>,
-    mut query: Query<(&BarycenterGizmoToggleButton, &Children)>,
-    mut text_query: Query<&mut Text>,
-) {
-    if settings.is_changed() {
         let text_str = if settings.enabled {
             "Hide Barycenter (C)"
         } else {
             "Show Barycenter (C)"
         };
-        for (_, children) in &mut query {
+
+        for children in button_children_query.iter_mut() {
             for child in children {
                 if let Ok(mut text) = text_query.get_mut(*child) {
                     *text = Text::new(text_str.to_string());

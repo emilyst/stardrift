@@ -48,11 +48,11 @@ impl Plugin for ControlsPlugin {
         app.add_systems(
             Startup,
             (
-                octree::initialize_octree_button_text,
-                barycenter::initialize_barycenter_button_text,
-                trails::initialize_trails_button_text,
-                diagnostics::initialize_diagnostics_button_text,
-                pause::initialize_pause_button_text,
+                octree::sync_octree_button_text,
+                barycenter::sync_barycenter_button_text,
+                trails::sync_trails_button_text,
+                diagnostics::sync_diagnostics_button_text,
+                pause::sync_pause_button_text,
             )
                 .after(setup_controls_ui),
         );
@@ -60,16 +60,16 @@ impl Plugin for ControlsPlugin {
         app.add_systems(
             Update,
             (
-                octree::update_octree_button_text,
-                barycenter::update_barycenter_button_text,
-                trails::update_trails_button_text,
-                diagnostics::update_diagnostics_button_text,
-                pause::update_pause_button_text,
+                octree::sync_octree_button_text,
+                barycenter::sync_barycenter_button_text,
+                trails::sync_trails_button_text,
+                diagnostics::sync_diagnostics_button_text,
+                pause::sync_pause_button_text,
             ),
         );
 
-        app.add_systems(OnEnter(AppState::Running), pause::update_pause_button_text);
-        app.add_systems(OnEnter(AppState::Paused), pause::update_pause_button_text);
+        app.add_systems(OnEnter(AppState::Running), pause::sync_pause_button_text);
+        app.add_systems(OnEnter(AppState::Paused), pause::sync_pause_button_text);
     }
 }
 
