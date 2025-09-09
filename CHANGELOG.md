@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.51] - 2025-09-09
+
 ### Changed
 
 - Temporary new defaults for slower simulations.
