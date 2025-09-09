@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Temporary new defaults for slower simulations.
+    - Lesbian pride flag colors.
+
 ## [0.0.50] - 2025-09-02
 
 ## [0.0.49] - 2025-09-01
@@ -45,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `nonbinary` - Yellow-white-purple-black (Kye Rowan design)
     - `asexual` - Black-gray-white-purple for the ace spectrum
     - `genderfluid` - Pink-white-purple-black-blue for gender fluidity
-    - `aromantic` - Green-white-gray-black for the aromantic spectrum  
+    - `aromantic` - Green-white-gray-black for the aromantic spectrum
     - `agender` - Black-gray-white-green in symmetric pattern
     - All pride schemes use gradient interpolation for smooth color transitions
     - Black stripes rendered as dark gray for visibility against space background

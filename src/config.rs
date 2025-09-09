@@ -78,7 +78,7 @@ pub struct SimulationConfig {
 #[derive(ConfigDefaults, Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct PhysicsConfig {
-    #[default(1000.0)]
+    #[default(100.0)]
     pub gravitational_constant: Scalar,
 
     #[default(100)]
@@ -90,7 +90,7 @@ pub struct PhysicsConfig {
     #[default(1)]
     pub octree_leaf_threshold: usize,
 
-    #[default(100.0)]
+    #[default(200.0)]
     pub body_distribution_sphere_radius_multiplier: f32,
 
     #[default(0.001)]
@@ -105,7 +105,7 @@ pub struct PhysicsConfig {
     #[default(1.0)]
     pub force_calculation_min_distance: Scalar,
 
-    #[default(1e6)]
+    #[default(1e5)]
     pub force_calculation_max_force: Scalar,
 
     #[default(None)]
@@ -128,13 +128,13 @@ pub struct InitialVelocityConfig {
     #[default(true)]
     pub enabled: bool,
 
-    #[default(50.0)]
+    #[default(5.0)]
     pub min_speed: Scalar,
 
-    #[default(100.0)]
+    #[default(5.0)]
     pub max_speed: Scalar,
 
-    #[default(VelocityMode::Random)]
+    #[default(VelocityMode::Orbital)]
     pub velocity_mode: VelocityMode,
 
     #[default(0.7)]
@@ -163,7 +163,7 @@ pub struct IntegratorConfig {
 #[derive(ConfigDefaults, Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct RenderingConfig {
-    #[default(ColorScheme::BlackBody)]
+    #[default(ColorScheme::Lesbian)]
     pub color_scheme: ColorScheme,
 
     #[default(3000.0)]
@@ -178,7 +178,7 @@ pub struct RenderingConfig {
     #[default(3.0)]
     pub saturation_intensity: f32,
 
-    #[default(4.0)]
+    #[default(3.0)]
     pub camera_radius_multiplier: f32,
 }
 
@@ -186,7 +186,7 @@ pub struct RenderingConfig {
 #[serde(default)]
 pub struct TrailConfig {
     // Length & Timing
-    #[default(10.0)]
+    #[default(60.0)]
     pub trail_length_seconds: f32,
 
     #[default(1.0 / 30.0)]
