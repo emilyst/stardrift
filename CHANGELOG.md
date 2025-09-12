@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Initial attempt at a new kinetic energy simulation diagnostic
+    - I'll check the math closer later
+
 ## [0.0.52] - 2025-09-09
 
 ## [0.0.51] - 2025-09-09

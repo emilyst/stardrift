@@ -27,7 +27,6 @@ impl Velocity {
         Self(velocity)
     }
 
-    #[cfg(test)]
     #[inline]
     pub fn value(&self) -> Vector {
         self.0
