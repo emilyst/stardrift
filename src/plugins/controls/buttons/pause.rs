@@ -28,14 +28,14 @@ impl ButtonWithLabel for PauseButton {
 pub fn sync_pause_button_text(
     state: Res<State<AppState>>,
     mut initialized: Local<bool>,
-    mut button_children_query: Query<&Children, With<PauseButton>>,
+    button_children_query: Query<&Children, With<PauseButton>>,
     mut text_query: Query<&mut Text>,
 ) {
     // Sync on first run or when state changes
     if !*initialized || state.is_changed() {
         *initialized = true;
 
-        for children in button_children_query.iter_mut() {
+        for children in button_children_query.iter() {
             let dynamic_text = match state.get() {
                 AppState::Running => "Pause (Space)",
                 AppState::Paused => "Resume (Space)",

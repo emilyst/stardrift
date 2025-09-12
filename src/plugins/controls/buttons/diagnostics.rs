@@ -29,7 +29,7 @@ impl ButtonWithLabel for DiagnosticsHudToggleButton {
 pub fn sync_diagnostics_button_text(
     settings: Res<DiagnosticsHudSettings>,
     mut initialized: Local<bool>,
-    mut button_children_query: Query<&Children, With<DiagnosticsHudToggleButton>>,
+    button_children_query: Query<&Children, With<DiagnosticsHudToggleButton>>,
     mut text_query: Query<&mut Text>,
 ) {
     // Sync on first run or when settings change
@@ -42,7 +42,7 @@ pub fn sync_diagnostics_button_text(
             "Show Diagnostics (D)"
         };
 
-        for children in button_children_query.iter_mut() {
+        for children in button_children_query.iter() {
             for child in children {
                 if let Ok(mut text) = text_query.get_mut(*child) {
                     *text = Text::new(text_str.to_string());

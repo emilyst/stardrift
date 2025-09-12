@@ -28,7 +28,7 @@ impl ButtonWithLabel for BarycenterGizmoToggleButton {
 pub fn sync_barycenter_button_text(
     settings: Res<BarycenterGizmoVisibility>,
     mut initialized: Local<bool>,
-    mut button_children_query: Query<&Children, With<BarycenterGizmoToggleButton>>,
+    button_children_query: Query<&Children, With<BarycenterGizmoToggleButton>>,
     mut text_query: Query<&mut Text>,
 ) {
     // Sync on first run or when settings change
@@ -41,7 +41,7 @@ pub fn sync_barycenter_button_text(
             "Show Barycenter (C)"
         };
 
-        for children in button_children_query.iter_mut() {
+        for children in button_children_query.iter() {
             for child in children {
                 if let Ok(mut text) = text_query.get_mut(*child) {
                     *text = Text::new(text_str.to_string());

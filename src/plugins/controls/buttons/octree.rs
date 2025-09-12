@@ -28,7 +28,7 @@ impl ButtonWithLabel for OctreeToggleButton {
 pub fn sync_octree_button_text(
     settings: Res<OctreeVisualizationSettings>,
     mut initialized: Local<bool>,
-    mut button_children_query: Query<&Children, With<OctreeToggleButton>>,
+    button_children_query: Query<&Children, With<OctreeToggleButton>>,
     mut text_query: Query<&mut Text>,
 ) {
     if !*initialized || settings.is_changed() {
@@ -40,9 +40,9 @@ pub fn sync_octree_button_text(
             "Show Octree (O)"
         };
 
-        for children in button_children_query.iter_mut() {
-            for child in children {
-                if let Ok(mut text) = text_query.get_mut(*child) {
+        for children in button_children_query.iter() {
+            for child in children.iter() {
+                if let Ok(mut text) = text_query.get_mut(child) {
                     *text = Text::new(text_str.to_string());
                     break;
                 }
