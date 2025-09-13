@@ -12,8 +12,6 @@ pub mod resources;
 pub mod states;
 pub mod utils;
 
-pub mod test_utils;
-
 // Re-export commonly used items
 pub use config::SimulationConfig;
 pub use events::*;
