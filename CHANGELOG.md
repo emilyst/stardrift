@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed integrator benchmarks by copying acceleration functions locally after test utilities removal
+
 ## [0.0.53] - 2025-09-20
 
 ### Changed

@@ -4,7 +4,7 @@
 //! - Performance (speed/throughput) - Lower time is better
 //! - Accuracy (error vs analytical solutions) - Lower values are better
 //! - Convergence order (error reduction with smaller timesteps) - Lower deviation is better
-//! - Stability (energy conservation over long simulations) - Lower drift is better  
+//! - Stability (energy conservation over long simulations) - Lower drift is better
 //! - Work-precision (accuracy for different timesteps) - Lower error is better
 //! - Real N-body scenarios (performance with octree) - Lower time is better
 //!
@@ -15,14 +15,69 @@ use criterion::{BenchmarkId, Criterion, PlotConfiguration, criterion_group, crit
 use std::hint::black_box;
 
 extern crate stardrift;
-use stardrift::physics::integrators::Integrator;
+use stardrift::physics::integrators::{AccelerationField, Integrator};
 use stardrift::physics::math::{Scalar, Vector};
 use stardrift::physics::octree::{Octree, OctreeBody};
-use stardrift::test_utils::physics::acceleration_functions::{
-    CentralForce, HarmonicOscillator, NBodyAcceleration,
-};
 
 const PI: Scalar = std::f64::consts::PI;
+
+// =============================================================================
+// Acceleration Functions for Benchmarks
+// =============================================================================
+
+/// Harmonic oscillator / Spring force: a = -k * x
+/// where k is the spring constant (or omega^2 for oscillators)
+struct HarmonicOscillator {
+    pub k: Scalar,
+}
+
+impl HarmonicOscillator {
+    /// Create from angular frequency omega (k = omega^2)
+    pub fn from_omega(omega: Scalar) -> Self {
+        Self { k: omega * omega }
+    }
+}
+
+impl AccelerationField for HarmonicOscillator {
+    fn at(&self, position: Vector) -> Vector {
+        -self.k * position
+    }
+}
+
+/// Central force problem (e.g., Kepler orbits): a = -μ/r³ * r_vec
+/// where μ = GM for gravitational problems
+struct CentralForce {
+    pub mu: Scalar,
+}
+
+impl AccelerationField for CentralForce {
+    fn at(&self, position: Vector) -> Vector {
+        let r = position.length();
+        if r > 1e-10 {
+            -position * (self.mu / (r * r * r))
+        } else {
+            Vector::ZERO
+        }
+    }
+}
+
+/// N-body acceleration field using octree for efficient force calculation
+/// Useful for testing integrators with realistic many-body forces
+struct NBodyAcceleration<'a> {
+    pub octree: &'a Octree,
+    pub entity: bevy::ecs::entity::Entity,
+    pub mass: Scalar,
+    pub g: Scalar,
+}
+
+impl<'a> AccelerationField for NBodyAcceleration<'a> {
+    fn at(&self, position: Vector) -> Vector {
+        let force =
+            self.octree
+                .calculate_force_at_position(position, self.mass, self.entity, self.g);
+        force / self.mass
+    }
+}
 
 // =============================================================================
 // Helper Functions and Test Scenarios
