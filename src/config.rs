@@ -2,7 +2,6 @@ use crate::prelude::*;
 use config::{Config, ConfigError, File};
 #[cfg(not(target_arch = "wasm32"))]
 use directories::ProjectDirs;
-use macros::ConfigDefaults;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -75,70 +74,67 @@ pub struct SimulationConfig {
     pub screenshots: ScreenshotConfig,
 }
 
-#[derive(ConfigDefaults, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct PhysicsConfig {
-    #[default(100.0)]
     pub gravitational_constant: Scalar,
-
-    #[default(100)]
     pub body_count: usize,
-
-    #[default(0.5)]
     pub octree_theta: Scalar,
-
-    #[default(1)]
     pub octree_leaf_threshold: usize,
-
-    #[default(200.0)]
     pub body_distribution_sphere_radius_multiplier: f32,
-
-    #[default(0.001)]
     pub body_distribution_min_distance: f32,
-
-    #[default(2.0)]
     pub min_body_radius: f32,
-
-    #[default(4.0)]
     pub max_body_radius: f32,
-
-    #[default(1.0)]
     pub force_calculation_min_distance: Scalar,
-
-    #[default(1e5)]
     pub force_calculation_max_force: Scalar,
-
-    #[default(None)]
     pub initial_seed: Option<u64>,
-
-    #[default(InitialVelocityConfig::default())]
     pub initial_velocity: InitialVelocityConfig,
-
     #[serde(default)]
-    #[default(IntegratorConfig::default())]
     pub integrator: IntegratorConfig,
-
-    #[default(true)]
     pub barycentric_drift_correction: bool,
 }
 
-#[derive(ConfigDefaults, Serialize, Deserialize, Clone, Debug)]
+impl Default for PhysicsConfig {
+    fn default() -> Self {
+        Self {
+            gravitational_constant: 100.0,
+            body_count: 100,
+            octree_theta: 0.5,
+            octree_leaf_threshold: 1,
+            body_distribution_sphere_radius_multiplier: 200.0,
+            body_distribution_min_distance: 0.001,
+            min_body_radius: 2.0,
+            max_body_radius: 4.0,
+            force_calculation_min_distance: 1.0,
+            force_calculation_max_force: 1e5,
+            initial_seed: None,
+            initial_velocity: InitialVelocityConfig::default(),
+            integrator: IntegratorConfig::default(),
+            barycentric_drift_correction: true,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct InitialVelocityConfig {
-    #[default(true)]
     pub enabled: bool,
-
-    #[default(5.0)]
     pub min_speed: Scalar,
-
-    #[default(5.0)]
     pub max_speed: Scalar,
-
-    #[default(VelocityMode::Orbital)]
     pub velocity_mode: VelocityMode,
-
-    #[default(0.7)]
     pub tangential_bias: Scalar,
+}
+
+impl Default for InitialVelocityConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            min_speed: 5.0,
+            max_speed: 5.0,
+            velocity_mode: VelocityMode::Orbital,
+            tangential_bias: 0.7,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -150,90 +146,111 @@ pub enum VelocityMode {
     Radial,
 }
 
+impl Default for VelocityMode {
+    fn default() -> Self {
+        VelocityMode::Orbital
+    }
+}
+
 /// Flexible integrator configuration
-#[derive(ConfigDefaults, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct IntegratorConfig {
     /// Type of integrator (e.g., "velocity_verlet")
     #[serde(rename = "type")]
-    #[default("velocity_verlet")]
     pub integrator_type: String,
 }
 
-#[derive(ConfigDefaults, Serialize, Deserialize, Clone, Debug)]
+impl Default for IntegratorConfig {
+    fn default() -> Self {
+        Self {
+            integrator_type: "velocity_verlet".to_string(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct RenderingConfig {
-    #[default(ColorScheme::Lesbian)]
     pub color_scheme: ColorScheme,
-
-    #[default(3000.0)]
     pub min_temperature: f32,
-
-    #[default(15000.0)]
     pub max_temperature: f32,
-
-    #[default(250.0)]
     pub bloom_intensity: f32,
-
-    #[default(3.0)]
     pub saturation_intensity: f32,
-
-    #[default(3.0)]
     pub camera_radius_multiplier: f32,
 }
 
-#[derive(ConfigDefaults, Serialize, Deserialize, Clone, Debug)]
+impl Default for RenderingConfig {
+    fn default() -> Self {
+        Self {
+            color_scheme: ColorScheme::Lesbian,
+            min_temperature: 3000.0,
+            max_temperature: 15000.0,
+            bloom_intensity: 250.0,
+            saturation_intensity: 3.0,
+            camera_radius_multiplier: 3.0,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct TrailConfig {
     // Length & Timing
-    #[default(60.0)]
     pub trail_length_seconds: f32,
-
-    #[default(1.0 / 30.0)]
     pub update_interval_seconds: f32,
-
-    #[default(10000)]
     pub max_points_per_trail: usize,
 
     // Visual Appearance
-    #[default(1.0)]
     pub base_width: f32,
-
-    #[default(true)]
     pub width_relative_to_body: bool,
-
-    #[default(2.0)]
     pub body_size_multiplier: f32,
 
     // Fading & Transparency
-    #[default(true)]
     pub enable_fading: bool,
-
-    #[default(FadeCurve::Exponential)]
     pub fade_curve: FadeCurve,
-
-    #[default(0.0)]
     pub min_alpha: f32,
-
-    #[default(0.3333)]
     pub max_alpha: f32,
 
     // Width Tapering
-    #[default(true)]
     pub enable_tapering: bool,
-
-    #[default(TaperCurve::Linear)]
     pub taper_curve: TaperCurve,
-
-    #[default(0.2)]
     pub min_width_ratio: f32,
 
     // Bloom Effect
-    #[default(1.0)]
     pub bloom_factor: f32,
-
-    #[default(true)]
     pub use_additive_blending: bool,
+}
+
+impl Default for TrailConfig {
+    fn default() -> Self {
+        Self {
+            // Length & Timing
+            trail_length_seconds: 60.0,
+            update_interval_seconds: 1.0 / 30.0,
+            max_points_per_trail: 10000,
+
+            // Visual Appearance
+            base_width: 1.0,
+            width_relative_to_body: true,
+            body_size_multiplier: 2.0,
+
+            // Fading & Transparency
+            enable_fading: true,
+            fade_curve: FadeCurve::Exponential,
+            min_alpha: 0.0,
+            max_alpha: 0.3333,
+
+            // Width Tapering
+            enable_tapering: true,
+            taper_curve: TaperCurve::Linear,
+            min_width_ratio: 0.2,
+
+            // Bloom Effect
+            bloom_factor: 1.0,
+            use_additive_blending: true,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -245,6 +262,12 @@ pub enum FadeCurve {
     EaseInOut,
 }
 
+impl Default for FadeCurve {
+    fn default() -> Self {
+        FadeCurve::Exponential
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum TaperCurve {
@@ -253,23 +276,32 @@ pub enum TaperCurve {
     SmoothStep,
 }
 
-#[derive(ConfigDefaults, Serialize, Deserialize, Clone, Debug)]
+impl Default for TaperCurve {
+    fn default() -> Self {
+        TaperCurve::Linear
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct ScreenshotConfig {
-    #[default(None)]
     pub directory: Option<String>,
-
-    #[default("stardrift_screenshot")]
     pub filename_prefix: String,
-
-    #[default(true)]
     pub include_timestamp: bool,
-
-    #[default(true)]
     pub notification_enabled: bool,
-
-    #[default(2)]
     pub hide_ui_frame_delay: u32,
+}
+
+impl Default for ScreenshotConfig {
+    fn default() -> Self {
+        Self {
+            directory: None,
+            filename_prefix: "stardrift_screenshot".to_string(),
+            include_timestamp: true,
+            notification_enabled: true,
+            hide_ui_frame_delay: 2,
+        }
+    }
 }
 
 impl SimulationConfig {

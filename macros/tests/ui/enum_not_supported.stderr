@@ -1,8 +1,0 @@
-error: ConfigDefaults can only be derived for structs, not enums
- --> tests/ui/enum_not_supported.rs:5:1
-  |
-5 | / enum NotSupported {
-6 | |     VariantA,
-7 | |     VariantB,
-8 | | }
-  | |_^

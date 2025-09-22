@@ -588,7 +588,7 @@ Stardrift uses a plugin-based architecture built on Bevy ECS (Entity Component S
 - **`benches/`** - Performance benchmarks
 - **`tests/`** - Integration tests
 - **`assets/`** - Static assets (fonts, icons)
-- **`macros/`** - Procedural macros for configuration
+
 
 ### Architecture
 

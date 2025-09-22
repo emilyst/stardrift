@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced ConfigDefaults procedural macro with manual Default implementations
+    - Configuration structs now use conventional Rust Default trait implementations
+    - Default values documented with inline comments in implementation blocks
+
+### Removed
+
+- Removed entire macros crate and procedural macro system
+    - Deleted macros crate from workspace dependencies
+    - Eliminated build-time procedural macro compilation overhead
+    - Simplified project structure by removing macros directory
+
 ### Fixed
 
 - Fixed integrator benchmarks by copying acceleration functions locally after test utilities removal

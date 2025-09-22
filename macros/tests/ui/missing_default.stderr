@@ -1,5 +1,0 @@
-error: Field 'field2' must have a #[default(...)] attribute specifying its default value
-  --> tests/ui/missing_default.rs:10:5
-   |
-10 |     pub field2: String,
-   |     ^^^^^^^^^^^^^^^^^^

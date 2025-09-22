@@ -1,5 +1,0 @@
-error: ConfigDefaults only supports structs with named fields
- --> tests/ui/tuple_struct.rs:5:1
-  |
-5 | struct TupleStruct(i32, String);
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

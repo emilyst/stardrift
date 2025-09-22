@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "macros"]
+members = ["."]
 resolver = "2"
 
 [package]
@@ -29,8 +29,7 @@ serde_json = "1.0"
 toml = "0.9"
 webbrowser = { version = "1.0", features = ["hardened"] }
 
-[dependencies.macros]
-path = "./macros"
+
 
 [dependencies.bevy]
 version = "0.16"

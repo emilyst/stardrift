@@ -1,5 +1,0 @@
-error: Field 'field1' has an empty #[default()] attribute. Please provide a default value.
- --> tests/ui/empty_default.rs:6:5
-  |
-6 |     #[default()] // Empty!
-  |     ^^^^^^^^^^^^
