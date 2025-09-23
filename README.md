@@ -1,6 +1,6 @@
 # Stardrift
 
-A high-performance 3D gravitational N-body simulation built with Rust and Bevy game engine. This
+A 3D gravitational N-body simulation built with Rust and the Bevy game engine. This
 project simulates the gravitational interactions between multiple celestial bodies with real-time visualization and
 interactive camera controls.
 
@@ -9,7 +9,7 @@ interactive camera controls.
 Stardrift is an experimental side project for personal enjoyment and learning. The project explores gravitational
 physics simulation while learning Rust and Bevy. Development happens in spare time without specific goals or timeline.
 
-This project also serves as an exploration of AI capabilities in software development. Its development involves heavy
+This project also serves as an exploration of AI capabilities in software development. Its development involves
 use of AI assistance.
 
 **Note**: This is not intended for scientific or research purposes. The project remains experimental and subject to
@@ -19,32 +19,26 @@ significant changes.
 
 ### Core Simulation
 
-- **N-body gravitational physics**: Accurate gravitational force calculations between all bodies
-- **Barnes-Hut octree algorithm**: Efficient O(N log N) gravitational force calculations using spatial partitioning
-- **High precision**: Uses f64 floating-point precision for increased accuracy
-- **Custom physics engine**: Purpose-built component-based physics system optimized for n-body simulation
-- **Multiple numerical integrators**: Six integration methods with different accuracy/performance trade-offs:
-    - Symplectic Euler (1st order, symplectic)
-    - Velocity Verlet (2nd order, symplectic)
-    - Heun/Improved Euler (2nd order)
-    - Runge-Kutta 2nd Order Midpoint (2nd order)
-    - Runge-Kutta 4th Order (4th order)
-    - PEFRL (4th order, symplectic)
-- **Parallel processing**: Multi-threaded physics calculations for performance optimization
+- **N-body gravitational physics**: Gravitational force calculations between all bodies
+- **Barnes-Hut octree algorithm**: O(N log N) gravitational force calculations using spatial partitioning
+- **Double precision**: Uses f64 floating-point arithmetic
+- **Custom physics engine**: Component-based physics system for n-body simulation
+- **Multiple numerical integrators**: Various integration methods including symplectic and Runge-Kutta schemes. Run `stardrift --list-integrators` to see all available methods.
+- **Parallel processing**: Multi-threaded physics calculations
 - **Dynamic barycenter tracking**: Real-time calculation and visualization of the system's center of mass
 
 ### Visualization & Controls
 
-- **3D real-time rendering**: 3D visualization with Bevy's rendering pipeline
-- **Interactive camera**: Pan, orbit, and zoom controls
+- **3D rendering**: Real-time visualization with Bevy's rendering pipeline
+- **Camera controls**: Pan, orbit, and zoom
 - **Touch support**: Touch controls for mobile and tablet devices
-- **Visual effects**: Bloom effects and tone mapping for visual rendering
+- **Visual effects**: Bloom effects and tone mapping
 - **Screenshot capture**: Take screenshots without UI elements
     - Automatic UI and HUD hiding during capture
     - Configurable save directory and filename format
-    - Timestamp-based filenames for chronological organization
+    - Timestamp-based filenames
     - PNG format with full window resolution
-- **Dynamic trails**: High-performance fading trails for celestial bodies
+- **Dynamic trails**: Fading trails for celestial bodies
     - Time-based trail length management
     - Multiple fade curves (Linear, Exponential, SmoothStep, EaseInOut)
     - Configurable width with tapering options
@@ -52,8 +46,7 @@ significant changes.
     - Automatically pauses when simulation is paused
 - **Barycenter visualization**: Cross-hair indicator showing the system's center of mass with toggle controls
 - **Octree visualization**: Real-time wireframe rendering of the spatial partitioning structure
-- **Interactive visualization controls**: Toggle octree display, barycenter gizmos, and adjust visualization depth
-  levels
+- **Interactive visualization controls**: Toggle octree, barycenter visualization
 
 ### User Interface
 
@@ -77,7 +70,7 @@ significant changes.
 
 ## Planned Features
 
-The following features are planned for future development:
+The following features are planned for future development (no planned timeline):
 
 1. **Enhanced Diagnostics** - Comprehensive physics accuracy monitoring including energy conservation (Hamiltonian),
    angular momentum tracking, virial ratio, and performance profiling
@@ -131,7 +124,7 @@ cd stardrift
 # Development build (faster compilation)
 cargo run -p stardrift
 
-# Release build (optimized performance)
+# Release build (with compiler optimizations)
 cargo run -p stardrift --release
 ```
 
@@ -141,40 +134,13 @@ cargo run -p stardrift --release
 stardrift [OPTIONS]
 ```
 
-#### General Options
+Common options:
+- `--bodies COUNT` - Set number of bodies to simulate
+- `--seed SEED` - Use specific random seed for reproducible simulations
+- `--paused` - Start simulation in paused state
+- `--list-integrators` - List all available integration methods
 
-| Option                  | Description                                     | Example                  |
-|-------------------------|-------------------------------------------------|--------------------------|
-| `--config FILE`         | Path to configuration file (TOML format)        | `--config custom.toml`   |
-| `--bodies COUNT`        | Number of bodies to simulate (overrides config) | `--bodies 100`           |
-| `--gravity VALUE`       | Gravitational constant (overrides config)       | `--gravity 0.05`         |
-| `--integrator TYPE`     | Integrator type (overrides config)              | `--integrator rk4`       |
-| `--seed SEED`           | Random seed for deterministic generation        | `--seed 42`              |
-| `--color-scheme SCHEME` | Color scheme for bodies (overrides config)      | `--color-scheme viridis` |
-| `--paused`              | Start simulation paused                         | `--paused`               |
-| `--verbose`             | Enable verbose logging                          | `--verbose`              |
-| `--list-integrators`    | List available integrators and exit             | `--list-integrators`     |
-| `--help`                | Print help information                          | `--help`                 |
-| `--version`             | Print version information                       | `--version`              |
-
-#### Color Scheme Options
-
-Available color schemes for the `--color-scheme` flag:
-
-- `black_body` (default) - Physics-based black body radiation
-- `rainbow` - Random vibrant colors
-- `deuteranopia_safe` - Red-green colorblind safe
-- `protanopia_safe` - Red-blindness safe
-- `tritanopia_safe` - Blue-yellow colorblind safe
-- `high_contrast` - Maximum distinguishability
-- `viridis` - Scientific perceptually uniform gradient
-- `plasma` - Magenta-purple-pink-yellow gradient
-- `inferno` - Black-red-yellow-white heat map
-- `turbo` - Google's improved rainbow
-- `pastel` - Soft, low-saturation colors
-- `neon` - Bright cyberpunk colors
-- `monochrome` - Grayscale variations
-- `vaporwave` - Retrofuturistic pink-purple-cyan
+Run `stardrift --help` for complete options including integrator selection, color schemes, and configuration overrides.
 
 #### Example Commands
 
@@ -182,7 +148,7 @@ Available color schemes for the `--color-scheme` flag:
 # Run with specific configuration
 stardrift --bodies 50 --seed 123 --color-scheme viridis
 
-# Test different integrators
+# Try different integrators
 stardrift --integrator velocity_verlet --bodies 100
 
 # Generate identical simulations with different colors
@@ -206,7 +172,7 @@ trunk serve
 trunk build --release
 ```
 
-The built files will be in the `dist/` directory, ready for deployment. Trunk automatically handles:
+The built files will be in the `dist/` directory for deployment. Trunk automatically handles:
 
 - WASM compilation and optimization
 - Asset bundling and injection
@@ -283,7 +249,7 @@ elements.
 ### Camera Behavior
 
 - The camera automatically follows the barycenter (center of mass) of the system
-- Pan and orbit controls allow you to explore the simulation from different angles
+- Pan and orbit controls allow you to view the simulation from different angles
 - The camera tracks the movement of the gravitational system
 
 ### Configuration
@@ -526,45 +492,34 @@ If no configuration file exists, the application uses default values.
 - **Physics**: Custom ECS-based physics with f64 precision and parallel processing
 - **Spatial Optimization**: Barnes-Hut octree algorithm with configurable theta parameter for accuracy/performance
   balance
-- **Rendering**: Bevy's PBR (Physically Based Rendering) pipeline with real-time octree wireframe visualization
-- **Random Number Generation**: ChaCha8 algorithm for efficient PRNG
+- **Rendering**: Bevy's PBR (Physically Based Rendering) pipeline with octree wireframe visualization
+- **Random Number Generation**: ChaCha8 PRNG algorithm
 - **Mathematical Utilities**: Sphere surface distribution algorithms and statistical validation
 
 ### Performance Optimizations
 
 - **Build Profiles**:
-    - Development: Fast compilation with basic optimizations
-    - Release: Full optimizations with debug info stripped
+    - Development: Reduced optimizations for faster compilation
+    - Release: Compiler optimizations enabled with debug info stripped
     - Distribution: Link-time optimization (LTO) and single codegen unit
 - **Algorithmic Efficiency**: Barnes-Hut octree reduces gravitational calculations from O(N²) to O(N log N)
 - **Parallel Processing**: Multi-threaded physics calculations
-- **Memory Efficiency**: Optimized data structures and minimal allocations
-- **Rendering Optimizations**: Efficient mesh and material management
-- **Integrator Benchmarks**: Comprehensive benchmark suite testing all six integrators across:
+- **Integrator Benchmarks**: Benchmark suite evaluating integrators across:
     - Raw performance (operations per second)
     - Accuracy (error vs analytical solutions)
     - Convergence order verification
     - Energy conservation over long simulations
     - Work-precision tradeoffs
-    - Realistic N-body scenarios
+    - N-body scenarios
 
 ### Dependencies
 
-#### Core Dependencies
+Built with Bevy game engine and community plugins. See `Cargo.toml` for the complete dependency list.
 
-- **bevy**: Game engine and rendering framework
-- **bevy_panorbit_camera**: Camera controls with touch support
-- **libm**: Mathematical functions for no-std environments
-- **rand**: Random number generation
-- **rand_chacha**: ChaCha random number generator
-- **chrono**: Date and time handling for screenshot timestamps
-
-#### Build Dependencies
-
-- **trunk**: Modern WASM application bundler (for WebAssembly builds)
-- **wasm-bindgen**: Rust-WASM bindings (handled automatically by trunk)
-- **web-sys**: Web API bindings
-- **getrandom**: With `wasm_js` backend
+For WebAssembly builds, install [trunk](https://trunkrs.dev/):
+```bash
+cargo install trunk
+```
 
 ### Browser Requirements (WASM Version)
 
@@ -574,39 +529,24 @@ If no configuration file exists, the application uses default values.
     - Firefox 52+ (WebAssembly requirement)
     - Safari 15+ (WebGL2 requirement)
     - Edge 79+ (Chromium-based Edge)
-- **Hardware acceleration**: Required for optimal performance
+- **Hardware acceleration**: Required for better performance
 
 ## Project Structure
 
 Stardrift uses a plugin-based architecture built on Bevy ECS (Entity Component System).
 
-### Project Layout
-
-- **`src/`** - Main application source code
-    - `src/plugins/` - Self-contained feature plugins
-    - `src/physics/` - Physics engine and integrators
-- **`benches/`** - Performance benchmarks
-- **`tests/`** - Integration tests
-- **`assets/`** - Static assets (fonts, icons)
-
-
 ### Architecture
 
-The project follows a **pure plugin architecture** where each major feature is a self-contained Bevy plugin:
+The project follows a plugin-based architecture where each major feature is self-contained:
 
-- **Simulation Plugin** - Core physics simulation and body management
+- **Simulation Plugin** - Core physics and body management
 - **Controls Plugin** - Input handling and UI
-- **Visualization Plugin** - Debug rendering (octree wireframe, barycenter)
+- **Visualization Plugin** - Debug rendering (octree, barycenter)
 - **Trails Plugin** - Particle trail rendering
-- **Diagnostics Plugin** - Performance metrics and HUD display
 - **Camera Plugin** - 3D camera controls
-- **Attribution Plugin** - Version and credit display
+- **Diagnostics Plugin** - Performance metrics
 
-Plugins communicate through:
-
-- **Events** - Command pattern for user actions
-- **Resources** - Shared state (RNG, constants, octree)
-- **Components** - ECS data (Mass, Velocity, Trail, etc.)
+Plugins communicate through events and shared resources using Bevy's ECS patterns.
 
 ### Physics Engine
 
@@ -628,33 +568,6 @@ The physics module implements:
 - **Configuration-Driven**: Centralized configuration system for runtime customization
 - **Clear Feature Boundaries**: Plugin boundaries enforce architectural constraints
 
-### Key Modules
-
-- **`plugins/simulation/`**: Self-contained physics simulation with internal submodules
-    - `mod.rs`: Plugin definition and system coordination
-    - `physics.rs`: Physics system orchestration and ECS integration
-    - `actions.rs`: Simulation control and action handlers (restart, pause, screenshot)
-    - `components.rs`: Physics component bundles and entity creation
-- **`plugins/controls.rs`**: Complete input handling and UI structure (keyboard, mouse, buttons)
-- **`plugins/camera.rs`**: Camera setup and positioning logic
-- **`plugins/visualization.rs`**: Debug rendering for octree wireframe and barycenter gizmo
-- **`plugins/simulation_diagnostics.rs`**: Simulation metrics and performance diagnostics
-- **`plugins/diagnostics_hud.rs`**: Real-time HUD display for simulation information (feature-gated)
-- **`plugins/trails.rs`**: Visual trail rendering system
-- **`plugins/embedded_assets.rs`**: Embedded asset management for web deployment
-- **`events.rs`**: Centralized event definitions with `SimulationCommand` enum for inter-plugin communication
-- **`resources/mod.rs`**: Shared state including RNG, gravitational constants, and octree data
-- **`physics/math.rs`**: Mathematical utilities for sphere distribution and physics calculations
-- **`physics/components.rs`**: Core physics components (Mass, Velocity, Acceleration)
-- **`physics/resources.rs`**: Physics resources and runtime configuration
-- **`physics/integrators/`**: Six numerical integration methods with acceleration field architecture and registry system
-- **`config.rs`**: Centralized configuration management with serialization support
-- **`states.rs`**: Application state management and transitions
-- **`physics/octree.rs`**: High-performance Barnes-Hut spatial partitioning implementation
-- **`physics/aabb3d.rs`**: Axis-aligned bounding box for spatial calculations
-
-This structure enables extension, testing, and maintenance while providing defined entry points for understanding and
-modifying the simulation behavior.
 
 ## Troubleshooting
 
