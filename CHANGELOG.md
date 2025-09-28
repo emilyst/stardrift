@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced ConfigDefaults procedural macro with manual Default implementations
     - Configuration structs now use conventional Rust Default trait implementations
     - Default values documented with inline comments in implementation blocks
+- Dependencies updated
 
 ### Removed
 
