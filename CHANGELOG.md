@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.55] - 2025-09-30
+
 ### Changed
 
 - Extracted command line parsing and handling into dedicated `cli` module
