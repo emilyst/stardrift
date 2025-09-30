@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Extracted command line parsing and handling into dedicated `cli` module
+  - Moved `Args` struct and CLI functions from `main.rs` to `src/cli.rs`
+  - Added `CliError` enum for proper error handling with `Result` types
+  - Integrator validation now happens at CLI parse time with helpful error messages
+- Replaced `unsafe` environment variable setting with Bevy's `LogPlugin` configuration API
+  - Eliminates potential data race issues with `std::env::set_var`
+  - `--verbose` flag now correctly controls log levels for both stardrift and bevy
+
+### Fixed
+
+- Fixed `--verbose` flag being ignored due to hardcoded log filter
+  - Without `--verbose`: logs at INFO level for both stardrift and bevy
+  - With `--verbose`: logs at DEBUG level for both stardrift and bevy
+
 ## [0.0.54] - 2025-09-28
 
 ### Changed

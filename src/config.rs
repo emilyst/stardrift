@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use clap::ValueEnum;
 use config::{Config, ConfigError, File};
 #[cfg(not(target_arch = "wasm32"))]
 use directories::ProjectDirs;
@@ -6,8 +7,9 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// Color scheme selection for celestial bodies
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default, ValueEnum)]
 #[serde(rename_all = "snake_case")]
+#[value(rename_all = "snake_case")]
 pub enum ColorScheme {
     /// Physics-based black body radiation colors
     #[default]
