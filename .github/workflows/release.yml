@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 env:
   CARGO_TERM_COLOR: always
@@ -17,8 +17,6 @@ jobs:
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
-      issues: write
-      checks: write
 
   build:
     name: Build release
@@ -59,14 +57,14 @@ jobs:
           # Extract the section for this version from CHANGELOG.md
           # This looks for the version header and extracts everything until the next version header
           CHANGELOG_CONTENT=$(awk -v ver="$VERSION" '
-            /^## \[/ { 
-              if (found) exit; 
-              if ($2 == "["ver"]") found=1; 
-              next 
+            /^## \[/ {
+              if (found) exit;
+              if ($2 == "["ver"]") found=1;
+              next
             }
             found { print }
           ' CHANGELOG.md)
-          
+
           # Handle multiline content for GitHub Actions output
           if [ -n "$CHANGELOG_CONTENT" ]; then
             echo "found=true" >> $GITHUB_OUTPUT
@@ -89,57 +87,57 @@ jobs:
           name: Stardrift v${{ steps.version.outputs.version }}
           body: |
             ## What's Changed
-            
+
             ${{ steps.changelog.outputs.content }}
-            
+
             ## Try Stardrift
-            
+
             **[→ View in browser](https://stardrift.run/)** - Try Stardrift directly in your web browser
-            
+
             ## Download Verification
-            
+
             ### Build Provenance (Recommended)
-            
+
             All release artifacts are signed with GitHub Attestations. Verify authenticity using the GitHub CLI:
-            
+
             ```sh
             # Verify any downloaded artifact (most secure)
             gh attestation verify <filename> --repo emilyst/stardrift
-            
+
             # Example for macOS DMG
             gh attestation verify stardrift-*.dmg --repo emilyst/stardrift
-            
+
             # Example for Linux binary
             gh attestation verify stardrift-*.tar.gz --repo emilyst/stardrift
             ```
-            
+
             This verifies the artifact was built by GitHub Actions from this repository's source code.
-            
+
             ## Security Notices
-            
+
             ### macOS
-            
+
             The macOS binaries are ad-hoc signed but not notarized. On macOS Sequoia (15.x) and later:
-            
+
             **Recommended method:**
-            
+
             1. **First attempt**: Double-click the app/DMG (or run the binary) - you'll see a warning that it cannot be opened
             2. **Allow the app**: Go to System Settings → Privacy & Security
             3. **Scroll down**: Find the "Open Anyway" button for Stardrift (appears for ~1 hour after first attempt)
             4. **Confirm**: Click "Open Anyway", enter your password, then click "Open" in the final dialog
-            
+
             **Alternative for command-line users**:
-            
+
             ```sh
             xattr -dr com.apple.quarantine /path/to/stardrift
             ```
-            
+
             Note: This requires an admin account. If it fails with "Operation not permitted", grant Terminal Full Disk Access in System Settings → Privacy & Security → Full Disk Access
-            
+
             Note: The right-click → "Open" bypass no longer works in macOS Sequoia.
-            
+
             ### Windows
-            
+
             Windows SmartScreen may warn about the executable. To run:
             1. Click "More info" on the SmartScreen dialog
             2. Click "Run anyway"
