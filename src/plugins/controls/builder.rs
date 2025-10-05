@@ -35,7 +35,11 @@ impl ControlsCommandsExt for ChildSpawnerCommands<'_> {
             parent.spawn((
                 Text::new(T::label()),
                 TextColor(Color::WHITE),
-                TextFont::from_font(font).with_font_size(BUTTON_FONT_SIZE_PX),
+                TextFont {
+                    font,
+                    font_size: BUTTON_FONT_SIZE_PX,
+                    ..default()
+                },
             ));
         })
         .id()

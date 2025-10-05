@@ -69,12 +69,20 @@ impl DiagnosticsHudPlugin {
         let regular_font_asset_path =
             AssetPath::parse("fonts/Saira-Regular").with_source(embedded_asset_source);
         let regular_font = asset_server.load(regular_font_asset_path);
-        let regular_text_font = TextFont::from_font(regular_font).with_font_size(12.0);
+        let regular_text_font = TextFont {
+            font: regular_font,
+            font_size: 12.0,
+            ..default()
+        };
 
         let extra_bold_font_asset_path =
             AssetPath::parse("fonts/Saira-ExtraBold").with_source(embedded_asset_source);
         let extra_bold_font = asset_server.load(extra_bold_font_asset_path);
-        let extra_bold_text_font = TextFont::from_font(extra_bold_font).with_font_size(12.0);
+        let extra_bold_text_font = TextFont {
+            font: extra_bold_font,
+            font_size: 12.0,
+            ..default()
+        };
 
         let border_radius = BorderRadius::all(Val::Px(5.0));
         let background_color = BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.01));
@@ -132,7 +140,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(JustifyText::Right),
+                                TextLayout::new_with_justify(Justify::Right),
                                 regular_text_font.clone(),
                             ),
                             (
@@ -141,7 +149,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(JustifyText::Left),
+                                TextLayout::new_with_justify(Justify::Left),
                                 Text::new("-"),
                                 extra_bold_text_font.clone(),
                             ),
@@ -156,7 +164,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(JustifyText::Right),
+                                TextLayout::new_with_justify(Justify::Right),
                                 regular_text_font.clone(),
                             ),
                             (
@@ -165,7 +173,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(JustifyText::Left),
+                                TextLayout::new_with_justify(Justify::Left),
                                 Text::new("-"),
                                 extra_bold_text_font.clone(),
                             ),
@@ -180,7 +188,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(JustifyText::Right),
+                                TextLayout::new_with_justify(Justify::Right),
                                 regular_text_font.clone(),
                             ),
                             (
@@ -189,7 +197,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(JustifyText::Left),
+                                TextLayout::new_with_justify(Justify::Left),
                                 extra_bold_text_font.clone(),
                             ),
                         ],
@@ -208,7 +216,7 @@ impl DiagnosticsHudPlugin {
         mut frame_count_text: Single<&mut Text, With<FrameCountTextNode>>,
         state: ResMut<DiagnosticsHudState>,
     ) {
-        if state.refresh_timer.finished()
+        if state.refresh_timer.is_finished()
             && let Some(frame_count) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FRAME_COUNT)
             && let Some(fps) = frame_count.smoothed()
         {
@@ -221,7 +229,7 @@ impl DiagnosticsHudPlugin {
         mut fps_text: Single<&mut Text, With<FpsTextNode>>,
         state: Res<DiagnosticsHudState>,
     ) {
-        if state.refresh_timer.finished()
+        if state.refresh_timer.is_finished()
             && let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS)
             && let Some(fps) = fps.smoothed()
         {

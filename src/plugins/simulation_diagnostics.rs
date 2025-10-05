@@ -70,7 +70,7 @@ impl SimulationDiagnosticsPlugin {
         state: Res<SimulationDiagnosticsState>,
     ) {
         // Only update when timer is ready to avoid excessive computation
-        if !state.update_timer.finished() {
+        if !state.update_timer.is_finished() {
             return;
         }
 

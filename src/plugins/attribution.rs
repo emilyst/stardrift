@@ -6,8 +6,7 @@
 
 use crate::prelude::*;
 use bevy::asset::{AssetPath, io::AssetSourceId};
-use bevy::window::SystemCursorIcon;
-use bevy::winit::cursor::CursorIcon;
+use bevy::window::{CursorIcon, SystemCursorIcon};
 
 #[derive(Component)]
 pub struct AttributionText;
@@ -26,7 +25,11 @@ fn setup_attribution(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     let font_asset_path = AssetPath::parse("fonts/Saira-Light").with_source(embedded_asset_source);
     let font = asset_server.load(font_asset_path);
-    let attribution_text_font = TextFont::from_font(font).with_font_size(10.0);
+    let attribution_text_font = TextFont {
+        font,
+        font_size: 10.0,
+        ..default()
+    };
 
     // Attribution with version in bottom right corner (visible in screenshots)
     // Now interactive - clicking opens the repository
@@ -40,7 +43,7 @@ fn setup_attribution(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..default()
         },
         BackgroundColor(Color::NONE),
-        BorderColor(Color::NONE),
+        BorderColor::all(Color::NONE),
         Text::new(format!(
             "Stardrift v{} ({})",
             env!("CARGO_PKG_VERSION"),

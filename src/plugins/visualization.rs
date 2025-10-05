@@ -49,7 +49,7 @@ fn configure_gizmos(mut config_store: ResMut<GizmoConfigStore>) {
 
 /// Handles SimulationCommand events for visualization features
 fn handle_visualization_commands(
-    mut commands: EventReader<SimulationCommand>,
+    mut commands: MessageReader<SimulationCommand>,
     mut octree_settings: ResMut<OctreeVisualizationSettings>,
     mut barycenter_visibility: ResMut<BarycenterGizmoVisibility>,
     mut trails_settings: ResMut<TrailsVisualizationSettings>,

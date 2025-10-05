@@ -8,9 +8,10 @@
 use crate::physics::components::{PhysicsBody, Radius};
 use crate::prelude::*;
 use crate::states::AppState;
-use bevy::render::mesh::{MeshAabb, PrimitiveTopology};
-use bevy::render::render_asset::RenderAssetUsages;
-use bevy::render::view::NoFrustumCulling;
+use bevy::asset::RenderAssetUsages;
+use bevy::camera::primitives::MeshAabb;
+use bevy::camera::visibility::NoFrustumCulling;
+use bevy::mesh::PrimitiveTopology;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TrailSet {

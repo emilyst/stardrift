@@ -30,6 +30,6 @@ pub use crate::plugins::visualization::{
 pub use crate::physics::octree::Octree;
 
 // Internal re-exports - Events
-pub use crate::events::SimulationCommand;
+pub use crate::messages::SimulationCommand;
 
 // Note: Utility functions are kept crate-private and not re-exported in prelude

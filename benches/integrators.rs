@@ -457,7 +457,7 @@ fn bench_nbody_realistic(c: &mut Criterion) {
         bodies.push(OctreeBody {
             position: Vector::new(radius * angle.cos(), radius * angle.sin(), z),
             mass: 1.0 + (i as Scalar) * 0.015, // Mass from 0.5 to 2.0
-            entity: bevy::ecs::entity::Entity::from_raw(i as u32),
+            entity: bevy::ecs::entity::Entity::from_raw_u32(i as u32).unwrap(),
         });
     }
 

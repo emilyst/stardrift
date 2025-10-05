@@ -5,7 +5,7 @@
 
 pub mod cli;
 pub mod config;
-pub mod events;
+pub mod messages;
 pub mod physics;
 pub mod plugins;
 pub mod prelude;
@@ -15,7 +15,7 @@ pub mod utils;
 
 // Re-export commonly used items
 pub use config::SimulationConfig;
-pub use events::*;
+pub use messages::*;
 pub use physics::{
     components::{Mass, Position, Velocity},
     integrators,

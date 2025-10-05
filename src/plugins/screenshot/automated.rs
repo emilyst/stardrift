@@ -156,7 +156,7 @@ impl AutomatedScreenshotSchedule {
 
     fn should_trigger(&self, delay: ScreenshotDelay) -> bool {
         match delay.mode {
-            ScreenshotTimingMode::Time => self.timer.finished(),
+            ScreenshotTimingMode::Time => self.timer.is_finished(),
             ScreenshotTimingMode::Frames => self.frame_counter >= delay.value as u32,
         }
     }
@@ -258,7 +258,7 @@ pub fn process_automated_screenshots(
     mut schedule: ResMut<AutomatedScreenshotSchedule>,
     mut naming: Option<ResMut<AutomatedScreenshotNaming>>,
     time: Res<Time>,
-    mut app_exit_events: EventWriter<AppExit>,
+    mut app_exit_events: MessageWriter<AppExit>,
     config: Res<SimulationConfig>,
 ) {
     let delta = match schedule.mode {

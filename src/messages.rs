@@ -1,12 +1,12 @@
-//! Centralized event definitions
+//! Centralized message definitions
 //!
-//! All events in the stardrift application are defined in this module to maintain
-//! clear boundaries between systems and improve discoverability. Events are the
+//! All messages in Stardrift are defined in this module to maintain
+//! clear boundaries between systems and improve discoverability. Messages are the
 //! primary mechanism for cross-system communication in the ECS architecture.
 
 use bevy::prelude::*;
 
-#[derive(Event, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SimulationCommand {
     Restart,
     TogglePause,

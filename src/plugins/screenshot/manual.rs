@@ -15,7 +15,7 @@ pub struct ScreenshotState {
 }
 
 pub fn handle_take_screenshot_event(
-    mut commands_reader: EventReader<SimulationCommand>,
+    mut commands_reader: MessageReader<SimulationCommand>,
     mut screenshot_state: ResMut<ScreenshotState>,
     mut ui_query: Query<&mut Visibility, With<crate::plugins::controls::UIRoot>>,
     mut hud_query: Query<

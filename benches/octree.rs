@@ -29,7 +29,7 @@ fn generate_test_bodies_spherical(count: usize, seed: u64, radius: Scalar) -> Ve
         bodies.push(OctreeBody {
             position,
             mass,
-            entity: bevy::ecs::entity::Entity::from_raw(i as u32),
+            entity: bevy::ecs::entity::Entity::from_raw_u32(i as u32).unwrap(),
         });
     }
 

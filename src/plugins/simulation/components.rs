@@ -3,7 +3,7 @@
 use crate::config::SimulationConfig;
 use crate::physics::math::{min_sphere_radius_for_surface_distribution, random_unit_vector};
 use crate::prelude::*;
-use bevy::render::mesh::SphereKind;
+use bevy::mesh::SphereKind;
 use rand::prelude::*;
 
 /// Factory functions for creating celestial body components.

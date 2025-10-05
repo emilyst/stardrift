@@ -16,7 +16,7 @@ description = "N-body gravity simulation toy that provides a real-time visualiza
 chrono = "0.4"
 
 [dependencies]
-bevy_panorbit_camera = "0.28"
+bevy_panorbit_camera = "0.29"
 chrono = "0.4"
 clap = { version = "4.5", features = ["derive"] }
 config = "0.15"
@@ -29,26 +29,27 @@ toml = "0.9"
 webbrowser = { version = "1.0", features = ["hardened"] }
 
 [dependencies.bevy]
-version = "0.16"
+version = "0.17"
 default-features = false
 features = [
     "default_no_std",
     "libm",
-    "zstd",
+    "zstd_rust",
     "reflect_functions",
     "reflect_documentation",
-    "bevy_ui",
     "bevy_asset",
     "bevy_color",
     "bevy_core_pipeline",
     "bevy_gilrs",
     "bevy_gizmos",
     "bevy_log",
+    "bevy_mesh",
     "bevy_pbr",
+    "bevy_post_process",
     "bevy_render",
     "bevy_state",
     "bevy_text",
-    "bevy_ui",
+    "bevy_ui_render",
     "bevy_window",
     "bevy_winit",
     "hdr",

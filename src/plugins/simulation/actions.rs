@@ -11,7 +11,7 @@ use bevy_panorbit_camera::PanOrbitCamera;
 
 #[allow(clippy::too_many_arguments)]
 pub fn handle_restart_simulation_event(
-    mut commands_reader: EventReader<SimulationCommand>,
+    mut commands_reader: MessageReader<SimulationCommand>,
     mut commands: Commands,
     simulation_bodies: Query<Entity, With<PhysicsBody>>,
     trail_renderers: Query<Entity, With<crate::plugins::trails::TrailRenderer>>,
@@ -62,7 +62,7 @@ pub fn handle_restart_simulation_event(
 }
 
 pub fn handle_toggle_pause_simulation_event(
-    mut commands_reader: EventReader<SimulationCommand>,
+    mut commands_reader: MessageReader<SimulationCommand>,
     current_state: Res<State<AppState>>,
     mut next_state: ResMut<NextState<AppState>>,
     mut physics_time: ResMut<PhysicsTime>,

@@ -89,7 +89,7 @@ fn main() {
             debug: true,
             ..default()
         },
-        EntityCountDiagnosticsPlugin,
+        EntityCountDiagnosticsPlugin::default(),
         FrameTimeDiagnosticsPlugin::default(),
         PanOrbitCameraPlugin,
         SimulationDiagnosticsPlugin::default(),

@@ -9,8 +9,7 @@ use bevy::asset::AssetPath;
 use bevy::asset::io::AssetSourceId;
 use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};
-use bevy::window::SystemCursorIcon;
-use bevy::winit::cursor::CursorIcon;
+use bevy::window::{CursorIcon, SystemCursorIcon};
 
 mod builder;
 mod buttons;
@@ -74,8 +73,8 @@ impl Plugin for ControlsPlugin {
 }
 
 fn keyboard_input_handler(
-    mut keyboard_events: EventReader<KeyboardInput>,
-    mut commands: EventWriter<SimulationCommand>,
+    mut keyboard_events: MessageReader<KeyboardInput>,
+    mut commands: MessageWriter<SimulationCommand>,
 ) {
     for event in keyboard_events.read() {
         if event.state != ButtonState::Pressed {
@@ -123,7 +122,7 @@ fn button_interaction_handler<T: ButtonWithLabel>(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<T>),
     >,
-    mut command_writer: EventWriter<SimulationCommand>,
+    mut command_writer: MessageWriter<SimulationCommand>,
 ) {
     for (interaction, mut color) in &mut interaction_query {
         match *interaction {
@@ -162,7 +161,7 @@ fn quit_button_handler(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<QuitButton>),
     >,
-    mut exit: EventWriter<AppExit>,
+    mut exit: MessageWriter<AppExit>,
 ) {
     for (interaction, mut color) in &mut interaction_query {
         match *interaction {
@@ -193,7 +192,10 @@ fn quit_button_handler(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn quit_on_escape(mut keyboard_events: EventReader<KeyboardInput>, mut exit: EventWriter<AppExit>) {
+fn quit_on_escape(
+    mut keyboard_events: MessageReader<KeyboardInput>,
+    mut exit: MessageWriter<AppExit>,
+) {
     use bevy::input::ButtonState;
 
     for event in keyboard_events.read() {

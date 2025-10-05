@@ -7,9 +7,9 @@
 use crate::config::SimulationConfig;
 use crate::physics::math::min_sphere_radius_for_surface_distribution;
 use crate::prelude::*;
-use bevy::core_pipeline::bloom::Bloom;
 use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::pbr::ClusterConfig;
+use bevy::post_process::bloom::Bloom;
+use bevy::render::view::Hdr;
 use bevy_panorbit_camera::PanOrbitCamera;
 use bevy_panorbit_camera::TouchControls;
 use bevy_panorbit_camera::TrackpadBehavior;
@@ -35,14 +35,13 @@ fn spawn_camera(mut commands: Commands, body_count: Res<BodyCount>, config: Res<
     commands.spawn((
         Name::new("Main Camera"),
         Camera {
-            hdr: true,
             clear_color: ClearColorConfig::Custom(Color::BLACK),
             ..default()
         },
         Camera3d::default(),
-        ClusterConfig::None,
+        Hdr,
         Tonemapping::AcesFitted,
-        Bloom::default(),
+        Bloom::NATURAL,
         Msaa::Sample4,
         PanOrbitCamera {
             allow_upside_down: true,

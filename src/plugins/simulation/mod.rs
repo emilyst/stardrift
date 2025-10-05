@@ -102,7 +102,7 @@ impl Plugin for SimulationPlugin {
         app.init_resource::<crate::physics::resources::PhysicsTime>();
 
         // New unified command event
-        app.add_event::<SimulationCommand>();
+        app.add_message::<SimulationCommand>();
 
         app.edit_schedule(FixedUpdate, |schedule| {
             schedule.set_build_settings(ScheduleBuildSettings {
