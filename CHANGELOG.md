@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.59] - 2025-10-05
+
 ### Changed
 
 - Web build infrastructure migrated to Tailwind CSS
