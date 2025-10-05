@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added WebAssembly loading progress indicator for web builds
+  - Displays minimal progress bar with percentage during WASM download
+  - Uses Trunk's initializer framework to track loading progress
+  - Automatically fades out when application starts
+
 ## [0.0.57] - 2025-10-05
 
 ## Changed
