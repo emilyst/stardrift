@@ -4,17 +4,17 @@ on:
   workflow_call:
     inputs:
       upload-artifacts:
-        description: 'Whether to upload artifacts'
+        description: "Whether to upload artifacts"
         required: false
         default: true
         type: boolean
       artifact-prefix:
-        description: 'Prefix for artifact names'
+        description: "Prefix for artifact names"
         required: false
-        default: 'stardrift'
+        default: "stardrift"
         type: string
       retention-days:
-        description: 'Artifact retention days'
+        description: "Artifact retention days"
         required: false
         default: 90
         type: number
@@ -91,11 +91,11 @@ jobs:
           BUNDLE_DIR="${APP_NAME}.app"
           mkdir -p "$BUNDLE_DIR/Contents/MacOS"
           mkdir -p "$BUNDLE_DIR/Contents/Resources"
-          
+
           # Copy executable
           cp "target/${{ matrix.platform.target }}/release/stardrift" "$BUNDLE_DIR/Contents/MacOS/$APP_NAME"
           chmod +x "$BUNDLE_DIR/Contents/MacOS/$APP_NAME"
-          
+
           # Create Info.plist using plutil commands
           PLIST_FILE="$BUNDLE_DIR/Contents/Info.plist"
           plutil -create xml1 "$PLIST_FILE"
@@ -115,7 +115,7 @@ jobs:
           plutil -insert LSMinimumSystemVersion -string "10.15" "$PLIST_FILE"
           plutil -insert NSHighResolutionCapable -bool true "$PLIST_FILE"
           plutil -insert NSPrincipalClass -string "NSApplication" "$PLIST_FILE"
-          
+
           # Copy resources
           if [ -d "assets" ]; then
             cp -r "assets" "$BUNDLE_DIR/Contents/Resources/"
@@ -123,26 +123,26 @@ jobs:
           if [ -d "configs" ]; then
             cp -r "configs" "$BUNDLE_DIR/Contents/Resources/"
           fi
-          
+
           # Ad-hoc sign the app bundle
           codesign --force --deep --sign - "$BUNDLE_DIR"
-          
+
           # Create a temporary directory for DMG contents
           DMG_DIR="dmg-contents"
           mkdir -p "$DMG_DIR"
-          
+
           # Copy app bundle to DMG directory
           cp -r "$BUNDLE_DIR" "$DMG_DIR/"
-          
+
           # Create Applications symlink
           ln -s /Applications "$DMG_DIR/Applications"
-          
+
           # Create DMG from directory with app bundle and Applications symlink
           hdiutil create -volname "Stardrift" -srcfolder "$DMG_DIR" -ov -format UDZO stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
-          
+
           # Clean up temporary directory
           rm -rf "$DMG_DIR"
-          
+
           # Ad-hoc sign the DMG
           codesign --force --sign - stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.dmg
 
@@ -224,7 +224,7 @@ jobs:
 
       - name: Build WebAssembly
         run: |
-          trunk build index.html
+          trunk build
 
       - name: Package WebAssembly
         run: |

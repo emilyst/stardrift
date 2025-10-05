@@ -1,8 +1,8 @@
 [build]
-target = "index.html"
+target = "web/index.html"
 release = true
 public_url = "./"
-opt-level = "s"
+opt-level = "3"
 
 [[hooks]]
 stage = "pre_build"
@@ -19,4 +19,7 @@ port = 8080
 open = false
 
 [watch]
-ignore = ["dist"]
+ignore = ["dist", "target", "docs", "benches"]
+
+[tools]
+tailwindcss = "4.1.14"

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" class="h-full">
+    <head>
+        <meta charset="utf-8" />
+        <meta
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+            name="viewport"
+        />
+        <title>Stardrift</title>
+        <link data-trunk rel="tailwind-css" href="tailwind.css" />
+    </head>
+    <body class="h-full overflow-hidden bg-black font-sans">
+        <link
+            data-trunk
+            rel="rust"
+            href=".."
+            data-initializer="initializer.mjs"
+            data-wasm-opt="0"
+        />
+
+        <div
+            id="loading-container"
+            class="absolute inset-0 grid place-items-center"
+        >
+            <div class="w-[80%] h-8 bg-black rounded-lg overflow-hidden grid">
+                <div
+                    id="loading-progress-bar"
+                    class="col-start-1 row-start-1 h-full w-0 bg-white"
+                ></div>
+                <div
+                    id="loading-percentage"
+                    class="col-start-1 row-start-1 grid place-items-center text-white text-lg font-bold mix-blend-difference"
+                >
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

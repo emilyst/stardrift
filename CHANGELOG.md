@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Web build infrastructure migrated to Tailwind CSS
+  - Replaced 73 lines of inline CSS with Tailwind CSS v4 utility classes
+  - Moved web assets from project root to `web/` directory
+  - Updated `Trunk.toml` build target from `index.html` to `web/index.html`
+  - Changed WASM `opt-level` from `"s"` (size optimization) to `"3"` (speed optimization)
+  - Added Tailwind CSS v4.1.14 to Trunk tools configuration
+  - Loading progress bar width changed from fixed 300px to 80% viewport width
+  - Loading percentage text uses `mix-blend-difference` for contrast instead of text stroke
+  - Expanded Trunk watch ignore list to include `target`, `docs`, `benches` directories
+
 ## [0.0.58] - 2025-10-05
 
 ### Added

@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@layer base {
+    canvas {
+        display: block;
+        height: 100% !important;
+        width: 100% !important;
+    }
+}
