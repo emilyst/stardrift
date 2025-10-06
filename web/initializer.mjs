@@ -1,4 +1,20 @@
 // Trunk initializer for WebAssembly loading progress
+
+// Polyfill for iOS Safari: exitPointerLock doesn't exist
+// winit tries to call this and crashes on iOS Safari
+if (!document.exitPointerLock) {
+  document.exitPointerLock = function () {
+    console.log("document.exitPointerLock polyfill called (no-op on iOS Safari)");
+  };
+}
+
+// Also add to Element prototype in case winit calls it on canvas/elements
+if (typeof Element !== "undefined" && !Element.prototype.exitPointerLock) {
+  Element.prototype.exitPointerLock = function () {
+    console.log("Element.exitPointerLock polyfill called (no-op on iOS Safari)");
+  };
+}
+
 export default function () {
   return {
     onStart: function () {

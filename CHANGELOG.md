@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- iOS Safari crashing on load
+  - Added polyfill for `exitPointerLock`
+
 ## [0.0.59] - 2025-10-05
 
 ### Changed
