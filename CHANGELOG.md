@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.61] - 2025-10-08
+
 ### Fixed
 
 - Bloom effect now applies uniformly across all celestial body colors
