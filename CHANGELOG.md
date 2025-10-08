@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Bloom effect now applies uniformly across all celestial body colors
+  - Removed `metallic: 0.0` and `reflectance: 0.0` material properties that were interfering with bloom extraction
+  - Bodies now use default PBR reflectance (0.5) which ensures consistent bloom visibility across all color ranges
+
 ## [0.0.60] - 2025-10-06
 
 ### Fixed

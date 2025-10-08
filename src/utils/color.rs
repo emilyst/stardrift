@@ -48,7 +48,7 @@
 //!         2.0,  // Bloom intensity
 //!         1.0   // Saturation
 //!     );
-//!     
+//!
 //!     // Create material from random rainbow color
 //!     let rainbow_color = random_rainbow_color(&mut rng);
 //!     let rainbow_material = create_emissive_material(
@@ -167,8 +167,6 @@ pub fn create_emissive_material(
 
     materials.add(StandardMaterial {
         base_color,
-        metallic: 0.0,
-        reflectance: 0.0,
         emissive: bloom_color.into(),
         ..default()
     })
