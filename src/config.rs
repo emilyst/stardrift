@@ -100,10 +100,10 @@ impl Default for PhysicsConfig {
     fn default() -> Self {
         Self {
             gravitational_constant: 100.0,
-            body_count: 100,
+            body_count: 25,
             octree_theta: 0.5,
             octree_leaf_threshold: 1,
-            body_distribution_sphere_radius_multiplier: 200.0,
+            body_distribution_sphere_radius_multiplier: 500.0,
             body_distribution_min_distance: 0.001,
             min_body_radius: 2.0,
             max_body_radius: 4.0,
@@ -185,7 +185,7 @@ pub struct RenderingConfig {
 impl Default for RenderingConfig {
     fn default() -> Self {
         Self {
-            color_scheme: ColorScheme::Lesbian,
+            color_scheme: ColorScheme::Rainbow,
             min_temperature: 3000.0,
             max_temperature: 15000.0,
             bloom_intensity: 250.0,

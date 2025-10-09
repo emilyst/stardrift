@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Lower default body count to 25
+  - It's more friendly for WebAssembly
+- Use `ColorScheme::Rainbow` as default color scheme
+
 ## [0.0.61] - 2025-10-08
 
 ### Fixed
