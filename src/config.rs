@@ -74,6 +74,7 @@ pub struct SimulationConfig {
     pub rendering: RenderingConfig,
     pub trails: TrailConfig,
     pub screenshots: ScreenshotConfig,
+    pub system: SystemConfig,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -302,6 +303,20 @@ impl Default for ScreenshotConfig {
             include_timestamp: true,
             notification_enabled: true,
             hide_ui_frame_delay: 2,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
+pub struct SystemConfig {
+    pub prevent_screen_sleep: bool,
+}
+
+impl Default for SystemConfig {
+    fn default() -> Self {
+        Self {
+            prevent_screen_sleep: true,
         }
     }
 }

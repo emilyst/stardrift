@@ -138,6 +138,7 @@ Common options:
 - `--bodies COUNT` - Set number of bodies to simulate
 - `--seed SEED` - Use specific random seed for reproducible simulations
 - `--paused` - Start simulation in paused state
+- `--prevent-screen-sleep` - Prevent display from sleeping during simulation (enabled by default)
 - `--list-integrators` - List all available integration methods
 
 Run `stardrift --help` for complete options including integrator selection, color schemes, and configuration overrides.
@@ -473,6 +474,12 @@ Trail visualization configuration options.
 | `include_timestamp`    | `bool`           | `true`                   | Add timestamp to filenames                           |
 | `notification_enabled` | `bool`           | `true`                   | Log screenshot captures                              |
 | `hide_ui_frame_delay`  | `u32`            | `2`                      | Frames to wait before capture (ensures UI is hidden) |
+
+##### System Configuration (`[system]`)
+
+| Field                  | Type   | Default | Description                                                                   |
+|------------------------|--------|---------|-------------------------------------------------------------------------------|
+| `prevent_screen_sleep` | `bool` | `true`  | Prevent display from sleeping or dimming during simulation (cross-platform) |
 
 #### Configuration File Location
 

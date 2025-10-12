@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Screen sleep prevention during simulation
+  - New `prevent_screen_sleep` configuration option in `[system]` section (defaults to true)
+  - CLI flag `--prevent-screen-sleep` to explicitly enable if disabled via config
+  - Uses cross-platform `keepawake` crate with support for Windows, macOS, and Linux
+  - Prevents display from dimming or sleeping while simulation runs
+  - Enabled by default for better user experience with visual simulations
+  - Can be disabled in config file by setting `[system] prevent_screen_sleep = false`
+
 ## [0.0.62] - 2025-10-09
 
 ### Changed

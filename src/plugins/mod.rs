@@ -3,6 +3,7 @@ pub mod camera;
 pub mod controls;
 pub mod diagnostics_hud;
 pub mod embedded_assets;
+pub mod keep_awake;
 pub mod screenshot;
 pub mod simulation;
 pub mod simulation_diagnostics;

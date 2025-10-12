@@ -10,6 +10,7 @@ use bevy::log::{Level, LogPlugin};
 use bevy::{app::TaskPoolThreadAssignmentPolicy, tasks::available_parallelism, window::WindowMode};
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
 use stardrift::cli;
+use stardrift::plugins::keep_awake::KeepAwakePlugin;
 use stardrift::plugins::screenshot::ScreenshotPlugin;
 use stardrift::plugins::trails::TrailsPlugin;
 use stardrift::plugins::{
@@ -104,6 +105,7 @@ fn main() {
         AttributionPlugin,
         TrailsPlugin,
         ScreenshotPlugin,
+        KeepAwakePlugin,
     ));
 
     // Initialize app states after DefaultPlugins (which includes StatesPlugin)

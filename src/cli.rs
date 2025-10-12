@@ -106,6 +106,10 @@ pub struct Args {
     /// Exit after taking all screenshots
     #[arg(long)]
     pub exit_after_screenshots: bool,
+
+    /// Prevent screen from sleeping during simulation
+    #[arg(long)]
+    pub prevent_screen_sleep: bool,
 }
 
 /// Handles the --list-integrators flag by printing available integrators and exiting
@@ -167,6 +171,11 @@ pub fn load_and_apply_config(args: &Args) -> Result<SimulationConfig, CliError> 
     if let Some(color_scheme) = args.color_scheme {
         println!("Using color scheme: {color_scheme:?}");
         config.rendering.color_scheme = color_scheme;
+    }
+
+    if args.prevent_screen_sleep {
+        println!("Enabling screen sleep prevention");
+        config.system.prevent_screen_sleep = true;
     }
 
     Ok(config)
