@@ -21,7 +21,6 @@ chrono = "0.4"
 clap = { version = "4.5", features = ["derive"] }
 config = "0.15"
 directories = "6.0"
-keepawake = "0.6"
 libm = "0.2"
 rand = "0.9"
 rand_chacha = "0.9"
@@ -72,6 +71,9 @@ path = "src/lib.rs"
 [[bin]]
 name = "stardrift"
 path = "src/main.rs"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+keepawake = "0.6"
 
 [target.wasm32-unknown-unknown.dependencies]
 wasm-bindgen = "0.2"
