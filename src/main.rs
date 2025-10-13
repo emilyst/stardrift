@@ -60,7 +60,7 @@ fn main() {
                     fullsize_content_view: true,
                     mode: WindowMode::Windowed,
                     prevent_default_event_handling: true,
-                    present_mode: bevy::window::PresentMode::AutoVsync,
+                    present_mode: bevy::window::PresentMode::Fifo,
                     title: "Stardrift".to_string(),
                     titlebar_transparent: true,
                     ..default()

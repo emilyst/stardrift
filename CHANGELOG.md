@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.64] - 2025-10-12
+### Changed
 
-## [0.0.63] - 2025-10-12
+- Switch present mode to FIFO
+  - Enforces vsync-like behavior across platforms
+
+## [0.0.64] - 2025-10-12
 
 ### Added
 
