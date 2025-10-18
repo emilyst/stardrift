@@ -47,10 +47,10 @@ jobs:
             os: windows-11-arm
             target: aarch64-pc-windows-msvc
           - name: macOS-x86_64
-            os: macos-13
+            os: macos-latest-large
             target: x86_64-apple-darwin
           - name: macOS-aarch64
-            os: macos-14
+            os: macos-latest
             target: aarch64-apple-darwin
 
     steps:
