@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Octree builds now reuse pooled allocations as designed
+  - The top-level body vector was freshly allocated every build, and every
+    vector handed down the recursion was dropped instead of returned to the
+    pool; leaf nodes now take ownership of their input vector directly and
+    internal nodes recycle theirs, so steady-state rebuilds allocate nothing
+  - New `Octree::build_from_slice` entry point for callers holding a
+    contiguous snapshot of bodies
 - Update GitHub Actions to Node 24-based versions
   - checkout v4 → v7, upload-artifact v4 → v7, download-artifact v4 → v8,
     attest-build-provenance v2 → v4, configure-pages v5 → v6,

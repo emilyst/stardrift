@@ -271,27 +271,54 @@ impl Octree {
         // Pre-allocate with estimated capacity based on size hint for efficiency
         let estimated_capacity = bodies_iter.size_hint().0.max(1) + 1;
 
-        // Single pass to collect bodies and compute bounding box
-        let (bodies_vec, min, max) = bodies_iter.fold(
-            (
-                {
-                    let mut vec = Vec::with_capacity(estimated_capacity);
-                    vec.push(first_body);
-                    vec
-                },
-                first_body.position,
-                first_body.position,
-            ),
-            |(mut bodies, min, max), body| {
-                bodies.push(body);
+        // Single pass to collect bodies and compute bounding box,
+        // reusing a pooled vector for the body storage
+        let mut bodies_vec = self.node_pool.get_external_bodies(estimated_capacity);
+        bodies_vec.push(first_body);
+        let mut min = first_body.position;
+        let mut max = first_body.position;
+        for body in bodies_iter {
+            min = min.component_min(body.position); // Track minimum on each axis
+            max = max.component_max(body.position); // Track maximum on each axis
+            bodies_vec.push(body);
+        }
+
+        self.build_from_parts(bodies_vec, min, max);
+    }
+
+    /// Builds the octree from a slice of bodies.
+    ///
+    /// Equivalent to [`Octree::build`] but for callers that already hold a
+    /// contiguous snapshot of bodies: the pooled body vector is filled with a
+    /// single `extend_from_slice` and the bounds come from a straight pass
+    /// over the slice.
+    pub fn build_from_slice(&mut self, bodies: &[OctreeBody]) {
+        if let Some(old_root) = self.root.take() {
+            self.node_pool.return_node(old_root);
+        }
+
+        let Some(first_body) = bodies.first() else {
+            self.root = None;
+            return;
+        };
+
+        let mut bodies_vec = self.node_pool.get_external_bodies(bodies.len());
+        bodies_vec.extend_from_slice(bodies);
+
+        let (min, max) = bodies.iter().fold(
+            (first_body.position, first_body.position),
+            |(min, max), body| {
                 (
-                    bodies,
-                    min.component_min(body.position), // Track minimum on each axis
-                    max.component_max(body.position), // Track maximum on each axis
+                    min.component_min(body.position),
+                    max.component_max(body.position),
                 )
             },
         );
 
+        self.build_from_parts(bodies_vec, min, max);
+    }
+
+    fn build_from_parts(&mut self, bodies_vec: Vec<OctreeBody>, min: Vector, max: Vector) {
         // Add 10% padding to prevent bodies exactly on boundaries
         // This ensures numerical stability during octant assignment
         let padding = (max - min) * 0.1;
@@ -315,15 +342,9 @@ impl Octree {
         depth: usize,
     ) -> OctreeNode {
         if depth >= MAX_OCTREE_DEPTH || bodies.len() <= leaf_threshold {
-            let pooled_bodies = pool.get_external_bodies(bodies.len());
-            let mut external_bodies = pooled_bodies;
-
-            external_bodies.extend(bodies);
-
-            return OctreeNode::External {
-                bounds,
-                bodies: external_bodies,
-            };
+            // Use the input vector directly as leaf storage; its allocation
+            // returns to the pool when the tree is torn down on the next build
+            return OctreeNode::External { bounds, bodies };
         }
 
         // Find center point and create 8 octant bounding boxes
@@ -383,6 +404,10 @@ impl Octree {
             .fold((0.0, Vector::ZERO), |(mass_acc, pos_acc), body| {
                 (mass_acc + body.mass, pos_acc + body.position * body.mass)
             });
+
+        // The input vector's bodies have all been copied into the octant
+        // vectors above, so its allocation can be recycled immediately
+        pool.return_external_bodies(bodies);
 
         // Center of mass is the weighted average position
         // Handle edge case of zero total mass (shouldn't happen in practice)
