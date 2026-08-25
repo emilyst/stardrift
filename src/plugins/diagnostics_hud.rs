@@ -70,8 +70,8 @@ impl DiagnosticsHudPlugin {
             AssetPath::parse("fonts/Saira-Regular").with_source(embedded_asset_source);
         let regular_font = asset_server.load(regular_font_asset_path);
         let regular_text_font = TextFont {
-            font: regular_font,
-            font_size: 12.0,
+            font: regular_font.into(),
+            font_size: FontSize::Px(12.0),
             ..default()
         };
 
@@ -79,12 +79,11 @@ impl DiagnosticsHudPlugin {
             AssetPath::parse("fonts/Saira-ExtraBold").with_source(embedded_asset_source);
         let extra_bold_font = asset_server.load(extra_bold_font_asset_path);
         let extra_bold_text_font = TextFont {
-            font: extra_bold_font,
-            font_size: 12.0,
+            font: extra_bold_font.into(),
+            font_size: FontSize::Px(12.0),
             ..default()
         };
 
-        let border_radius = BorderRadius::all(Val::Px(5.0));
         let background_color = BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.01));
 
         // Platform-specific top offset
@@ -114,6 +113,7 @@ impl DiagnosticsHudPlugin {
             display: Display::Flex,
             flex_direction: FlexDirection::Column,
             row_gap: Val::Px(1.0),
+            border_radius: BorderRadius::all(Val::Px(5.0)),
             ..default()
         };
         let hud_row_node = Node {
@@ -128,7 +128,6 @@ impl DiagnosticsHudPlugin {
             DiagnosticsHudRoot,
             children![(
                 hud_node,
-                border_radius,
                 background_color,
                 children![
                     (
@@ -140,7 +139,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(Justify::Right),
+                                TextLayout::justify(Justify::Right),
                                 regular_text_font.clone(),
                             ),
                             (
@@ -149,7 +148,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(Justify::Left),
+                                TextLayout::justify(Justify::Left),
                                 Text::new("-"),
                                 extra_bold_text_font.clone(),
                             ),
@@ -164,7 +163,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(Justify::Right),
+                                TextLayout::justify(Justify::Right),
                                 regular_text_font.clone(),
                             ),
                             (
@@ -173,7 +172,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(Justify::Left),
+                                TextLayout::justify(Justify::Left),
                                 Text::new("-"),
                                 extra_bold_text_font.clone(),
                             ),
@@ -188,7 +187,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(Justify::Right),
+                                TextLayout::justify(Justify::Right),
                                 regular_text_font.clone(),
                             ),
                             (
@@ -197,7 +196,7 @@ impl DiagnosticsHudPlugin {
                                     min_width: Val::Px(100.0),
                                     ..default()
                                 },
-                                TextLayout::new_with_justify(Justify::Left),
+                                TextLayout::justify(Justify::Left),
                                 extra_bold_text_font.clone(),
                             ),
                         ],

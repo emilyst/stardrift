@@ -26,8 +26,8 @@ fn setup_attribution(mut commands: Commands, asset_server: Res<AssetServer>) {
     let font_asset_path = AssetPath::parse("fonts/Saira-Light").with_source(embedded_asset_source);
     let font = asset_server.load(font_asset_path);
     let attribution_text_font = TextFont {
-        font,
-        font_size: 10.0,
+        font: font.into(),
+        font_size: FontSize::Px(10.0),
         ..default()
     };
 

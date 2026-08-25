@@ -301,7 +301,7 @@ impl Plugin for TrailsPlugin {
                 Self::update_trails.in_set(TrailSet::Update),
                 Self::render_trails.in_set(TrailSet::Render),
             )
-                .run_if(in_state(AppState::Running).or(in_state(AppState::Paused))),
+                .run_if(in_state(AppState::Running).or_else(in_state(AppState::Paused))),
         );
 
         // Trail systems run in Update while physics runs in FixedUpdate.
@@ -443,9 +443,9 @@ impl TrailsPlugin {
                 match mesh_handle {
                     Some(mesh_handle) => {
                         // Update existing mesh
-                        if let Some(mesh) = trail_meshes.get_mut(&mesh_handle.0) {
+                        if let Some(mut mesh) = trail_meshes.get_mut(&mesh_handle.0) {
                             Self::update_trail_mesh(
-                                mesh,
+                                &mut mesh,
                                 trail,
                                 camera_pos,
                                 current_time,

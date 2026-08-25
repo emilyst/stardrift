@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Upgrade Bevy from 0.17 to 0.19
+  - `TextFont` now uses `FontSource` and `FontSize::Px` for font and size fields
+  - `BorderRadius` moved into the `Node` struct
+  - `TextLayout::new_with_justify` replaced with `TextLayout::justify`
+  - `Hdr` component moved to `bevy::camera`
+  - `Assets::get_mut` now returns `AssetMut`
+  - Run condition combinator `.or` replaced with `.or_else`
+- Upgrade bevy_panorbit_camera from 0.29 to 0.35
+
 ## [0.0.67] - 2025-11-22
 
 ## [0.0.66] - 2025-10-13

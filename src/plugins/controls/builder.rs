@@ -25,9 +25,9 @@ impl ControlsCommandsExt for ChildSpawnerCommands<'_> {
                 align_items: AlignItems::FlexStart,
                 justify_content: JustifyContent::Center,
                 row_gap: Val::Px(1.0),
+                border_radius: BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
                 ..default()
             },
-            BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
             BackgroundColor(BUTTON_COLOR_NORMAL),
             T::marker(),
         ))
@@ -36,8 +36,8 @@ impl ControlsCommandsExt for ChildSpawnerCommands<'_> {
                 Text::new(T::label()),
                 TextColor(Color::WHITE),
                 TextFont {
-                    font,
-                    font_size: BUTTON_FONT_SIZE_PX,
+                    font: font.into(),
+                    font_size: FontSize::Px(BUTTON_FONT_SIZE_PX),
                     ..default()
                 },
             ));

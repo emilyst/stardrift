@@ -7,9 +7,9 @@
 use crate::config::SimulationConfig;
 use crate::physics::math::min_sphere_radius_for_surface_distribution;
 use crate::prelude::*;
+use bevy::camera::Hdr;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::post_process::bloom::Bloom;
-use bevy::render::view::Hdr;
 use bevy_panorbit_camera::PanOrbitCamera;
 use bevy_panorbit_camera::TouchControls;
 use bevy_panorbit_camera::TrackpadBehavior;
