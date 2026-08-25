@@ -73,7 +73,7 @@ use crate::physics::math::{Scalar, Vector};
 /// | Property      | Symplectic Euler | Explicit Euler | Velocity Verlet | RK4      |
 /// |---------------|------------------|----------------|-----------------|----------|
 /// | Order         | 1                | 1              | 2               | 4        |
-/// | Force evals   | 1                | 1              | 1               | 4        |
+/// | Force evals   | 1                | 1              | 2               | 4        |
 /// | Symplectic    | Yes              | No             | Yes             | No       |
 /// | Energy drift  | Bounded          | Exponential    | Bounded         | Linear   |
 /// | Complexity    | Minimal          | Minimal        | Low             | Moderate |
@@ -88,7 +88,7 @@ use crate::physics::math::{Scalar, Vector};
 /// - Establishing baseline energy conservation behavior
 ///
 /// **Consider alternatives:**
-/// - Use Velocity Verlet for better accuracy, same cost
+/// - Use Velocity Verlet for better accuracy at twice the force evaluations
 /// - Use PEFRL for high-precision orbital mechanics
 /// - Use explicit Euler only for dissipative systems
 ///

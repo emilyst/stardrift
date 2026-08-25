@@ -78,7 +78,7 @@ use crate::physics::math::{Scalar, Vector};
 /// # Computational Cost
 ///
 /// - **Force evaluations**: 4 per timestep
-/// - **Cost comparison**: ~4× more expensive than Velocity Verlet per step
+/// - **Cost comparison**: ~2× more expensive than Velocity Verlet per step
 /// - **Efficiency gain**: Often allows larger timesteps than lower-order methods
 /// - **Memory usage**: Minimal - only current state stored
 /// - **Parallelization**: Limited - stages must be computed sequentially
@@ -89,7 +89,7 @@ use crate::physics::math::{Scalar, Vector};
 /// |-----------------|-------|------------|-------------|----------------------------|
 /// | PEFRL           | 4     | Yes        | 4           | Bounded oscillation        |
 /// | RK4             | 4     | No         | 4           | Secular drift              |
-/// | Velocity Verlet | 2     | Yes        | 1           | Bounded oscillation        |
+/// | Velocity Verlet | 2     | Yes        | 2           | Bounded oscillation        |
 /// | Yoshida4        | 4     | Yes        | 3           | Bounded (larger amplitude) |
 ///
 /// # Use Cases
@@ -189,178 +189,5 @@ impl Integrator for Pefrl {
 
     fn aliases(&self) -> Vec<&'static str> {
         vec!["forest_ruth"]
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::physics::math::{Scalar, Vector};
-
-    /// Simple acceleration field for a harmonic oscillator.
-    struct HarmonicOscillator {
-        /// Spring constant `k`.
-        k: Scalar,
-    }
-
-    impl AccelerationField for HarmonicOscillator {
-        fn at(&self, position: Vector) -> Vector {
-            // For 1‑D we only care about the x component.
-            // a = -k * x
-            Vector::new(-self.k * position.x, 0.0, 0.0)
-        }
-    }
-
-    /// Acceleration field for a two-body Kepler problem with central gravity.
-    struct KeplerField {
-        /// Gravitational parameter GM (product of G and mass)
-        gm: Scalar,
-    }
-
-    impl AccelerationField for KeplerField {
-        fn at(&self, position: Vector) -> Vector {
-            // For inverse-square law: a = -GM * x / |x|³
-            let distance_sq = position.x.powi(2) + position.y.powi(2) + position.z.powi(2);
-            if distance_sq < 1e-10 {
-                // Avoid division by zero at origin
-                Vector::new(0.0, 0.0, 0.0)
-            } else {
-                let distance = distance_sq.sqrt();
-                let factor = -self.gm / (distance_sq * distance);
-                Vector::new(
-                    factor * position.x,
-                    factor * position.y,
-                    factor * position.z,
-                )
-            }
-        }
-    }
-
-    #[test]
-    fn test_pefrl_harmonic_oscillator() {
-        // Physical parameters
-        let mass: Scalar = 1.0; // m = 1 kg
-        let k: Scalar = 2.0 * std::f64::consts::PI.powi(2); // ω = 2π → period 1 s
-        let omega = (k / mass).sqrt();
-
-        // Initial conditions: start at maximum displacement, zero velocity.
-        let amplitude: Scalar = 1.0;
-        let mut position = Vector::new(amplitude, 0.0, 0.0);
-        let mut velocity = Vector::new(0.0, 0.0, 0.0);
-
-        // Time step and total simulation time.
-        let dt: Scalar = 0.001; // small enough for accuracy
-        let steps: usize = 10_000; // simulate 10 seconds
-
-        let field = HarmonicOscillator { k };
-        let integrator = Pefrl;
-
-        // Helper to compute total energy.
-        fn total_energy(pos: &Vector, vel: &Vector, k: Scalar) -> Scalar {
-            0.5 * pos.x.powi(2) * k + 0.5 * vel.x.powi(2)
-        }
-
-        let initial_energy = total_energy(&position, &velocity, k);
-
-        // Run the simulation.
-        for step in 0..steps {
-            integrator.step(&mut position, &mut velocity, &field, dt);
-
-            // Periodically check energy conservation and analytical solution.
-            if step % 100 == 0 {
-                let t = (step as Scalar) * dt;
-                let analytic_pos = amplitude * (omega * t).cos();
-                let energy = total_energy(&position, &velocity, k);
-
-                // Energy should stay within 1e-4 relative error.
-                assert!(
-                    (energy - initial_energy).abs() / initial_energy < 1e-4,
-                    "Energy drift at step {}: {:.6} vs {:.6}",
-                    step,
-                    energy,
-                    initial_energy
-                );
-
-                // Position should match analytical within a tolerance.
-                assert!(
-                    (position.x - analytic_pos).abs() < 5e-3,
-                    "Position mismatch at t={:.4}: numeric {:.6}, analytic {:.6}",
-                    t,
-                    position.x,
-                    analytic_pos
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_pefrl_kepler_orbit() {
-        // Circular orbit in normalized units: GM = 1, r = 1, so v = sqrt(GM/r) = 1
-        // and the orbital period is 2π time units.
-        let gm: Scalar = 1.0;
-        let mut position = Vector::new(1.0, 0.0, 0.0);
-        let mut velocity = Vector::new(0.0, 1.0, 0.0); // Perpendicular velocity
-
-        // 5000 time units total, roughly 800 orbits
-        let dt: Scalar = 0.01;
-        let steps: usize = 500_000;
-
-        let field = KeplerField { gm };
-        let integrator = Pefrl;
-
-        // Helper to compute total energy (kinetic + potential)
-        fn total_energy(pos: &Vector, vel: &Vector, gm: Scalar) -> Scalar {
-            let r = (pos.x.powi(2) + pos.y.powi(2) + pos.z.powi(2)).sqrt();
-            0.5 * (vel.x.powi(2) + vel.y.powi(2) + vel.z.powi(2)) - gm / r
-        }
-
-        // Helper to compute angular momentum magnitude
-        fn angular_momentum(pos: &Vector, vel: &Vector) -> Scalar {
-            let rxv = pos.x * vel.y - pos.y * vel.x; // z-component of cross product
-            rxv.abs()
-        }
-
-        let initial_energy = total_energy(&position, &velocity, gm);
-        let initial_angular_momentum = angular_momentum(&position, &velocity);
-
-        // Run the simulation and check key properties
-        for step in 0..steps {
-            integrator.step(&mut position, &mut velocity, &field, dt);
-
-            // Periodically check conservation properties
-            if step % 1000 == 0 {
-                let energy = total_energy(&position, &velocity, gm);
-                let angular_momentum = angular_momentum(&position, &velocity);
-
-                // Energy should stay within 1e-6 relative error (very tight tolerance for a symplectic integrator)
-                assert!(
-                    (energy - initial_energy).abs() / initial_energy.abs() < 1e-6,
-                    "Energy drift at step {}: {:.6} vs {:.6}",
-                    step,
-                    energy,
-                    initial_energy
-                );
-
-                // Angular momentum should be nearly constant
-                assert!(
-                    (angular_momentum - initial_angular_momentum).abs() / initial_angular_momentum
-                        < 1e-6,
-                    "Angular momentum drift at step {}: {:.6} vs {:.6}",
-                    step,
-                    angular_momentum,
-                    initial_angular_momentum
-                );
-            }
-        }
-
-        // Final validation: check that we're still in a reasonable orbit
-        let final_distance = (position.x.powi(2) + position.y.powi(2) + position.z.powi(2)).sqrt();
-
-        // Should be close to initial distance (1 AU) - no spiral-in or out
-        assert!(
-            (final_distance - 1.0).abs() < 0.1,
-            "Orbit has drifted too much: final distance {:.6} vs initial 1.0",
-            final_distance
-        );
     }
 }

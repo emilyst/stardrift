@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Registry-driven integrator correctness suite (`tests/integrator_correctness.rs`)
+  - Trajectory accuracy against closed-form solutions, empirical convergence
+    order and error constant, energy/angular-momentum conservation with drift
+    character, time-reversibility classification, force-evaluation structure,
+    golden-value regression pins, and registry integrity
+  - Every integrator is characterized by a measured two-sided expectation
+    band; newly registered integrators fail until characterized
+
 ### Changed
 
 - Update GitHub Actions to Node 24-based versions
@@ -15,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     upload-pages-artifact v3 → v5, deploy-pages v4 → v5,
     action-gh-release v2 → v3
   - Resolves Node 20 deprecation warnings in CI
+
+### Removed
+
+- Integrator pseudo-benchmarks (`benches/integrators.rs`)
+  - Their accuracy, convergence, and conservation measurements reported error
+    values as fake durations and asserted nothing; superseded by the
+    integrator correctness suite
+
+### Fixed
+
+- Velocity Verlet documentation claimed 1 force evaluation per step; the
+  implementation performs 2 (comparison tables in related integrator docs
+  corrected to match)
 
 ## [0.0.68] - 2026-08-25
 

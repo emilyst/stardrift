@@ -43,7 +43,7 @@ use crate::physics::math::{Scalar, Vector};
 /// - **Order of accuracy**: O(dt²) local truncation error
 /// - **Symplectic**: Preserves phase space volume exactly (det J = 1)
 /// - **Time-reversible**: Forward and backward integration are symmetric
-/// - **Force evaluations**: 1 per timestep (acceleration stored and reused)
+/// - **Force evaluations**: 2 per timestep (start and end of step)
 /// - **Self-starting**: No previous values needed
 ///
 /// # Energy Behavior
@@ -58,17 +58,18 @@ use crate::physics::math::{Scalar, Vector};
 ///
 /// # Computational Cost
 ///
-/// Extremely efficient with only 1 force evaluation per timestep:
-/// - Same cost as Symplectic Euler but with O(dt²) vs O(dt) accuracy
-/// - 4× cheaper than RK4 or PEFRL
-/// - The stored acceleration can be reused for the next timestep
+/// This implementation performs 2 force evaluations per timestep:
+/// - Twice the cost of Symplectic Euler, but with O(dt²) vs O(dt) accuracy
+/// - 2× cheaper than RK4 or PEFRL
+/// - Storing the end-of-step acceleration for reuse would reduce the cost
+///   to 1 evaluation per step (see Implementation Notes)
 ///
 /// # Comparison with Other Methods
 ///
 /// | Property      | Velocity Verlet | RK4         | PEFRL       | Symplectic Euler |
 /// |---------------|-----------------|-------------|-------------|------------------|
 /// | Order         | 2               | 4           | 4           | 1                |
-/// | Force evals   | 1               | 4           | 4           | 1                |
+/// | Force evals   | 2               | 4           | 4           | 1                |
 /// | Symplectic    | Yes             | No          | Yes         | Yes              |
 /// | Energy drift  | Bounded         | Linear      | Bounded     | Bounded          |
 /// | Best for      | General purpose | Short sims  | High accuracy| Simple problems |
