@@ -92,6 +92,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Octree wireframe and barycenter cross-hair render again
+  - Bevy 0.18 split gizmo rendering into the `bevy_gizmos_render` feature;
+    the trimmed feature list only enabled `bevy_gizmos`, so gizmo lines were
+    queued every frame but never rendered (silently, on native and WASM)
+    since the Bevy 0.19 upgrade
 - Physics no longer runs ~6.7% fast
   - Bevy's `FixedUpdate` schedule defaults to 64 Hz while `PhysicsTime`
     assumed 60 Hz, so 64 integration steps of 1/60 s ran per wall-clock

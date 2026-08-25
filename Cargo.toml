@@ -42,6 +42,7 @@ features = [
     "bevy_core_pipeline",
     "bevy_gilrs",
     "bevy_gizmos",
+    "bevy_gizmos_render",
     "bevy_log",
     "bevy_mesh",
     "bevy_pbr",
