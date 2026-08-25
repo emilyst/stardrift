@@ -155,7 +155,7 @@ pub fn load_and_apply_config(args: &Args) -> Result<SimulationConfig, CliError> 
         let registry = IntegratorRegistry::new().with_standard_integrators();
         registry
             .create(integrator_type)
-            .map_err(|err| CliError::InvalidIntegrator(err))?;
+            .map_err(CliError::InvalidIntegrator)?;
 
         println!("Using integrator: {integrator_type}");
         config.physics.integrator = IntegratorConfig {

@@ -189,7 +189,7 @@ impl Octree {
     ///   - 0.5 for good accuracy/performance balance (recommended)
     ///   - 1.0 for maximum speed with acceptable visual accuracy
     /// * `min_distance` - Minimum distance between bodies to prevent force singularities.
-    ///                    Forces are calculated as if bodies are at least this far apart.
+    ///   Forces are calculated as if bodies are at least this far apart.
     /// * `max_force` - Maximum allowed force magnitude. Forces exceeding this are clamped.
     ///
     /// # Example
@@ -471,6 +471,7 @@ impl Octree {
     ///
     /// For each node, if s/d < theta (where s is node size and d is distance):
     /// - Treat the node as a single point mass at its center of mass
+    ///
     /// Otherwise:
     /// - Recursively calculate forces from child nodes
     ///

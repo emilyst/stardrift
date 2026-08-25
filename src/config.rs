@@ -142,17 +142,13 @@ impl Default for InitialVelocityConfig {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum VelocityMode {
     Random,
+    #[default]
     Orbital,
     Tangential,
     Radial,
-}
-
-impl Default for VelocityMode {
-    fn default() -> Self {
-        VelocityMode::Orbital
-    }
 }
 
 /// Flexible integrator configuration
@@ -258,31 +254,23 @@ impl Default for TrailConfig {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum FadeCurve {
     Linear,
+    #[default]
     Exponential,
     SmoothStep,
     EaseInOut,
 }
 
-impl Default for FadeCurve {
-    fn default() -> Self {
-        FadeCurve::Exponential
-    }
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum TaperCurve {
+    #[default]
     Linear,
     Exponential,
     SmoothStep,
-}
-
-impl Default for TaperCurve {
-    fn default() -> Self {
-        TaperCurve::Linear
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

@@ -68,7 +68,7 @@ impl AutomatedScreenshotSchedule {
         let timer = if !use_frames {
             let duration = initial_delay
                 .or(interval)
-                .map(|v| Duration::from_secs_f32(v))
+                .map(Duration::from_secs_f32)
                 .unwrap_or(Duration::from_secs(0));
             Timer::new(duration, TimerMode::Once)
         } else {
@@ -104,48 +104,46 @@ impl AutomatedScreenshotSchedule {
 
         match self.state {
             AutoScreenshotState::WaitingForInitial => {
-                if let Some(delay) = self.initial_delay {
-                    if self.should_trigger(delay) {
-                        self.reset_timer();
-                        self.remaining_count = self.remaining_count.saturating_sub(1);
-                        self.frames_since_last_screenshot = 0;
+                if let Some(delay) = self.initial_delay
+                    && self.should_trigger(delay)
+                {
+                    self.reset_timer();
+                    self.remaining_count = self.remaining_count.saturating_sub(1);
+                    self.frames_since_last_screenshot = 0;
 
-                        if self.remaining_count > 0 && self.interval.is_some() {
-                            self.state = AutoScreenshotState::WaitingForInterval;
-                            // Set up interval timer
-                            if let (ScreenshotTimingMode::Time, Some(interval)) =
-                                (self.mode, self.interval)
-                            {
-                                self.timer = Timer::new(
-                                    Duration::from_secs_f32(interval.value),
-                                    TimerMode::Once,
-                                );
-                            }
-                        } else {
-                            self.state = AutoScreenshotState::Complete;
-                        }
-                        return true;
-                    }
-                }
-            }
-            AutoScreenshotState::WaitingForInterval => {
-                if let Some(interval) = self.interval {
-                    if self.should_trigger(interval) {
-                        self.reset_timer();
-                        self.remaining_count = self.remaining_count.saturating_sub(1);
-                        self.frames_since_last_screenshot = 0;
-
-                        if self.remaining_count == 0 {
-                            self.state = AutoScreenshotState::Complete;
-                        } else if self.mode == ScreenshotTimingMode::Time {
-                            // Reset timer for next interval
+                    if self.remaining_count > 0 && self.interval.is_some() {
+                        self.state = AutoScreenshotState::WaitingForInterval;
+                        // Set up interval timer
+                        if let (ScreenshotTimingMode::Time, Some(interval)) =
+                            (self.mode, self.interval)
+                        {
                             self.timer = Timer::new(
                                 Duration::from_secs_f32(interval.value),
                                 TimerMode::Once,
                             );
                         }
-                        return true;
+                    } else {
+                        self.state = AutoScreenshotState::Complete;
                     }
+                    return true;
+                }
+            }
+            AutoScreenshotState::WaitingForInterval => {
+                if let Some(interval) = self.interval
+                    && self.should_trigger(interval)
+                {
+                    self.reset_timer();
+                    self.remaining_count = self.remaining_count.saturating_sub(1);
+                    self.frames_since_last_screenshot = 0;
+
+                    if self.remaining_count == 0 {
+                        self.state = AutoScreenshotState::Complete;
+                    } else if self.mode == ScreenshotTimingMode::Time {
+                        // Reset timer for next interval
+                        self.timer =
+                            Timer::new(Duration::from_secs_f32(interval.value), TimerMode::Once);
+                    }
+                    return true;
                 }
             }
             AutoScreenshotState::Complete => {}
@@ -221,12 +219,12 @@ impl AutomatedScreenshotNaming {
 
     pub fn generate_path(&mut self) -> PathBuf {
         // Ensure directory exists
-        if !self.base_directory.exists() {
-            if let Err(e) = std::fs::create_dir_all(&self.base_directory) {
-                error!("Failed to create screenshot directory: {}", e);
-                // Fallback to current directory
-                self.base_directory = PathBuf::from(".");
-            }
+        if !self.base_directory.exists()
+            && let Err(e) = std::fs::create_dir_all(&self.base_directory)
+        {
+            error!("Failed to create screenshot directory: {}", e);
+            // Fallback to current directory
+            self.base_directory = PathBuf::from(".");
         }
 
         let filename = if self.use_sequential {

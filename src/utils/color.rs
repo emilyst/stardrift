@@ -841,7 +841,7 @@ pub fn lesbian_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     // Generate position along the flag (7 stripes)
     let position = rng.random::<f32>();
 
-    let color = if position < 0.14 {
+    if position < 0.14 {
         // Dark orange
         apply_variation(dark_orange, rng)
     } else if position < 0.28 {
@@ -871,9 +871,7 @@ pub fn lesbian_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     } else {
         // Dark pink
         apply_variation(dark_pink, rng)
-    };
-
-    color
+    }
 }
 
 /// Generates a random pansexual pride color.
@@ -891,7 +889,7 @@ pub fn pansexual_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     // Generate position along the flag (3 equal stripes)
     let position = rng.random::<f32>();
 
-    let color = if position < 0.33 {
+    if position < 0.33 {
         // Pink stripe
         let t = position / 0.33;
         if t < 0.5 {
@@ -919,9 +917,7 @@ pub fn pansexual_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
         } else {
             apply_variation(blue, rng)
         }
-    };
-
-    color
+    }
 }
 
 /// Generates a random non-binary pride color.
@@ -941,7 +937,7 @@ pub fn nonbinary_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     // Generate position along the flag (4 equal stripes)
     let position = rng.random::<f32>();
 
-    let color = if position < 0.25 {
+    if position < 0.25 {
         // Yellow stripe
         let t = position / 0.25;
         if t < 0.7 {
@@ -977,9 +973,7 @@ pub fn nonbinary_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
         } else {
             apply_variation(black, rng)
         }
-    };
-
-    color
+    }
 }
 
 /// Generates a random asexual pride color.
@@ -998,7 +992,7 @@ pub fn asexual_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     // Generate position along the flag (4 equal stripes)
     let position = rng.random::<f32>();
 
-    let color = if position < 0.25 {
+    if position < 0.25 {
         // Black stripe
         let t = position / 0.25;
         if t < 0.8 {
@@ -1034,9 +1028,7 @@ pub fn asexual_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
         } else {
             apply_variation(purple, rng)
         }
-    };
-
-    color
+    }
 }
 
 /// Generates a random genderfluid pride color.
@@ -1057,7 +1049,7 @@ pub fn genderfluid_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     // Generate position along the flag (5 equal stripes)
     let position = rng.random::<f32>();
 
-    let color = if position < 0.2 {
+    if position < 0.2 {
         // Pink stripe
         let t = position / 0.2;
         if t < 0.7 {
@@ -1103,9 +1095,7 @@ pub fn genderfluid_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
         } else {
             apply_variation(blue, rng)
         }
-    };
-
-    color
+    }
 }
 
 /// Generates a random aromantic pride color.
@@ -1125,7 +1115,7 @@ pub fn aromantic_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     // Generate position along the flag (5 equal stripes)
     let position = rng.random::<f32>();
 
-    let color = if position < 0.2 {
+    if position < 0.2 {
         // Dark green stripe
         let t = position / 0.2;
         if t < 0.7 {
@@ -1169,9 +1159,7 @@ pub fn aromantic_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
         } else {
             apply_variation(black, rng)
         }
-    };
-
-    color
+    }
 }
 
 /// Generates a random agender pride color.
@@ -1190,7 +1178,7 @@ pub fn agender_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
     // Generate position along the flag (7 stripes: black, gray, white, green, white, gray, black)
     let position = rng.random::<f32>();
 
-    let color = if position < 0.14 {
+    if position < 0.14 {
         // First black stripe
         let t = position / 0.14;
         if t < 0.7 {
@@ -1256,9 +1244,7 @@ pub fn agender_pride_color(rng: &mut RenderingRng) -> (f32, f32, f32) {
         } else {
             apply_variation(black, rng)
         }
-    };
-
-    color
+    }
 }
 
 /// Helper function to apply slight color variations
