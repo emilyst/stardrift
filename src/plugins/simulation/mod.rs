@@ -99,6 +99,12 @@ impl Plugin for SimulationPlugin {
         app.insert_resource(CurrentIntegrator(integrator));
         app.insert_resource(IntegratorRegistry::default());
 
+        // Pin the FixedUpdate rate to the physics tick rate; PhysicsTime::dt
+        // derives from the same constant, so the schedule and the integration
+        // step cannot drift apart.
+        app.insert_resource(Time::<Fixed>::from_hz(
+            crate::physics::resources::PHYSICS_TICK_HZ,
+        ));
         app.init_resource::<crate::physics::resources::PhysicsTime>();
 
         // New unified command event

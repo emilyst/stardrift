@@ -14,6 +14,11 @@ impl Default for CurrentIntegrator {
     }
 }
 
+/// Physics tick rate. Feeds both the `FixedUpdate` schedule rate and
+/// [`PhysicsTime::dt`] so wall-clock pacing and the integration step can
+/// never disagree (Bevy's `FixedUpdate` otherwise defaults to 64 Hz).
+pub const PHYSICS_TICK_HZ: Scalar = 60.0;
+
 /// Resource for physics timestep control
 #[derive(Resource, Debug, Clone)]
 pub struct PhysicsTime {
@@ -26,7 +31,7 @@ pub struct PhysicsTime {
 impl Default for PhysicsTime {
     fn default() -> Self {
         Self {
-            dt: 1.0 / 60.0, // 60 Hz default // TODO: base on FixedUpdate schedule?
+            dt: 1.0 / PHYSICS_TICK_HZ,
             paused: false,
         }
     }

@@ -63,6 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Physics no longer runs ~6.7% fast
+  - Bevy's `FixedUpdate` schedule defaults to 64 Hz while `PhysicsTime`
+    assumed 60 Hz, so 64 integration steps of 1/60 s ran per wall-clock
+    second; both now derive from a single `PHYSICS_TICK_HZ` constant
 - Octree wireframe no longer flickers or disappears
   - The gizmo redraw was gated on change detection, but gizmos are
     immediate-mode and must be re-issued every frame; the wireframe blinked
