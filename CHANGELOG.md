@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.68] - 2026-08-25
+
 ### Changed
 
 - Upgrade Bevy from 0.17 to 0.19
