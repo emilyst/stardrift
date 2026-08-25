@@ -1,43 +1,40 @@
 //! System-level two-body test: measures the convergence order of the *actual*
 //! production integration scheme, not the integrators in isolation.
 //!
-//! `integrate_motions` builds one octree per step (via `rebuild_octree`) and
-//! then advances every body independently against that frozen snapshot. A
-//! multi-stage integrator therefore evaluates its intermediate accelerations
-//! with the *other* bodies still at their pre-step positions, which injects an
-//! O(dt) error into the acceleration and caps the whole scheme at first-order
-//! global accuracy — regardless of the integrator's nominal order. The
-//! single-evaluation methods (explicit and symplectic Euler) query the field
-//! once, at pre-step positions, which is exactly the synchronized form of
-//! those schemes; their genuine order is 1, so they lose nothing.
+//! `integrate_motions` advances all bodies stage-synchronized: each stage of
+//! the active integrator gathers every body's stage query, rebuilds the
+//! octree from that consistent snapshot, and evaluates all accelerations
+//! against it before any body advances. These tests pin the properties that
+//! the synchronization delivers, at theta = 0 (exact pairwise forces):
 //!
-//! These tests pin the *current* behavior:
+//! - every integrator recovers its nominal convergence order through the real
+//!   pipeline (1, 1, 2, 2, 2, 4, 4);
+//! - total linear momentum is conserved to roundoff by ALL methods,
+//!   multi-stage included — each stage's pairwise forces are evaluated from
+//!   one consistent configuration, so action equals reaction exactly;
+//! - angular momentum is likewise conserved to roundoff;
+//! - the palindromic methods (velocity Verlet, PEFRL) are exactly
+//!   time-reversible through the full pipeline, and the non-symmetric methods
+//!   measurably are not;
+//! - the single-evaluation methods (explicit and symplectic Euler) produce
+//!   bitwise-identical trajectories to the pre-restructure pipeline, anchoring
+//!   the driver rewrite.
 //!
-//! - every integrator, PEFRL included, measures order ~1 through the real
-//!   `rebuild_octree` + `integrate_motions` pipeline;
-//! - total linear momentum is exactly conserved (to roundoff) by the
-//!   single-evaluation methods but drifts secularly for multi-stage methods,
-//!   because the stale-partner evaluations break Newton's third law even with
-//!   theta = 0 (exact pairwise forces).
-//!
-//! If `integrate_motions` is ever restructured into stage-synchronized passes
-//! (rebuilding or re-evaluating the field between stages for all bodies), the
-//! multi-stage rows here SHOULD start failing with *better* measured orders —
-//! that failure is the desired signal. Re-characterize and update both this
-//! file's expectations and the integrator-selection advice in the docs.
+//! An order or conservation regression here means the driver no longer keeps
+//! stages globally synchronized (or the octree stopped being exact at
+//! theta = 0). See docs/integration.md for the design.
 //!
 //! To re-derive measured values:
 //! `cargo test --test two_body_system characterize -- --ignored --nocapture`
 
 use bevy::prelude::*;
-use bevy::tasks::{ComputeTaskPool, TaskPool};
 use stardrift::physics::components::{Mass, Position, Velocity};
 use stardrift::physics::integrators::Integrator;
 use stardrift::physics::integrators::registry::IntegratorRegistry;
 use stardrift::physics::math::{Scalar, Vector};
 use stardrift::physics::octree::Octree;
 use stardrift::physics::resources::{CurrentIntegrator, PhysicsTime};
-use stardrift::plugins::simulation::physics::{integrate_motions, rebuild_octree};
+use stardrift::plugins::simulation::physics::integrate_motions;
 use stardrift::resources::{GravitationalConstant, GravitationalOctree};
 use std::f64::consts::PI;
 
@@ -137,9 +134,8 @@ struct TwoBodySim {
 
 impl TwoBodySim {
     fn new(integrator_name: &str, dt: Scalar) -> Self {
-        // integrate_motions uses par_iter_mut, which needs the task pool.
-        ComputeTaskPool::get_or_init(TaskPool::default);
-
+        // At N = 2 the driver's acceleration pass runs sequentially, so no
+        // compute task pool is needed.
         let registry = IntegratorRegistry::new().with_standard_integrators();
         let integrator: Box<dyn Integrator + Send + Sync> = registry
             .create(integrator_name)
@@ -170,9 +166,10 @@ impl TwoBodySim {
             ))
             .id();
 
-        // Production ordering: PhysicsSet::BuildOctree then IntegrateMotions.
+        // The production driver builds the octree internally, once per
+        // integrator stage.
         let mut schedule = Schedule::default();
-        schedule.add_systems((rebuild_octree, integrate_motions).chain());
+        schedule.add_systems(integrate_motions);
 
         Self {
             world,
@@ -257,70 +254,47 @@ fn measure_momentum_drift(name: &str) -> Scalar {
 // =============================================================================
 
 /// Measured convergence order of the full production pipeline, per integrator
-/// (characterized 2026-08-25). All are ~1: the frozen octree field caps every
-/// multi-stage method at first order. The multi-stage methods do not merely
-/// share the order — they collapse onto the *same* error curve (velocity
-/// Verlet, RK4, and PEFRL agree to three digits), because the frozen-field
-/// O(dt) term dominates whatever the integrator itself contributes.
+/// (characterized 2026-08-25, post stage-synchronization). Every method
+/// recovers its nominal order at theta = 0. The two first-order methods
+/// measure slightly below 1 (pre-asymptotic at this dt range, trending toward
+/// 1 at finer steps); their bands account for that.
 const SYSTEM_ORDER_BANDS: &[(&str, (Scalar, Scalar))] = &[
-    ("explicit_euler", (0.7, 1.4)),                    // measured 0.82
-    ("symplectic_euler", (0.7, 1.4)),                  // measured 0.89
-    ("velocity_verlet", (0.7, 1.4)),                   // measured 0.96
-    ("heun", (0.7, 1.4)),                              // measured 0.98
-    ("runge_kutta_second_order_midpoint", (0.7, 1.4)), // measured 0.95
-    ("runge_kutta_fourth_order", (0.7, 1.4)),          // measured 0.95
-    ("pefrl", (0.7, 1.4)),                             // measured 0.95
+    ("explicit_euler", (0.6, 1.1)),                     // measured 0.82
+    ("symplectic_euler", (0.65, 1.15)),                 // measured 0.89
+    ("velocity_verlet", (1.75, 2.25)),                  // measured 2.00
+    ("heun", (1.75, 2.3)),                              // measured 2.03
+    ("runge_kutta_second_order_midpoint", (1.65, 2.2)), // measured 1.90
+    ("runge_kutta_fourth_order", (3.7, 4.45)),          // measured 4.10
+    ("pefrl", (3.75, 4.25)),                            // measured 4.00
 ];
 
 #[test]
-fn system_convergence_order_is_first_order_for_all_integrators() {
+fn system_convergence_order_matches_nominal_order() {
     for (name, (lo, hi)) in SYSTEM_ORDER_BANDS {
         let (order, r_squared, errors) = measure_system_order(name);
         assert!(
             order > *lo && order < *hi,
             "{name}: system-level convergence order {order:.3} outside ({lo}, {hi}) \
              (R^2 = {r_squared:.5}, errors: {errors:?}).\n\
-             If this integrator now measures *higher* than first order, the \
-             frozen-field limitation in integrate_motions has changed — \
-             re-characterize this suite and update the module docs."
+             An order below nominal means integrate_motions no longer keeps \
+             stages globally synchronized — re-characterize this suite."
         );
     }
 }
 
 #[test]
-fn single_eval_methods_conserve_momentum_to_roundoff() {
-    // One field evaluation at pre-step positions: pairwise forces are exactly
-    // antisymmetric, so total momentum survives to roundoff.
-    for name in ["explicit_euler", "symplectic_euler"] {
-        let drift = measure_momentum_drift(name);
+fn all_methods_conserve_momentum_to_roundoff() {
+    // Every stage's pairwise forces are evaluated from one consistent
+    // configuration, so action equals reaction exactly at theta = 0 and total
+    // momentum survives to roundoff — for multi-stage methods too.
+    let registry = IntegratorRegistry::new().with_standard_integrators();
+    for name in registry.list_available() {
+        let drift = measure_momentum_drift(&name);
         assert!(
             drift < 1e-12,
-            "{name}: single-evaluation momentum drift {drift:.3e} above roundoff"
-        );
-    }
-}
-
-#[test]
-fn multi_stage_methods_leak_momentum_through_frozen_field() {
-    // Intermediate stages see the partner at its stale pre-step position;
-    // action does not equal reaction, and momentum drifts secularly even with
-    // exact (theta = 0) forces. All five multi-stage methods measured ~3.1e-3
-    // over 5/8 period at dt = T/1000.
-    for name in [
-        "velocity_verlet",
-        "heun",
-        "runge_kutta_second_order_midpoint",
-        "runge_kutta_fourth_order",
-        "pefrl",
-    ] {
-        let drift = measure_momentum_drift(name);
-        let (lo, hi) = (3e-4, 3e-2);
-        assert!(
-            drift > lo && drift < hi,
-            "{name}: momentum drift {drift:.3e} outside measured band \
-             ({lo:.0e}, {hi:.0e}).\n\
-             A drift at roundoff level means integrate_motions no longer \
-             freezes the field between stages — re-characterize this suite."
+            "{name}: momentum drift {drift:.3e} above roundoff.\n\
+             Secular drift means a stage evaluated forces from an inconsistent \
+             (stale-partner) configuration — re-characterize this suite."
         );
     }
 }

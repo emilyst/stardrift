@@ -5,7 +5,7 @@
 //! Heun's method provides a good balance of simplicity and accuracy for
 //! short-duration simulations where energy conservation is not critical.
 
-use super::{AccelerationField, Integrator};
+use super::{Integrator, StageQuery, StepState};
 use crate::physics::math::{Scalar, Vector};
 
 /// Heun's method (Improved Euler method)
@@ -91,29 +91,47 @@ impl Integrator for Heun {
         Box::new(*self)
     }
 
-    fn step(
+    fn scratch_len(&self) -> usize {
+        2
+    }
+
+    fn next_query(&self, state: &StepState, scratch: &[Vector], dt: Scalar) -> Option<StageQuery> {
+        match state.stage {
+            // Stage 1: evaluate at current position (predictor)
+            0 => Some(StageQuery {
+                position: state.initial_position,
+                velocity: state.initial_velocity,
+            }),
+            // Stage 2: evaluate at predicted endpoint
+            1 => Some(StageQuery {
+                position: state.initial_position + state.initial_velocity * dt,
+                velocity: state.initial_velocity + scratch[0] * dt,
+            }),
+            _ => None,
+        }
+    }
+
+    fn apply_stage(
         &self,
-        position: &mut Vector,
-        velocity: &mut Vector,
-        field: &dyn AccelerationField,
-        dt: Scalar,
+        state: &mut StepState,
+        scratch: &mut [Vector],
+        accel: Vector,
+        _dt: Scalar,
     ) {
-        // Proper Heun's method with acceleration evaluation
-        // This is a predictor-corrector method that achieves 2nd order accuracy
+        scratch[state.stage] = accel;
+        state.stage += 1;
+    }
 
-        // Stage 1: Evaluate at current position (predictor)
-        let k1_x = *velocity;
-        let k1_v = field.at(*position);
-
-        // Stage 2: Evaluate at predicted endpoint
-        let pos_predicted = *position + k1_x * dt;
-        let vel_predicted = *velocity + k1_v * dt;
-        let k2_x = vel_predicted;
-        let k2_v = field.at(pos_predicted);
-
+    fn finish(&self, state: &StepState, scratch: &[Vector], dt: Scalar) -> (Vector, Vector) {
         // Average the slopes (corrector)
-        *position += (k1_x + k2_x) * (dt * 0.5);
-        *velocity += (k1_v + k2_v) * (dt * 0.5);
+        let k1_x = state.initial_velocity;
+        let k1_v = scratch[0];
+        let k2_x = state.initial_velocity + k1_v * dt;
+        let k2_v = scratch[1];
+        (
+            state.initial_position + (k1_x + k2_x) * (dt * 0.5),
+            state.initial_velocity + (k1_v + k2_v) * (dt * 0.5),
+        )
     }
 
     fn convergence_order(&self) -> usize {

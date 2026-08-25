@@ -31,6 +31,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Integration is now stage-synchronized, restoring each integrator's nominal
+  convergence order in the simulation
+  - Previously the octree was built once per step and frozen, so multi-stage
+    integrators evaluated intermediate accelerations against stale partner
+    positions: every method degraded to first order, momentum leaked, and
+    velocity Verlet, RK4, and PEFRL produced near-identical trajectories
+  - The `Integrator` trait now exposes a staged query/apply protocol
+    (`next_query`/`apply_stage`/`finish`); the driver advances all bodies in
+    lockstep, rebuilding the octree from a consistent snapshot each stage.
+    The single-body `step` method is now provided in terms of the same
+    protocol
+  - Measured through the production pipeline at theta = 0: orders
+    1/1/2/2/2/4/4 as claimed, and linear momentum conserved to roundoff for
+    all seven methods
+  - Velocity Verlet is now in kick-drift-kick form and declares FSAL (its
+    final field evaluation doubles as the next step's first), so the default
+    integrator still performs one octree build per step
+  - Explicit and symplectic Euler produce bitwise-identical trajectories to
+    the previous pipeline
+  - Barnes-Hut acceptance now never treats a node containing the query
+    position as a point mass, removing a latent self-attraction path (and
+    making theta > 1 safe)
+  - Pause is governed solely by `PhysicsTime`; barycentric drift correction
+    is now pause-gated, transform sync is ungated, and transform sync runs
+    after drift correction so corrections reach `Transform` in the same step
 - Octree builds now reuse pooled allocations as designed
   - The top-level body vector was freshly allocated every build, and every
     vector handed down the recursion was dropped instead of returned to the

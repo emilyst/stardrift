@@ -6,7 +6,7 @@
 //! non-symplectic and exhibit energy drift in conservative systems, making them
 //! less suitable for long-term orbital mechanics than symplectic alternatives.
 
-use super::{AccelerationField, Integrator};
+use super::{Integrator, StageQuery, StepState};
 use crate::physics::math::{Scalar, Vector};
 
 /// Second-order Runge-Kutta method (Midpoint method)
@@ -78,29 +78,45 @@ impl Integrator for RungeKuttaSecondOrderMidpoint {
         Box::new(*self)
     }
 
-    fn step(
+    fn scratch_len(&self) -> usize {
+        2
+    }
+
+    fn next_query(&self, state: &StepState, scratch: &[Vector], dt: Scalar) -> Option<StageQuery> {
+        match state.stage {
+            // Stage 1: evaluate at current position
+            0 => Some(StageQuery {
+                position: state.initial_position,
+                velocity: state.initial_velocity,
+            }),
+            // Stage 2: evaluate at midpoint
+            1 => Some(StageQuery {
+                position: state.initial_position + state.initial_velocity * (dt * 0.5),
+                velocity: state.initial_velocity + scratch[0] * (dt * 0.5),
+            }),
+            _ => None,
+        }
+    }
+
+    fn apply_stage(
         &self,
-        position: &mut Vector,
-        velocity: &mut Vector,
-        field: &dyn AccelerationField,
-        dt: Scalar,
+        state: &mut StepState,
+        scratch: &mut [Vector],
+        accel: Vector,
+        _dt: Scalar,
     ) {
-        // Proper RK2 Midpoint method with acceleration evaluation
-        // Achieves true 2nd order accuracy by evaluating at the midpoint
+        scratch[state.stage] = accel;
+        state.stage += 1;
+    }
 
-        // Stage 1: Evaluate at current position
-        let k1_x = *velocity;
-        let k1_v = field.at(*position);
-
-        // Stage 2: Evaluate at midpoint
-        let pos_mid = *position + k1_x * (dt * 0.5);
-        let vel_mid = *velocity + k1_v * (dt * 0.5);
-        let k2_x = vel_mid;
-        let k2_v = field.at(pos_mid);
-
-        // Update using midpoint derivative
-        *position += k2_x * dt;
-        *velocity += k2_v * dt;
+    fn finish(&self, state: &StepState, scratch: &[Vector], dt: Scalar) -> (Vector, Vector) {
+        // Update using the midpoint derivative
+        let k2_x = state.initial_velocity + scratch[0] * (dt * 0.5);
+        let k2_v = scratch[1];
+        (
+            state.initial_position + k2_x * dt,
+            state.initial_velocity + k2_v * dt,
+        )
     }
 
     fn convergence_order(&self) -> usize {
@@ -220,41 +236,64 @@ impl Integrator for RungeKuttaFourthOrder {
         Box::new(*self)
     }
 
-    fn step(
+    fn scratch_len(&self) -> usize {
+        4
+    }
+
+    fn next_query(&self, state: &StepState, scratch: &[Vector], dt: Scalar) -> Option<StageQuery> {
+        let x0 = state.initial_position;
+        let v0 = state.initial_velocity;
+        match state.stage {
+            // Stage 1: k1 at current position
+            0 => Some(StageQuery {
+                position: x0,
+                velocity: v0,
+            }),
+            // Stage 2: k2 at midpoint using k1
+            1 => Some(StageQuery {
+                position: x0 + v0 * (dt * 0.5),
+                velocity: v0 + scratch[0] * (dt * 0.5),
+            }),
+            // Stage 3: k3 at midpoint using k2 (k2_x = v0 + k1_v*dt/2)
+            2 => Some(StageQuery {
+                position: x0 + (v0 + scratch[0] * (dt * 0.5)) * (dt * 0.5),
+                velocity: v0 + scratch[1] * (dt * 0.5),
+            }),
+            // Stage 4: k4 at endpoint using k3 (k3_x = v0 + k2_v*dt/2)
+            3 => Some(StageQuery {
+                position: x0 + (v0 + scratch[1] * (dt * 0.5)) * dt,
+                velocity: v0 + scratch[2] * dt,
+            }),
+            _ => None,
+        }
+    }
+
+    fn apply_stage(
         &self,
-        position: &mut Vector,
-        velocity: &mut Vector,
-        field: &dyn AccelerationField,
-        dt: Scalar,
+        state: &mut StepState,
+        scratch: &mut [Vector],
+        accel: Vector,
+        _dt: Scalar,
     ) {
-        // Proper RK4 with acceleration evaluation at each stage
-        // This achieves true 4th order accuracy
+        scratch[state.stage] = accel;
+        state.stage += 1;
+    }
 
-        // Stage 1: k1 at current position
-        let k1_x = *velocity;
-        let k1_v = field.at(*position);
-
-        // Stage 2: k2 at midpoint using k1
-        let pos_k2 = *position + k1_x * (dt * 0.5);
-        let vel_k2 = *velocity + k1_v * (dt * 0.5);
-        let k2_x = vel_k2;
-        let k2_v = field.at(pos_k2);
-
-        // Stage 3: k3 at midpoint using k2
-        let pos_k3 = *position + k2_x * (dt * 0.5);
-        let vel_k3 = *velocity + k2_v * (dt * 0.5);
-        let k3_x = vel_k3;
-        let k3_v = field.at(pos_k3);
-
-        // Stage 4: k4 at endpoint using k3
-        let pos_k4 = *position + k3_x * dt;
-        let vel_k4 = *velocity + k3_v * dt;
-        let k4_x = vel_k4;
-        let k4_v = field.at(pos_k4);
+    fn finish(&self, state: &StepState, scratch: &[Vector], dt: Scalar) -> (Vector, Vector) {
+        let v0 = state.initial_velocity;
+        let &[k1_v, k2_v, k3_v, k4_v] = &scratch[..4] else {
+            unreachable!("RK4 records exactly 4 stage accelerations");
+        };
+        let k1_x = v0;
+        let k2_x = v0 + k1_v * (dt * 0.5);
+        let k3_x = v0 + k2_v * (dt * 0.5);
+        let k4_x = v0 + k3_v * dt;
 
         // Combine stages using RK4 weights: y_n+1 = y_n + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
-        *position += (k1_x + k2_x * 2.0 + k3_x * 2.0 + k4_x) * (dt / 6.0);
-        *velocity += (k1_v + k2_v * 2.0 + k3_v * 2.0 + k4_v) * (dt / 6.0);
+        (
+            state.initial_position + (k1_x + k2_x * 2.0 + k3_x * 2.0 + k4_x) * (dt / 6.0),
+            state.initial_velocity + (k1_v + k2_v * 2.0 + k3_v * 2.0 + k4_v) * (dt / 6.0),
+        )
     }
 
     fn convergence_order(&self) -> usize {

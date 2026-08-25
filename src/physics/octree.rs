@@ -253,6 +253,17 @@ impl Octree {
     ///
     /// O(N log N) time complexity for N bodies.
     /// Reuses node allocations from previous builds to minimize memory allocation.
+    ///
+    /// # Translation equivariance
+    ///
+    /// The root bounds derive from the bodies' min/max positions plus
+    /// proportional padding, so a rigid translation of every body produces an
+    /// identically shaped tree: same topology, same acceptance decisions,
+    /// same forces (in exact arithmetic). Barycentric drift correction (a
+    /// uniform translation between steps) and the integration driver's FSAL
+    /// acceleration cache both depend on this property. Do not replace the
+    /// bounds computation with a quantized or world-anchored box without
+    /// revisiting both.
     pub fn build(&mut self, bodies: impl IntoIterator<Item = OctreeBody>) {
         if let Some(old_root) = self.root.take() {
             self.node_pool.return_node(old_root);
@@ -566,7 +577,14 @@ impl Octree {
 
                 // Barnes-Hut criterion: if s/d < theta, treat as single body
                 // This is the key optimization - distant groups of bodies are treated as one
-                if size_squared < distance_squared * self.theta * self.theta {
+                //
+                // A node whose bounds contain the query position is never
+                // accepted, regardless of theta: its aggregate includes any
+                // body at that position (self-attraction), and for theta > 1
+                // the s/d test alone would not exclude it.
+                if size_squared < distance_squared * self.theta * self.theta
+                    && !bounds.contains(body.position)
+                {
                     self.calculate_force_from_point(body, *center_of_mass, *total_mass, g)
                 } else {
                     let mut force = Vector::ZERO;

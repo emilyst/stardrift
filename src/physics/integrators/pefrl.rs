@@ -6,7 +6,7 @@
 //! and N-body simulations where energy conservation over millions of timesteps
 //! is critical.
 
-use super::{AccelerationField, Integrator};
+use super::{Integrator, StageQuery, StepState};
 use crate::physics::math::{Scalar, Vector};
 
 /// PEFRL integrator - a 4th order symplectic integrator
@@ -133,6 +133,12 @@ impl Pefrl {
     const CHI: Scalar = -0.066_264_582_669_818_5;
     const COEFF_A: Scalar = 0.5 * (1.0 - 2.0 * Pefrl::LAMBDA);
     const COEFF_B: Scalar = 1.0 - 2.0 * (Pefrl::CHI + Pefrl::XI);
+
+    /// Drift coefficient preceding each of the four kicks. The trailing
+    /// xi-drift that completes the palindrome is applied in `finish`.
+    const DRIFT_COEFFS: [Scalar; 4] = [Pefrl::XI, Pefrl::CHI, Pefrl::COEFF_B, Pefrl::CHI];
+    /// Kick coefficient for each of the four field evaluations.
+    const KICK_COEFFS: [Scalar; 4] = [Pefrl::COEFF_A, Pefrl::LAMBDA, Pefrl::LAMBDA, Pefrl::COEFF_A];
 }
 
 impl Integrator for Pefrl {
@@ -140,43 +146,38 @@ impl Integrator for Pefrl {
         Box::new(*self)
     }
 
-    fn step(
+    fn next_query(&self, state: &StepState, _scratch: &[Vector], dt: Scalar) -> Option<StageQuery> {
+        // Each kick is preceded by a drift; the query previews the drifted
+        // position as a pure function of the working state, and apply_stage
+        // commits the same drift before kicking.
+        Self::DRIFT_COEFFS
+            .get(state.stage)
+            .map(|&drift| StageQuery {
+                position: state.position + state.velocity * (drift * dt),
+                velocity: state.velocity,
+            })
+    }
+
+    fn apply_stage(
         &self,
-        position: &mut Vector,
-        velocity: &mut Vector,
-        field: &dyn AccelerationField,
+        state: &mut StepState,
+        _scratch: &mut [Vector],
+        accel: Vector,
         dt: Scalar,
     ) {
-        // Stage 1: Position update
-        *position += *velocity * (Pefrl::XI * dt);
+        // Commit the drift previewed by next_query, then kick.
+        state.position += state.velocity * (Self::DRIFT_COEFFS[state.stage] * dt);
+        state.velocity += accel * (Self::KICK_COEFFS[state.stage] * dt);
+        state.stage += 1;
+    }
 
-        // Stage 2: Velocity update with first acceleration
-        let accel_1 = field.at(*position);
-        *velocity += accel_1 * (Pefrl::COEFF_A * dt);
-
-        // Stage 3: Position update
-        *position += *velocity * (Pefrl::CHI * dt);
-
-        // Stage 4: Velocity update with second acceleration
-        let accel_2 = field.at(*position);
-        *velocity += accel_2 * (Pefrl::LAMBDA * dt);
-
-        // Stage 5: Position update (middle stage)
-        *position += *velocity * (Pefrl::COEFF_B * dt);
-
-        // Stage 6: Velocity update with third acceleration
-        let accel_3 = field.at(*position);
-        *velocity += accel_3 * (Pefrl::LAMBDA * dt);
-
-        // Stage 7: Position update
-        *position += *velocity * (Pefrl::CHI * dt);
-
-        // Stage 8: Velocity update with fourth acceleration
-        let accel_4 = field.at(*position);
-        *velocity += accel_4 * (Pefrl::COEFF_A * dt);
-
-        // Stage 9: Final position update
-        *position += *velocity * (Pefrl::XI * dt);
+    fn finish(&self, state: &StepState, _scratch: &[Vector], dt: Scalar) -> (Vector, Vector) {
+        // Trailing xi-drift with the POST-final-kick velocity completes the
+        // palindrome; a pure read here would silently drop the last drift.
+        (
+            state.position + state.velocity * (Pefrl::XI * dt),
+            state.velocity,
+        )
     }
 
     fn convergence_order(&self) -> usize {

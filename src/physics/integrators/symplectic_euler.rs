@@ -5,7 +5,7 @@
 //! accuracy, it often outperforms higher-order non-symplectic methods in
 //! long-term energy conservation.
 
-use super::{AccelerationField, Integrator};
+use super::{Integrator, StageQuery, StepState};
 use crate::physics::math::{Scalar, Vector};
 
 /// Symplectic Euler integrator (also known as semi-implicit Euler)
@@ -105,21 +105,35 @@ impl Integrator for SymplecticEuler {
         Box::new(*self)
     }
 
-    fn step(
+    fn next_query(
         &self,
-        position: &mut Vector,
-        velocity: &mut Vector,
-        field: &dyn AccelerationField,
+        state: &StepState,
+        _scratch: &[Vector],
+        _dt: Scalar,
+    ) -> Option<StageQuery> {
+        (state.stage == 0).then_some(StageQuery {
+            position: state.position,
+            velocity: state.velocity,
+        })
+    }
+
+    fn apply_stage(
+        &self,
+        state: &mut StepState,
+        _scratch: &mut [Vector],
+        accel: Vector,
         dt: Scalar,
     ) {
-        // Calculate acceleration at current position
-        let acceleration = field.at(*position);
-
         // Update velocity first: v(t+dt) = v(t) + a(t) * dt
-        *velocity += acceleration * dt;
+        state.velocity += accel * dt;
 
         // Then update position using new velocity: x(t+dt) = x(t) + v(t+dt) * dt
-        *position += *velocity * dt;
+        state.position += state.velocity * dt;
+        state.stage = 1;
+    }
+
+    fn finish(&self, state: &StepState, _scratch: &[Vector], _dt: Scalar) -> (Vector, Vector) {
+        (state.position, state.velocity)
     }
 
     fn convergence_order(&self) -> usize {

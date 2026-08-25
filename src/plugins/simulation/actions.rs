@@ -41,7 +41,7 @@ pub fn handle_restart_simulation_event(
 
         **barycenter = None;
 
-        octree.build(vec![]);
+        octree.build(std::iter::empty());
 
         pan_orbit_camera.target_focus = Vec3::ZERO;
         pan_orbit_camera.force_update = true;

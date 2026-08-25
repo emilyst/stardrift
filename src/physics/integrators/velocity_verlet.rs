@@ -5,7 +5,7 @@
 //! conservation. This second-order symplectic integrator is widely regarded
 //! as the best general-purpose method for Hamiltonian systems.
 
-use super::{AccelerationField, Integrator};
+use super::{Integrator, StageQuery, StepState};
 use crate::physics::math::{Scalar, Vector};
 
 /// Velocity Verlet integrator
@@ -32,11 +32,12 @@ use crate::physics::math::{Scalar, Vector};
 ///   v(t+dt) = v(t+dt/2) + a(t+dt) * dt/2
 /// ```
 ///
-/// Equivalently (as implemented):
-/// 1. a(t) = F(x(t))/m
-/// 2. x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt²
-/// 3. a(t+dt) = F(x(t+dt))/m
-/// 4. v(t+dt) = v(t) + 0.5*(a(t) + a(t+dt))*dt
+/// This implementation uses the kick-drift-kick (KDK) form directly, which
+/// makes the palindromic K(dt/2) D(dt) K(dt/2) structure — and hence
+/// time-reversibility — explicit in the code. The final kick's field
+/// evaluation is at the committed end-of-step position, so it doubles as the
+/// next step's first evaluation (FSAL): a driver that caches it performs only
+/// one fresh field evaluation per step.
 ///
 /// # Mathematical Properties
 ///
@@ -102,29 +103,50 @@ impl Integrator for VelocityVerlet {
         Box::new(*self)
     }
 
-    fn step(
+    fn next_query(
         &self,
-        position: &mut Vector,
-        velocity: &mut Vector,
-        field: &dyn AccelerationField,
+        state: &StepState,
+        _scratch: &[Vector],
+        _dt: Scalar,
+    ) -> Option<StageQuery> {
+        // Stage 0 queries the start-of-step state; stage 1 queries the
+        // drifted position with the half-kicked velocity.
+        (state.stage < 2).then_some(StageQuery {
+            position: state.position,
+            velocity: state.velocity,
+        })
+    }
+
+    fn apply_stage(
+        &self,
+        state: &mut StepState,
+        _scratch: &mut [Vector],
+        accel: Vector,
         dt: Scalar,
     ) {
-        // Proper Velocity Verlet with acceleration recalculation
-        // This is the mathematically correct implementation that conserves energy
+        match state.stage {
+            0 => {
+                // Kick: v(t+dt/2) = v(t) + a(t)*dt/2
+                state.velocity += accel * (0.5 * dt);
+                // Drift: x(t+dt) = x(t) + v(t+dt/2)*dt
+                state.position += state.velocity * dt;
+            }
+            _ => {
+                // Kick: v(t+dt) = v(t+dt/2) + a(t+dt)*dt/2
+                state.velocity += accel * (0.5 * dt);
+            }
+        }
+        state.stage += 1;
+    }
 
-        // Calculate acceleration at current position
-        let accel_old = field.at(*position);
+    fn finish(&self, state: &StepState, _scratch: &[Vector], _dt: Scalar) -> (Vector, Vector) {
+        (state.position, state.velocity)
+    }
 
-        // Update position using current velocity and acceleration
-        // x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt²
-        *position += *velocity * dt + accel_old * (0.5 * dt * dt);
-
-        // Calculate acceleration at new position
-        let accel_new = field.at(*position);
-
-        // Update velocity using average of old and new acceleration
-        // v(t+dt) = v(t) + 0.5*(a(t) + a(t+dt))*dt
-        *velocity += (accel_old + accel_new) * (0.5 * dt);
+    fn reuses_final_stage(&self) -> bool {
+        // The final field evaluation is at the committed end-of-step
+        // position, which is exactly the next step's stage-0 query (FSAL).
+        true
     }
 
     fn convergence_order(&self) -> usize {

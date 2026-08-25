@@ -1,9 +1,9 @@
 use crate::config::SimulationConfig;
-use crate::physics::integrators::AccelerationField;
+use crate::physics::integrators::StepState;
 use crate::physics::math::{Scalar, Vector};
 use crate::physics::{
     components::{Mass, PhysicsBody, PhysicsBodyBundle, Position, Velocity},
-    octree::{Octree, OctreeBody},
+    octree::OctreeBody,
     resources::{CurrentIntegrator, PhysicsTime},
 };
 use crate::resources::{
@@ -12,83 +12,195 @@ use crate::resources::{
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::Mesh3d;
 use bevy::prelude::*;
+use bevy::tasks::{ComputeTaskPool, ParallelSliceMut};
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PhysicsSet {
-    BuildOctree,
     IntegrateMotions,
-    SyncTransforms,
     CorrectBarycentricDrift,
+    SyncTransforms,
 }
 
-/// Rebuild the octree structure from current body positions
-pub fn rebuild_octree(
-    bodies: Query<(Entity, &Position, &Mass)>,
-    mut octree: ResMut<GravitationalOctree>,
-) {
-    if bodies.is_empty() {
-        return;
-    }
+/// Below this body count the acceleration pass runs sequentially: task-pool
+/// dispatch costs more than the work at small N, and small worlds (including
+/// the physics tests) then never touch the compute task pool at all.
+const PARALLEL_ACCEL_THRESHOLD: usize = 128;
 
-    octree.build(bodies.iter().map(|(entity, position, mass)| OctreeBody {
-        position: position.value(),
-        mass: mass.value(),
-        entity,
-    }));
+/// Driver-private buffers reused across steps.
+#[derive(Default)]
+pub struct StepBuffers {
+    entities: Vec<Entity>,
+    masses: Vec<Scalar>,
+    states: Vec<StepState>,
+    /// Per-body integrator scratch, `scratch_len` slots each, flat SoA layout
+    scratch: Vec<Vector>,
+    /// Stage snapshot: every body at its current stage-query position. This
+    /// one buffer is both the octree's build input and the force-evaluation
+    /// input, which is what makes the per-stage field globally consistent.
+    snapshot: Vec<OctreeBody>,
+    accels: Vec<Vector>,
+    /// FSAL cache: the final stage's accelerations from the previous step
+    /// (see `reuses_final_stage`), plus the conditions it was recorded under.
+    fsal_accels: Vec<Vector>,
+    fsal_entities: Vec<Entity>,
+    fsal_integrator: &'static str,
+    fsal_valid: bool,
 }
 
-/// Acceleration field that wraps the octree for a specific body
+/// Integrate positions and velocities for all bodies, stage-synchronized.
 ///
-/// This struct implements the AccelerationField trait to allow integrators
-/// to calculate accelerations at arbitrary positions during multi-stage integration.
-struct BodyAccelerationField<'a> {
-    octree: &'a Octree,
-    body_entity: Entity,
-    body_mass: Scalar,
-    g: Scalar,
-}
-
-impl<'a> AccelerationField for BodyAccelerationField<'a> {
-    fn at(&self, position: Vector) -> Vector {
-        let force = self.octree.calculate_force_at_position(
-            position,
-            self.body_mass,
-            self.body_entity,
-            self.g,
-        );
-        force / self.body_mass
-    }
-}
-
-/// Integrate positions and velocities for all bodies
+/// Each stage of the active integrator runs as a global pass: every body's
+/// stage query is gathered, the octree is rebuilt from that consistent
+/// snapshot, accelerations are evaluated against it, and only then does any
+/// body advance to the next stage. Multi-stage integrators therefore see all
+/// bodies at the same intermediate time, which is what preserves their
+/// nominal order and (for the splitting methods at theta = 0) symplecticity
+/// and momentum conservation. The committed positions and velocities are
+/// written back exactly once per step.
 pub fn integrate_motions(
     mut query: Query<(Entity, &mut Position, &mut Velocity, &Mass)>,
     integrator: Res<CurrentIntegrator>,
     physics_time: Res<PhysicsTime>,
-    octree: Res<GravitationalOctree>,
+    mut octree: ResMut<GravitationalOctree>,
     g: Res<GravitationalConstant>,
+    mut buffers: Local<StepBuffers>,
 ) {
+    // Early-return before any mutable component access so a paused
+    // simulation marks nothing changed.
     if physics_time.is_paused() {
         return;
     }
 
     let dt = physics_time.dt;
-    let octree: &Octree = &octree;
+    let g = **g;
+    let integrator = &*integrator.0;
+    let buffers = &mut *buffers;
 
-    query
-        .par_iter_mut()
-        .for_each(|(entity, mut position, mut velocity, mass)| {
-            let field = BodyAccelerationField {
-                octree,
-                body_entity: entity,
-                body_mass: mass.value(),
-                g: **g,
+    buffers.entities.clear();
+    buffers.masses.clear();
+    buffers.states.clear();
+    for (entity, position, velocity, mass) in query.iter() {
+        buffers.entities.push(entity);
+        buffers.masses.push(mass.value());
+        buffers
+            .states
+            .push(StepState::new(position.value(), velocity.value()));
+    }
+
+    let n = buffers.entities.len();
+    if n == 0 {
+        return;
+    }
+
+    let scratch_len = integrator.scratch_len();
+    // Scratch is not zeroed between steps: each step's stage counter restarts
+    // at zero, so slots are always written before they are read.
+    buffers.scratch.resize(n * scratch_len, Vector::ZERO);
+    buffers.snapshot.resize(
+        n,
+        OctreeBody {
+            position: Vector::ZERO,
+            mass: 0.0,
+            entity: Entity::PLACEHOLDER,
+        },
+    );
+    buffers.accels.resize(n, Vector::ZERO);
+
+    // The FSAL cache is valid only if the previous step committed exactly
+    // this entity set with this integrator. Positions may have been uniformly
+    // translated in between (barycentric drift correction): accelerations are
+    // translation-invariant and the octree build is translation-equivariant
+    // (see Octree::build), so the cached values still apply.
+    let use_fsal_cache = integrator.reuses_final_stage()
+        && buffers.fsal_valid
+        && buffers.fsal_integrator == integrator.name()
+        && buffers.fsal_entities == buffers.entities;
+
+    let mut first_stage = true;
+    loop {
+        // All bodies share one integrator and advance in lockstep, so the
+        // first body's completion is everyone's completion.
+        let mut complete = false;
+        for i in 0..n {
+            let scratch = &buffers.scratch[i * scratch_len..(i + 1) * scratch_len];
+            match integrator.next_query(&buffers.states[i], scratch, dt) {
+                Some(stage_query) => {
+                    buffers.snapshot[i] = OctreeBody {
+                        position: stage_query.position,
+                        mass: buffers.masses[i],
+                        entity: buffers.entities[i],
+                    };
+                }
+                None => {
+                    complete = true;
+                    break;
+                }
+            }
+        }
+        if complete {
+            break;
+        }
+
+        if first_stage && use_fsal_cache {
+            // First stage reuses the previous step's final-stage
+            // accelerations; the queries are at the same configuration.
+            buffers.accels.copy_from_slice(&buffers.fsal_accels);
+        } else {
+            octree.build_from_slice(&buffers.snapshot);
+            let octree = &**octree;
+            let snapshot = &buffers.snapshot;
+            let evaluate = |global_index: usize, accel: &mut Vector| {
+                let body = &snapshot[global_index];
+                let force =
+                    octree.calculate_force_at_position(body.position, body.mass, body.entity, g);
+                *accel = force / body.mass;
             };
+            if n < PARALLEL_ACCEL_THRESHOLD {
+                for (i, accel) in buffers.accels.iter_mut().enumerate() {
+                    evaluate(i, accel);
+                }
+            } else {
+                let task_pool = ComputeTaskPool::get();
+                let chunk_size = (n / (task_pool.thread_num() * 4)).max(32);
+                buffers
+                    .accels
+                    .par_chunk_map_mut(task_pool, chunk_size, |chunk_index, chunk| {
+                        for (offset, accel) in chunk.iter_mut().enumerate() {
+                            evaluate(chunk_index * chunk_size + offset, accel);
+                        }
+                    });
+            }
+        }
+        first_stage = false;
 
-            integrator
-                .0
-                .step(position.value_mut(), velocity.value_mut(), &field, dt);
-        });
+        for i in 0..n {
+            let scratch = &mut buffers.scratch[i * scratch_len..(i + 1) * scratch_len];
+            integrator.apply_stage(&mut buffers.states[i], scratch, buffers.accels[i], dt);
+        }
+    }
+
+    if integrator.reuses_final_stage() {
+        // `accels` holds the final stage's evaluations at this point.
+        buffers.fsal_accels.clear();
+        buffers.fsal_accels.extend_from_slice(&buffers.accels);
+        buffers.fsal_entities.clear();
+        buffers.fsal_entities.extend_from_slice(&buffers.entities);
+        buffers.fsal_integrator = integrator.name();
+        buffers.fsal_valid = true;
+    } else {
+        buffers.fsal_valid = false;
+    }
+
+    for i in 0..n {
+        let scratch = &buffers.scratch[i * scratch_len..(i + 1) * scratch_len];
+        let (position, velocity) = integrator.finish(&buffers.states[i], scratch, dt);
+        if let Ok((_, mut position_component, mut velocity_component, _)) =
+            query.get_mut(buffers.entities[i])
+        {
+            *position_component.value_mut() = position;
+            *velocity_component.value_mut() = velocity;
+        }
+    }
 }
 
 /// Synchronize Transform components from high-precision Position components
@@ -117,7 +229,13 @@ pub fn counteract_barycentric_drift(
     mut bodies: Query<(&mut Position, &Mass)>,
     mut barycenter: ResMut<Barycenter>,
     config: Res<SimulationConfig>,
+    physics_time: Res<PhysicsTime>,
 ) {
+    // A physics operation: while paused, positions must not move.
+    if physics_time.is_paused() {
+        return;
+    }
+
     let (weighted_positions, total_mass): (Vector, Scalar) = bodies
         .iter()
         .map(|(position, mass)| (position.value(), mass.value()))

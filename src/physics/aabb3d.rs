@@ -16,6 +16,16 @@ impl Aabb3d {
         (self.min + self.max) * 0.5
     }
 
+    #[inline]
+    pub fn contains(&self, point: Vector) -> bool {
+        point.x >= self.min.x
+            && point.x <= self.max.x
+            && point.y >= self.min.y
+            && point.y <= self.max.y
+            && point.z >= self.min.z
+            && point.z <= self.max.z
+    }
+
     pub fn octants(self) -> [Aabb3d; 8] {
         let center = self.center();
 

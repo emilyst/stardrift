@@ -16,8 +16,7 @@ use crate::physics::resources::CurrentIntegrator;
 use actions::{handle_restart_simulation_event, handle_toggle_pause_simulation_event};
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use physics::{
-    PhysicsSet, counteract_barycentric_drift, integrate_motions, rebuild_octree,
-    sync_transform_from_position,
+    PhysicsSet, counteract_barycentric_drift, integrate_motions, sync_transform_from_position,
 };
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -117,13 +116,15 @@ impl Plugin for SimulationPlugin {
             });
         });
 
+        // Transform sync runs last so drift corrections reach Transform in
+        // the same fixed step. The octree build is internal to the
+        // integration driver (one build per integrator stage).
         app.configure_sets(
             FixedUpdate,
             (
-                PhysicsSet::BuildOctree,
                 PhysicsSet::IntegrateMotions,
-                PhysicsSet::SyncTransforms,
                 PhysicsSet::CorrectBarycentricDrift,
+                PhysicsSet::SyncTransforms,
             )
                 .chain(),
         );
@@ -140,17 +141,16 @@ impl Plugin for SimulationPlugin {
 
         app.add_systems(Startup, physics::spawn_simulation_bodies);
 
+        // Pause is governed by PhysicsTime alone (checked inside the physics
+        // systems); AppState remains a UI-level concept. Transform sync is
+        // ungated: it is a render sync whose Changed<Position> filter makes
+        // it a near-no-op when nothing moved.
         app.add_systems(
             FixedUpdate,
             (
-                rebuild_octree.in_set(PhysicsSet::BuildOctree),
-                integrate_motions
-                    .in_set(PhysicsSet::IntegrateMotions)
-                    .run_if(in_state(AppState::Running)),
-                sync_transform_from_position
-                    .in_set(PhysicsSet::SyncTransforms)
-                    .run_if(in_state(AppState::Running)),
+                integrate_motions.in_set(PhysicsSet::IntegrateMotions),
                 counteract_barycentric_drift.in_set(PhysicsSet::CorrectBarycentricDrift),
+                sync_transform_from_position.in_set(PhysicsSet::SyncTransforms),
             ),
         );
         // Core simulation command handlers

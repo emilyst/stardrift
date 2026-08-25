@@ -4,7 +4,7 @@
 //! It exhibits poor energy conservation in conservative systems, with energy typically
 //! drifting exponentially over time.
 
-use super::{AccelerationField, Integrator};
+use super::{Integrator, StageQuery, StepState};
 use crate::physics::math::{Scalar, Vector};
 
 /// Explicit Euler integrator (forward Euler method)
@@ -95,24 +95,35 @@ impl Integrator for ExplicitEuler {
         Box::new(*self)
     }
 
-    fn step(
+    fn next_query(
         &self,
-        position: &mut Vector,
-        velocity: &mut Vector,
-        field: &dyn AccelerationField,
+        state: &StepState,
+        _scratch: &[Vector],
+        _dt: Scalar,
+    ) -> Option<StageQuery> {
+        (state.stage == 0).then_some(StageQuery {
+            position: state.position,
+            velocity: state.velocity,
+        })
+    }
+
+    fn apply_stage(
+        &self,
+        state: &mut StepState,
+        _scratch: &mut [Vector],
+        accel: Vector,
         dt: Scalar,
     ) {
-        // Store the current velocity for position update
-        let current_velocity = *velocity;
+        // Both updates use start-of-step values:
+        // x(t+dt) = x(t) + v(t) * dt, then v(t+dt) = v(t) + a(t) * dt
+        let current_velocity = state.velocity;
+        state.position += current_velocity * dt;
+        state.velocity += accel * dt;
+        state.stage = 1;
+    }
 
-        // Calculate acceleration at current position
-        let acceleration = field.at(*position);
-
-        // Update position first using CURRENT velocity: x(t+dt) = x(t) + v(t) * dt
-        *position += current_velocity * dt;
-
-        // Then update velocity: v(t+dt) = v(t) + a(t) * dt
-        *velocity += acceleration * dt;
+    fn finish(&self, state: &StepState, _scratch: &[Vector], _dt: Scalar) -> (Vector, Vector) {
+        (state.position, state.velocity)
     }
 
     fn convergence_order(&self) -> usize {
