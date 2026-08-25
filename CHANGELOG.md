@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Run condition combinator `.or` replaced with `.or_else`
 - Upgrade bevy_panorbit_camera from 0.29 to 0.35
 
+### Removed
+
+- macOS Intel (x86_64) release binaries
+  - GitHub's Intel macOS runners are paid-only; Intel Macs can use the web version instead
+
 ## [0.0.67] - 2025-11-22
 
 ## [0.0.66] - 2025-10-13
