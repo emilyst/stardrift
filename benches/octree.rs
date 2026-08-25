@@ -68,32 +68,6 @@ fn bench_construction_scaling(c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_construction_memory(c: &mut Criterion) {
-    let mut group = c.benchmark_group("construction_memory");
-
-    // Test memory efficiency with different leaf thresholds
-    let leaf_thresholds = [1, 4, 10, 20, 50, 100];
-    let body_count = 10_000;
-    let bodies = generate_test_bodies_spherical(body_count, 42, 500.0);
-
-    for &threshold in &leaf_thresholds {
-        group.throughput(Throughput::Elements(body_count as u64));
-        group.bench_with_input(
-            BenchmarkId::new("leaf_threshold", threshold),
-            &threshold,
-            |b, &threshold_val| {
-                b.iter(|| {
-                    let mut octree = Octree::new(0.5, 10.0, 1e4).with_leaf_threshold(threshold_val);
-                    octree.build(black_box(bodies.iter().copied()));
-                    black_box(octree);
-                });
-            },
-        );
-    }
-
-    group.finish();
-}
-
 // =============================================================================
 // Force Calculation Performance Benchmarks
 // =============================================================================
@@ -128,44 +102,6 @@ fn bench_force_calculation_scaling(c: &mut Criterion) {
                 black_box(force);
             });
         });
-    }
-
-    group.finish();
-}
-
-fn bench_theta_accuracy_tradeoff(c: &mut Criterion) {
-    let mut group = c.benchmark_group("theta_accuracy_tradeoff");
-
-    // Test accuracy vs performance trade-off
-    let theta_values = [0.1, 0.3, 0.5, 0.8, 1.0, 1.5, 2.0];
-    let body_count = 5_000;
-    let bodies = generate_test_bodies_spherical(body_count, 42, 500.0);
-    let g = 10.0;
-
-    for &theta in &theta_values {
-        let mut octree = Octree::new(theta, 10.0, 1e4);
-        octree.build(bodies.iter().copied());
-
-        group.throughput(Throughput::Elements(body_count as u64));
-        group.bench_with_input(
-            BenchmarkId::new("theta", (theta * 100.0) as u32),
-            &theta,
-            |b, _| {
-                b.iter(|| {
-                    let mut total_force = Vector::ZERO;
-                    for body in &bodies {
-                        let force = octree.calculate_force_at_position(
-                            black_box(body.position),
-                            black_box(body.mass),
-                            black_box(body.entity),
-                            g,
-                        );
-                        total_force += force;
-                    }
-                    black_box(total_force);
-                });
-            },
-        );
     }
 
     group.finish();
@@ -220,17 +156,9 @@ fn bench_realworld_60fps_target(c: &mut Criterion) {
 // Benchmark Groups
 // =============================================================================
 
-criterion_group!(
-    construction,
-    bench_construction_scaling,
-    bench_construction_memory
-);
+criterion_group!(construction, bench_construction_scaling);
 
-criterion_group!(
-    physics,
-    bench_force_calculation_scaling,
-    bench_theta_accuracy_tradeoff
-);
+criterion_group!(physics, bench_force_calculation_scaling);
 
 criterion_group!(realworld, bench_realworld_60fps_target);
 

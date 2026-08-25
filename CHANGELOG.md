@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Their accuracy, convergence, and conservation measurements reported error
     values as fake durations and asserted nothing; superseded by the
     integrator correctness suite
+- Octree leaf-threshold and theta-sweep benchmark groups
+  - Parameter-tuning studies rather than regression measures; the remaining
+    groups (construction scaling, force-calculation scaling, 60 FPS
+    end-to-end) cover performance-regression comparisons via
+    `cargo bench -- --save-baseline`
 
 ### Fixed
 
