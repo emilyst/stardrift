@@ -17,17 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Every integrator is characterized by a measured two-sided expectation
     band; newly registered integrators fail until characterized
 - System-level two-body test (`tests/two_body_system.rs`) running the real
-  `rebuild_octree` + `integrate_motions` pipeline against an analytic Kepler
-  orbit
-  - Documents that production integration is first-order for every
-    integrator: the octree field is frozen for the whole step, so multi-stage
-    methods evaluate intermediate stages against stale partner positions
-  - Also documents that the frozen field breaks Newton's third law for
-    multi-stage methods (secular momentum drift even with exact forces),
-    while single-evaluation methods conserve momentum to roundoff
-  - If `integrate_motions` is ever restructured into stage-synchronized
-    passes, these tests fail with better measured orders — the signal to
-    re-characterize
+  `integrate_motions` pipeline against an analytic Kepler orbit
+  - Pins what stage-synchronized integration delivers at theta = 0: nominal
+    convergence orders (1/1/2/2/2/4/4), linear momentum to roundoff for all
+    seven methods, angular momentum to roundoff for the splitting methods
+    (with measured secular bands for the rest)
+  - Verifies exact time-reversibility of the palindromic methods (velocity
+    Verlet, PEFRL) through the full pipeline at theta = 0.5, where the
+    non-symmetric methods measurably fail
+  - Anchors the single-evaluation methods bitwise to their pre-restructure
+    trajectories, proving the driver rewrite left that path untouched
+  - Includes an ignored theta-sweep energy-drift characterization helper
 
 ### Changed
 
