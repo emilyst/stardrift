@@ -1,7 +1,6 @@
 use crate::physics::aabb3d::Aabb3d;
 use crate::physics::math::{Scalar, Vector, VectorExt};
 use bevy::prelude::Entity;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Maximum depth allowed for the octree to prevent stack overflow
 /// and performance degradation. Depth of 24 provides spatial resolution
@@ -170,13 +169,12 @@ impl OctreeNodePool {
 #[derive(Debug)]
 pub struct Octree {
     pub root: Option<OctreeNode>,
-    pub theta: Scalar,                  // Barnes-Hut approximation parameter
-    pub min_distance: Scalar,           // Minimum distance for force calculation
-    pub max_force: Scalar,              // Maximum force magnitude
-    pub leaf_threshold: usize,          // Maximum bodies per leaf node
-    min_distance_squared: Scalar,       // Cached value to avoid repeated multiplication
-    node_pool: OctreeNodePool,          // Pool for reusing node allocations
-    force_calculation_count: AtomicU64, // Counter for force calculations performed
+    pub theta: Scalar,            // Barnes-Hut approximation parameter
+    pub min_distance: Scalar,     // Minimum distance for force calculation
+    pub max_force: Scalar,        // Maximum force magnitude
+    pub leaf_threshold: usize,    // Maximum bodies per leaf node
+    min_distance_squared: Scalar, // Cached value to avoid repeated multiplication
+    node_pool: OctreeNodePool,    // Pool for reusing node allocations
 }
 
 impl Octree {
@@ -208,7 +206,6 @@ impl Octree {
             leaf_threshold: 4,
             min_distance_squared: min_distance * min_distance,
             node_pool: OctreeNodePool::new(),
-            force_calculation_count: AtomicU64::new(0),
         }
     }
 
@@ -450,8 +447,6 @@ impl Octree {
         // Clamp distance to minimum to prevent singularities
         // This ensures forces remain finite but don't vanish
         let clamped_distance_squared = distance_squared.max(self.min_distance_squared);
-
-        self.force_calculation_count.fetch_add(1, Ordering::Relaxed);
 
         let distance = clamped_distance_squared.sqrt();
         let direction_normalized = direction / distance;

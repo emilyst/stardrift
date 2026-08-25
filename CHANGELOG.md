@@ -44,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Their accuracy, convergence, and conservation measurements reported error
     values as fake durations and asserted nothing; superseded by the
     integrator correctness suite
+- Unread force-calculation counter from the octree
+  - A relaxed atomic incremented on every point-mass interaction in the
+    innermost force loop, contended across all worker threads, with no
+    reader anywhere
 - Octree leaf-threshold and theta-sweep benchmark groups
   - Parameter-tuning studies rather than regression measures; the remaining
     groups (construction scaling, force-calculation scaling, 60 FPS
