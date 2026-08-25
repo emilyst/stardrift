@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Update GitHub Actions to Node 24-based versions
+  - checkout v4 → v7, upload-artifact v4 → v7, download-artifact v4 → v8,
+    attest-build-provenance v2 → v4, configure-pages v5 → v6,
+    upload-pages-artifact v3 → v5, deploy-pages v4 → v5,
+    action-gh-release v2 → v3
+  - Resolves Node 20 deprecation warnings in CI
+
 ## [0.0.68] - 2026-08-25
 
 ### Changed

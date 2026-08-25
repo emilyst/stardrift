@@ -51,7 +51,7 @@ jobs:
             target: aarch64-apple-darwin
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Get version
         id: get_version
@@ -168,7 +168,7 @@ jobs:
           cd ..\..\..
           (Get-FileHash stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.zip -Algorithm SHA256).Hash | Out-File -FilePath stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.zip.sha256
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: inputs.upload-artifacts
         with:
           name: ${{ inputs.artifact-prefix }}-${{ matrix.platform.target }}
@@ -179,7 +179,7 @@ jobs:
 
       - name: Attest build provenance
         if: inputs.upload-artifacts && inputs.artifact-prefix == 'stardrift'
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             stardrift-${{ steps.get_version.outputs.version }}-${{ matrix.platform.target }}.tar.gz
@@ -194,7 +194,7 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Get version
         id: get_version
@@ -230,7 +230,7 @@ jobs:
           cd ..
           sha256sum stardrift-${{ steps.get_version.outputs.version }}-wasm.tar.gz > stardrift-${{ steps.get_version.outputs.version }}-wasm.tar.gz.sha256
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: inputs.upload-artifacts
         with:
           name: ${{ inputs.artifact-prefix }}-wasm
@@ -242,6 +242,6 @@ jobs:
 
       - name: Attest WebAssembly build provenance
         if: inputs.upload-artifacts && inputs.artifact-prefix == 'stardrift'
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: stardrift-${{ steps.get_version.outputs.version }}-wasm.tar.gz
