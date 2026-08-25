@@ -107,7 +107,11 @@ fn handle_visualization_commands(
 }
 
 /// Visualizes the octree structure using debug gizmos
-/// Only runs when settings or octree changes to avoid unnecessary work
+///
+/// Gizmos are immediate-mode and must be re-issued every frame; gating on
+/// change detection makes the wireframe vanish on frames where the octree
+/// resource was not touched (e.g. render frames without a fixed-update tick,
+/// or while the simulation is paused).
 fn visualize_octree(
     mut gizmos: Gizmos,
     octree: Res<GravitationalOctree>,
@@ -115,11 +119,6 @@ fn visualize_octree(
 ) {
     // Early exit if visualization is disabled
     if !settings.enabled {
-        return;
-    }
-
-    // Only process if settings or octree has changed
-    if !settings.is_changed() && !octree.is_changed() {
         return;
     }
 

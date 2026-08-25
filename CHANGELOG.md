@@ -52,6 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Octree wireframe no longer flickers or disappears
+  - The gizmo redraw was gated on change detection, but gizmos are
+    immediate-mode and must be re-issued every frame; the wireframe blinked
+    out on render frames without a fixed-update tick and would vanish
+    entirely while paused
 - Velocity Verlet documentation claimed 1 force evaluation per step; the
   implementation performs 2 (comparison tables in related integrator docs
   corrected to match)
