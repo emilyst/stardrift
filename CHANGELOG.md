@@ -16,6 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     golden-value regression pins, and registry integrity
   - Every integrator is characterized by a measured two-sided expectation
     band; newly registered integrators fail until characterized
+- System-level two-body test (`tests/two_body_system.rs`) running the real
+  `rebuild_octree` + `integrate_motions` pipeline against an analytic Kepler
+  orbit
+  - Documents that production integration is first-order for every
+    integrator: the octree field is frozen for the whole step, so multi-stage
+    methods evaluate intermediate stages against stale partner positions
+  - Also documents that the frozen field breaks Newton's third law for
+    multi-stage methods (secular momentum drift even with exact forces),
+    while single-evaluation methods conserve momentum to roundoff
+  - If `integrate_motions` is ever restructured into stage-synchronized
+    passes, these tests fail with better measured orders — the signal to
+    re-characterize
 
 ### Changed
 

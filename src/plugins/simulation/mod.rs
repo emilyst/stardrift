@@ -8,7 +8,7 @@ use crate::prelude::*;
 
 pub mod actions;
 mod components;
-mod physics;
+pub mod physics;
 
 use crate::physics::integrators::VelocityVerlet;
 use crate::physics::integrators::registry::IntegratorRegistry;
