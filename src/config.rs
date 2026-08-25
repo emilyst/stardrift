@@ -113,7 +113,11 @@ impl Default for PhysicsConfig {
             initial_seed: None,
             initial_velocity: InitialVelocityConfig::default(),
             integrator: IntegratorConfig::default(),
-            barycentric_drift_correction: true,
+            // Off by default: spawn boosts into the center-of-momentum frame, so
+            // the barycenter starts at the origin (the camera's fixed focus) with
+            // zero velocity, and residual barycenter motion only reflects
+            // Barnes-Hut force asymmetry (a useful diagnostic).
+            barycentric_drift_correction: false,
         }
     }
 }

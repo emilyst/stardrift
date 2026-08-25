@@ -292,6 +292,15 @@ pub fn spawn_bodies(
     use crate::config::ColorScheme;
     use crate::utils::color::*;
 
+    let mut pending: Vec<(
+        Vector,
+        f32,
+        Vector,
+        Handle<StandardMaterial>,
+        Handle<Mesh>,
+        f32,
+    )> = Vec::with_capacity(body_count);
+
     for _ in 0..body_count {
         // Use physics RNG for position, radius, and velocity (physics determinism)
         let position = factory::random_position(physics_rng, body_count, config);
@@ -346,8 +355,42 @@ pub fn spawn_bodies(
         let density = 1.0; // Default density, could be made configurable
         let mass = density * 4.0 / 3.0 * std::f32::consts::PI * radius.powi(3);
 
+        pending.push((
+            Vector::from(position),
+            mass,
+            Vector::from(velocity),
+            material,
+            mesh,
+            radius,
+        ));
+    }
+
+    // Boost into the center-of-momentum frame: random spawn velocities leave a
+    // nonzero net momentum, which would translate the whole system indefinitely.
+    // A single Galilean boost (and recenter) at spawn removes it as an initial
+    // condition, so the barycenter starts at the origin with zero velocity.
+    let (weighted_pos, momentum, total_mass) = pending.iter().fold(
+        (Vector::ZERO, Vector::ZERO, 0.0 as Scalar),
+        |(x_acc, p_acc, m_acc), (position, mass, velocity, ..)| {
+            let m = *mass as Scalar;
+            (x_acc + *position * m, p_acc + *velocity * m, m_acc + m)
+        },
+    );
+
+    let (barycenter, barycenter_velocity) = if total_mass > Scalar::EPSILON {
+        (weighted_pos / total_mass, momentum / total_mass)
+    } else {
+        (Vector::ZERO, Vector::ZERO)
+    };
+
+    for (position, mass, velocity, material, mesh, radius) in pending {
         commands.spawn((
-            PhysicsBodyBundle::new(Vector::from(position), mass, radius, Vector::from(velocity)),
+            PhysicsBodyBundle::new(
+                position - barycenter,
+                mass,
+                radius,
+                velocity - barycenter_velocity,
+            ),
             MeshMaterial3d(material),
             Mesh3d(mesh),
         ));

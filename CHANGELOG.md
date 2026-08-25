@@ -35,6 +35,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Bodies spawn in the center-of-momentum frame
+  - Random spawn velocities left a nonzero net momentum, so the whole system
+    translated at constant velocity from the first frame; a single Galilean
+    boost and recenter at spawn removes it as an initial condition
+- Barycentric drift correction is now disabled by default
+  - With spawn momentum zeroed and momentum conserved to roundoff by the
+    stage-synchronized integration, residual barycenter motion only reflects
+    Barnes-Hut force asymmetry at theta > 0 — a diagnostic worth seeing
+    rather than suppressing
 - Integration is now stage-synchronized, restoring each integrator's nominal
   convergence order in the simulation
   - Previously the octree was built once per step and frozen, so multi-stage
