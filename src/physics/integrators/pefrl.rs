@@ -75,6 +75,14 @@ use crate::physics::math::{Scalar, Vector};
 /// - **Long-term stability**: Suitable for millions of timesteps
 /// - **Phase space**: All Poincaré invariants preserved
 ///
+/// **In the simulation these are theta = 0 statements.** At theta > 0 the
+/// Barnes-Hut field is not the gradient of any potential (the acceptance
+/// criterion is not symmetric between a pair of bodies), so exact
+/// symplecticity and the modified-Hamiltonian guarantee do not apply; the
+/// long-term drift is then set by the Barnes-Hut error, not this method.
+/// The palindromic structure remains exactly time-reversible at any theta.
+/// See docs/integration.md.
+///
 /// # Computational Cost
 ///
 /// - **Force evaluations**: 4 per timestep

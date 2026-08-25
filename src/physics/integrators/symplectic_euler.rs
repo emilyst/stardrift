@@ -60,6 +60,11 @@ use crate::physics::math::{Scalar, Vector};
 /// Unlike explicit Euler which exhibits exponential energy drift, symplectic
 /// Euler maintains bounded energy error indefinitely.
 ///
+/// **In the simulation these are theta = 0 statements.** At theta > 0 the
+/// Barnes-Hut field is not a gradient field, so exact symplecticity does not
+/// apply and the residual drift is set by the approximation. See
+/// docs/integration.md.
+///
 /// # Computational Cost
 ///
 /// Minimal computational requirements:

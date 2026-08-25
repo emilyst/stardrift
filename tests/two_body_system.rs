@@ -384,6 +384,9 @@ fn splitting_methods_conserve_angular_momentum_to_roundoff() {
 /// PEFRL) retrace their steps to roundoff at ANY theta — this is the one
 /// structural property that survives the octree approximation. Non-symmetric
 /// methods leave an O(dt^p+1)-per-step residual, orders of magnitude larger.
+/// (At N = 2 no node is ever accepted, so acceptance flips are not exercised
+/// here; what IS exercised is the full driver including the FSAL cache
+/// across the velocity negation.)
 /// The residual gap is dt-dependent — RK4's per-step asymmetry is O(dt^5), so
 /// a fine dt would shrink it below any fixed floor — hence the deliberately
 /// coarse dt = T/200 here, where the measured gap is eight orders of
@@ -499,6 +502,12 @@ fn single_eval_methods_match_pre_restructure_trajectories_bitwise() {
 /// the drift is a property of the approximation, not the integrator. This
 /// prints the measured max |dE/E| over 20 relative orbits per theta so the
 /// docs' claims can be checked from measurement.
+///
+/// Caveat (measured 2026-08-25): at N = 2 the sweep is degenerate — the only
+/// internal node contains both bodies and is never accepted, so the tree is
+/// exact at every theta and all columns match (9.1e-3 / 1.1e-4 / 1.3e-9 for
+/// symplectic Euler / velocity Verlet / PEFRL). Distinguishing theta values
+/// needs an N-body scene; kept as the harness for that future measurement.
 /// `cargo test --test two_body_system characterize_theta -- --ignored --nocapture`
 #[test]
 #[ignore = "measurement helper, not an assertion"]

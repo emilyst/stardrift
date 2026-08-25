@@ -57,13 +57,23 @@ use crate::physics::math::{Scalar, Vector};
 /// The energy error remains bounded for exponentially long times, making
 /// this ideal for long-duration simulations of conservative systems.
 ///
+/// **In the simulation these are theta = 0 statements.** At theta > 0 the
+/// Barnes-Hut acceptance is not symmetric between a pair of bodies, so the
+/// approximate force field is not the gradient of any potential: the scheme
+/// is not symplectic there and momentum is conserved only to the Barnes-Hut
+/// error. What survives at any theta is exact time-reversibility of this
+/// method's palindromic structure, which eliminates the integrator's own
+/// contribution to secular energy drift; the residual is a property of the
+/// Barnes-Hut approximation (reduce theta to reduce it). See
+/// docs/integration.md.
+///
 /// # Computational Cost
 ///
 /// This implementation performs 2 force evaluations per timestep:
 /// - Twice the cost of Symplectic Euler, but with O(dt²) vs O(dt) accuracy
 /// - 2× cheaper than RK4 or PEFRL
-/// - Storing the end-of-step acceleration for reuse would reduce the cost
-///   to 1 evaluation per step (see Implementation Notes)
+/// - In the simulation the FSAL property (see above) reduces the cost to one
+///   fresh field evaluation and one octree build per step
 ///
 /// # Comparison with Other Methods
 ///
@@ -91,10 +101,9 @@ use crate::physics::math::{Scalar, Vector};
 ///
 /// # Implementation Notes
 ///
-/// This implementation recalculates the acceleration at each step. Some
-/// implementations store the acceleration between steps for efficiency,
-/// but this requires careful state management. The current approach is
-/// simpler and more robust.
+/// The integration driver caches the final stage's accelerations between
+/// steps (FSAL), so this method performs one fresh field evaluation per step
+/// in the simulation. The standalone `step` path evaluates twice.
 #[derive(Debug, Copy, Clone, Default)]
 pub struct VelocityVerlet;
 

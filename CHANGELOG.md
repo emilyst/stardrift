@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Integration design document (`docs/integration.md`)
+  - Records the staged protocol, what it guarantees at theta = 0 versus
+    theta > 0, the accepted losses (multistep/Hermite methods, per-body
+    timesteps), and the deferred items with their reasons
 - Registry-driven integrator correctness suite (`tests/integrator_correctness.rs`)
   - Trajectory accuracy against closed-form solutions, empirical convergence
     order and error constant, energy/angular-momentum conservation with drift
