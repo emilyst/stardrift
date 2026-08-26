@@ -95,6 +95,8 @@ pub struct PhysicsConfig {
     #[serde(default)]
     pub integrator: IntegratorConfig,
     pub barycentric_drift_correction: bool,
+    #[serde(default)]
+    pub collisions: CollisionsConfig,
 }
 
 impl Default for PhysicsConfig {
@@ -109,7 +111,15 @@ impl Default for PhysicsConfig {
             min_body_radius: 2.0,
             max_body_radius: 4.0,
             force_calculation_min_distance: 1.0,
-            force_calculation_max_force: 1e5,
+            // With merge-on-contact collisions, pair separations are bounded
+            // below by the contact distance, so this clamp only matters for
+            // pathological configurations. 1e5 was binding at contact for
+            // default-sized bodies (contact force ~439·r⁴ reaches 1e5 at
+            // r = 3.89 < max_body_radius) and the threshold radius grows as
+            // m while contact radius grows as m^(1/3), so merged bodies made
+            // it the dominant force error. 1e6 clears the physically
+            // reachable maximum for the default scene.
+            force_calculation_max_force: 1e6,
             initial_seed: None,
             initial_velocity: InitialVelocityConfig::default(),
             integrator: IntegratorConfig::default(),
@@ -118,6 +128,26 @@ impl Default for PhysicsConfig {
             // zero velocity, and residual barycenter motion only reflects
             // Barnes-Hut force asymmetry (a useful diagnostic).
             barycentric_drift_correction: false,
+            collisions: CollisionsConfig::default(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
+pub struct CollisionsConfig {
+    pub enabled: bool,
+    /// Multiplier on the sum of two bodies' radii that counts as contact.
+    /// 1.0 merges exactly at surface contact; below 1.0 requires overlap,
+    /// above 1.0 merges early.
+    pub contact_factor: Scalar,
+}
+
+impl Default for CollisionsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            contact_factor: 1.0,
         }
     }
 }

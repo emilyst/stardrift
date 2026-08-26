@@ -7,6 +7,7 @@
 use crate::prelude::*;
 
 pub mod actions;
+pub mod collisions;
 mod components;
 pub mod physics;
 
@@ -118,11 +119,16 @@ impl Plugin for SimulationPlugin {
 
         // Transform sync runs last so drift corrections reach Transform in
         // the same fixed step. The octree build is internal to the
-        // integration driver (one build per integrator stage).
+        // integration driver (one build per integrator stage). Collision
+        // detection sits between integration (which writes both endpoints of
+        // each body's swept segment) and drift correction (which must see
+        // the post-merge set, and would otherwise put the segment endpoints
+        // in different frames).
         app.configure_sets(
             FixedUpdate,
             (
                 PhysicsSet::IntegrateMotions,
+                PhysicsSet::DetectCollisions,
                 PhysicsSet::CorrectBarycentricDrift,
                 PhysicsSet::SyncTransforms,
             )
@@ -149,6 +155,7 @@ impl Plugin for SimulationPlugin {
             FixedUpdate,
             (
                 integrate_motions.in_set(PhysicsSet::IntegrateMotions),
+                collisions::detect_and_merge_collisions.in_set(PhysicsSet::DetectCollisions),
                 counteract_barycentric_drift.in_set(PhysicsSet::CorrectBarycentricDrift),
                 sync_transform_from_position.in_set(PhysicsSet::SyncTransforms),
             ),

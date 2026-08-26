@@ -2,7 +2,7 @@ use crate::config::SimulationConfig;
 use crate::physics::integrators::StepState;
 use crate::physics::math::{Scalar, Vector};
 use crate::physics::{
-    components::{Mass, PhysicsBody, PhysicsBodyBundle, Position, Velocity},
+    components::{Mass, PhysicsBody, PhysicsBodyBundle, Position, PreviousPosition, Velocity},
     octree::OctreeBody,
     resources::{CurrentIntegrator, PhysicsTime},
 };
@@ -17,6 +17,7 @@ use bevy::tasks::{ComputeTaskPool, ParallelSliceMut};
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PhysicsSet {
     IntegrateMotions,
+    DetectCollisions,
     CorrectBarycentricDrift,
     SyncTransforms,
 }
@@ -43,6 +44,7 @@ pub struct StepBuffers {
     /// (see `reuses_final_stage`), plus the conditions it was recorded under.
     fsal_accels: Vec<Vector>,
     fsal_entities: Vec<Entity>,
+    fsal_masses: Vec<Scalar>,
     fsal_integrator: &'static str,
     fsal_valid: bool,
 }
@@ -58,7 +60,13 @@ pub struct StepBuffers {
 /// and momentum conservation. The committed positions and velocities are
 /// written back exactly once per step.
 pub fn integrate_motions(
-    mut query: Query<(Entity, &mut Position, &mut Velocity, &Mass)>,
+    mut query: Query<(
+        Entity,
+        &mut Position,
+        &mut Velocity,
+        &Mass,
+        Option<&mut PreviousPosition>,
+    )>,
     integrator: Res<CurrentIntegrator>,
     physics_time: Res<PhysicsTime>,
     mut octree: ResMut<GravitationalOctree>,
@@ -79,7 +87,7 @@ pub fn integrate_motions(
     buffers.entities.clear();
     buffers.masses.clear();
     buffers.states.clear();
-    for (entity, position, velocity, mass) in query.iter() {
+    for (entity, position, velocity, mass, _) in query.iter() {
         buffers.entities.push(entity);
         buffers.masses.push(mass.value());
         buffers
@@ -107,14 +115,20 @@ pub fn integrate_motions(
     buffers.accels.resize(n, Vector::ZERO);
 
     // The FSAL cache is valid only if the previous step committed exactly
-    // this entity set with this integrator. Positions may have been uniformly
-    // translated in between (barycentric drift correction): accelerations are
-    // translation-invariant and the octree build is translation-equivariant
-    // (see Octree::build), so the cached values still apply.
+    // this entity set with these masses under this integrator. Positions may
+    // have been uniformly translated in between (barycentric drift
+    // correction): accelerations are translation-invariant and the octree
+    // build is translation-equivariant (see Octree::build), so the cached
+    // values still apply. No system may modify Position or Mass between
+    // steps except by uniform translation without invalidating this cache;
+    // collision merges are caught by the entity and mass comparisons (both
+    // are needed — a non-despawning response like mass transfer would slip
+    // past the entity check alone).
     let use_fsal_cache = integrator.reuses_final_stage()
         && buffers.fsal_valid
         && buffers.fsal_integrator == integrator.name()
-        && buffers.fsal_entities == buffers.entities;
+        && buffers.fsal_entities == buffers.entities
+        && buffers.fsal_masses == buffers.masses;
 
     let mut first_stage = true;
     loop {
@@ -185,6 +199,8 @@ pub fn integrate_motions(
         buffers.fsal_accels.extend_from_slice(&buffers.accels);
         buffers.fsal_entities.clear();
         buffers.fsal_entities.extend_from_slice(&buffers.entities);
+        buffers.fsal_masses.clear();
+        buffers.fsal_masses.extend_from_slice(&buffers.masses);
         buffers.fsal_integrator = integrator.name();
         buffers.fsal_valid = true;
     } else {
@@ -194,9 +210,15 @@ pub fn integrate_motions(
     for i in 0..n {
         let scratch = &buffers.scratch[i * scratch_len..(i + 1) * scratch_len];
         let (position, velocity) = integrator.finish(&buffers.states[i], scratch, dt);
-        if let Ok((_, mut position_component, mut velocity_component, _)) =
+        if let Ok((_, mut position_component, mut velocity_component, _, previous_position)) =
             query.get_mut(buffers.entities[i])
         {
+            // Record the outgoing committed position so collision detection
+            // can sweep this step's segment. Written here (after the pause
+            // early-return) so a paused step marks nothing changed.
+            if let Some(mut previous_position) = previous_position {
+                previous_position.0 = position_component.value();
+            }
             *position_component.value_mut() = position;
             *velocity_component.value_mut() = velocity;
         }
@@ -294,7 +316,7 @@ pub fn spawn_bodies(
 
     let mut pending: Vec<(
         Vector,
-        f32,
+        Scalar,
         Vector,
         Handle<StandardMaterial>,
         Handle<Mesh>,
@@ -351,9 +373,9 @@ pub fn spawn_bodies(
 
         let mesh = factory::create_detailed_mesh(meshes, radius);
 
-        // Mass proportional to volume (r³) with default density
-        let density = 1.0; // Default density, could be made configurable
-        let mass = density * 4.0 / 3.0 * std::f32::consts::PI * radius.powi(3);
+        // Mass from the shared density relation, computed in Scalar so the
+        // mass ∝ r³ invariant that collision merges rely on holds to a ulp.
+        let mass = crate::physics::math::mass_for_radius(radius as Scalar);
 
         pending.push((
             Vector::from(position),
@@ -372,7 +394,7 @@ pub fn spawn_bodies(
     let (weighted_pos, momentum, total_mass) = pending.iter().fold(
         (Vector::ZERO, Vector::ZERO, 0.0 as Scalar),
         |(x_acc, p_acc, m_acc), (position, mass, velocity, ..)| {
-            let m = *mass as Scalar;
+            let m = *mass;
             (x_acc + *position * m, p_acc + *velocity * m, m_acc + m)
         },
     );

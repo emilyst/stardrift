@@ -36,6 +36,26 @@ impl VectorExt for Vector {
     }
 }
 
+/// Uniform density shared by every body. Mass is the source of truth and
+/// radius is derived from it (and vice versa at spawn), so the mass ∝ r³
+/// invariant holds by construction — including across merges, where volume
+/// conservation and density conservation coincide only because this is one
+/// global constant.
+pub const BODY_DENSITY: Scalar = 1.0;
+
+/// Mass of a uniform-density sphere of the given radius.
+#[inline]
+pub fn mass_for_radius(radius: Scalar) -> Scalar {
+    BODY_DENSITY * 4.0 / 3.0 * std::f64::consts::PI * radius.powi(3)
+}
+
+/// Radius of a uniform-density sphere of the given mass. Inverse of
+/// [`mass_for_radius`].
+#[inline]
+pub fn radius_for_mass(mass: Scalar) -> Scalar {
+    (mass / (BODY_DENSITY * 4.0 / 3.0 * std::f64::consts::PI)).cbrt()
+}
+
 /// Re-export commonly used math constants
 use crate::prelude::Vec3;
 

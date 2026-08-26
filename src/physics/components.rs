@@ -84,6 +84,21 @@ impl Position {
     }
 }
 
+/// The body's committed position at the start of the current step, written by
+/// the integration driver just before it commits the new position. Collision
+/// detection sweeps the segment from this to `Position`; the pair joins
+/// consecutive steps' segments exactly, leaving no gap for a contact to fall
+/// through.
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct PreviousPosition(pub Vector);
+
+impl PreviousPosition {
+    #[inline]
+    pub fn value(&self) -> Vector {
+        self.0
+    }
+}
+
 /// Marker component for physics bodies that should be simulated
 #[derive(Component, Debug, Default)]
 pub struct PhysicsBody;
@@ -94,6 +109,7 @@ pub struct PhysicsBodyBundle {
     pub transform: Transform,
     pub global_transform: GlobalTransform,
     pub position: Position,
+    pub previous_position: PreviousPosition,
     pub mass: Mass,
     pub velocity: Velocity,
     pub radius: Radius,
@@ -104,12 +120,13 @@ pub struct PhysicsBodyBundle {
 }
 
 impl PhysicsBodyBundle {
-    pub fn new(position: Vector, mass: f32, radius: f32, velocity: Vector) -> Self {
+    pub fn new(position: Vector, mass: Scalar, radius: f32, velocity: Vector) -> Self {
         Self {
             transform: Transform::from_translation(position.as_vec3()),
             global_transform: GlobalTransform::default(),
             position: Position::new(position),
-            mass: Mass::new(mass.into()),
+            previous_position: PreviousPosition(position),
+            mass: Mass::new(mass),
             velocity: Velocity::new(velocity),
             radius: Radius::new(radius.into()),
             physics_body: PhysicsBody,
