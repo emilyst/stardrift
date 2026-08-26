@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "lastUpdated": 1764359779354,
+  "plugins": [
+    {
+      "filename": "task-decomposition-expert.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/ai-specialists/task-decomposition-expert.md",
+        "filename": "task-decomposition-expert.md",
+        "name": "task-decomposition-expert",
+        "description": "Complex goal breakdown specialist. Use PROACTIVELY for multi-step projects requiring different capabilities. Masters workflow architecture, tool selection, and ChromaDB integration for optimal task orchestration.",
+        "tools": [
+          "Read",
+          "Write"
+        ],
+        "category": "ai-specialists",
+        "type": "agent",
+        "size": 5136,
+        "contentHash": "07671577361079bf38f1ac91d9ac946e13f5fa9a261922dc33077a5d3f4642cd",
+        "installedAt": 1764359769655,
+        "updatedAt": 1764359769655
+      }
+    },
+    {
+      "filename": "rust-pro.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/programming-languages/rust-pro.md",
+        "filename": "rust-pro.md",
+        "name": "rust-pro",
+        "description": "Write idiomatic Rust with ownership patterns, lifetimes, and trait implementations. Masters async/await, safe concurrency, and zero-cost abstractions. Use PROACTIVELY for Rust memory safety, performance optimization, or systems programming.",
+        "tools": [
+          "Read",
+          "Write",
+          "Edit",
+          "Bash"
+        ],
+        "category": "programming-languages",
+        "type": "agent",
+        "size": 1200,
+        "contentHash": "dcc7e195dca1f8d8db8f657b784d36a87668e2fc2f82ff0929234f97ba01a817",
+        "installedAt": 1764359779354,
+        "updatedAt": 1764359779354
+      }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 **/*.local.*
-**/.claude
+**/.DS_Store
 **/.idea
 **/.run
 **/.zed/
