@@ -63,37 +63,31 @@ When you run `cargo release patch --execute`, the following happens automaticall
 
 ### Release Configuration
 
-Release behavior is configured in `Cargo.toml` under `[package.metadata.release]`:
-
-```toml
-[package.metadata.release]
-sign-commit = true
-sign-tag = true
-publish = false  # Not publishing to crates.io
-allow-branch = ["main"]
-```
+Release behavior is configured in `Cargo.toml` under `[package.metadata.release]` (see the file for the authoritative settings). The important behaviors: commits and tags are signed, nothing is published to crates.io, releases are only allowed from `main`, and `push = false` — pushing the commit and tag to GitHub is a deliberate manual step. The changelog rewrite is driven by a `pre-release-replacements` rule on `CHANGELOG.md`.
 
 ## Automated Builds
 
 When a version tag is pushed to GitHub, the release workflow automatically:
 
-1. Builds binaries for all platforms:
+1. Runs the CI workflow (the release is gated on it passing)
+
+2. Builds binaries for all platforms:
    - Linux (x86_64, ARM64)
    - Windows (x86_64, ARM64)
-   - macOS (Intel, Apple Silicon)
+   - macOS (Apple Silicon)
    - WebAssembly
 
-2. Creates release artifacts:
+3. Creates release artifacts:
    - `.tar.gz` archives for Linux/macOS
    - `.zip` archives for Windows
    - `.dmg` disk images for macOS
-   - WASM package for web deployment
+   - WASM package (`.tar.gz`) for web deployment
 
-3. Generates SHA256 checksums for verification
+4. Generates SHA256 checksums and build provenance attestations (see [Build Provenance](#build-provenance))
 
-4. Creates build provenance attestations (see [Security](#build-provenance))
+5. Publishes everything to the GitHub Releases page, with release notes extracted from the changelog
 
-5. Publishes everything to the GitHub Releases page
+6. Deploys the WASM build to GitHub Pages
 
 ## Build Provenance
 

@@ -1,6 +1,6 @@
 # Color Schemes
 
-Stardrift offers a variety of color schemes for celestial bodies, ranging from physics-based coloring to artistic palettes and pride flag themes. This guide describes each available scheme and helps you choose the right one for your use case.
+Stardrift offers a variety of color schemes for celestial bodies, ranging from physics-based coloring to artistic palettes and pride flag themes. This guide describes each available scheme and helps you choose the right one for your use case. The long help output (`stardrift --help`) also lists every scheme with a one-line description under `--color-scheme`.
 
 ## Quick Reference
 
@@ -149,58 +149,23 @@ Artistic color schemes for visual appeal.
 
 ### rainbow
 
-Random vibrant colors sampling the full HSL spectrum.
-
-**Characteristics:**
-- High saturation
-- Full hue range
-- Random distribution
-
-**Best for:** Playful, colorful simulations with maximum variety.
+Random vibrant colors sampling the full hue spectrum at high saturation. Maximum variety.
 
 ### pastel
 
-Soft, muted colors with low saturation and high lightness.
-
-**Characteristics:**
-- Saturation: 0.3-0.5
-- Lightness: 0.7-0.85
-- Gentle, easy on the eyes
-
-**Best for:** Relaxing visuals, softer aesthetic, reduced eye strain.
+Soft, muted colors — low saturation, high lightness. Gentle and easy on the eyes.
 
 ### neon
 
-High-saturation cyberpunk-style colors with limited hue ranges.
-
-**Characteristics:**
-- Very high saturation
-- Electric, glowing appearance
-- Concentrated in cyan, magenta, and lime hues
-
-**Best for:** Retro-futuristic aesthetic, high-energy visuals.
+Very high saturation concentrated in cyan, magenta, and lime for an electric, cyberpunk look.
 
 ### monochrome
 
-Grayscale variations for a minimalist look.
-
-**Characteristics:**
-- No color, only brightness variation
-- Excludes pure black and white for visibility
-- Clean, focused aesthetic
-
-**Best for:** Minimalist presentations, reducing visual distraction, print-friendly output.
+Grayscale only (excluding pure black and white for visibility). Minimalist and print-friendly.
 
 ### vaporwave
 
-Retrofuturistic 80s aesthetic with pink, purple, and cyan.
-
-**Characteristics:**
-- Weighted distribution favoring pink and purple
-- Cyan accents
-- Authentic synthwave/vaporwave feel
-
-**Best for:** Aesthetic appreciation, nostalgic 80s vibes.
+Retrofuturistic 80s aesthetic: weighted toward pink and purple with cyan accents.
 
 ## Pride Flag Themes
 

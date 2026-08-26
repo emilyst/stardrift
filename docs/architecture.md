@@ -8,7 +8,7 @@ Stardrift is built on the [Bevy](https://bevyengine.org/) game engine using the 
 
 **Key Technologies:**
 - **Language**: Rust
-- **Engine**: Bevy 0.17.x (ECS game engine)
+- **Engine**: Bevy 0.19.x (ECS game engine)
 - **Physics**: Custom N-body simulation with double precision (f64)
 - **Rendering**: Bevy's PBR (Physically Based Rendering) pipeline
 
@@ -22,81 +22,58 @@ src/
 ├── config.rs            # Configuration loading and management
 ├── states.rs            # Application state machine
 ├── prelude.rs           # Common imports
-├── messages.rs          # User-facing messages
+├── messages.rs          # SimulationCommand message definitions
 │
 ├── physics/             # Physics engine (not a Bevy plugin)
-│   ├── mod.rs
 │   ├── components.rs    # Physics components (Mass, Velocity, etc.)
-│   ├── resources.rs     # Physics resources (Octree, Barycenter)
+│   ├── resources.rs     # Physics resources (timing, current integrator)
 │   ├── octree.rs        # Barnes-Hut octree implementation
 │   ├── aabb3d.rs        # Axis-aligned bounding box
-│   ├── math.rs          # Mathematical utilities
-│   └── integrators/     # Numerical integration methods
-│       ├── mod.rs
-│       ├── registry.rs  # Integrator registration system
-│       ├── velocity_verlet.rs
-│       ├── symplectic_euler.rs
-│       ├── pefrl.rs
-│       ├── explicit_euler.rs
-│       ├── heun.rs
-│       └── runge_kutta.rs
+│   ├── math.rs          # Type aliases (Scalar, Vector) and math utilities
+│   └── integrators/     # Numerical integration methods + registry
 │
 ├── plugins/             # Bevy plugins
-│   ├── mod.rs           # Plugin exports
-│   ├── simulation/      # Core simulation plugin
-│   │   ├── mod.rs
-│   │   ├── components.rs
-│   │   ├── physics.rs   # Physics systems
-│   │   └── actions.rs   # Simulation commands
-│   ├── camera.rs        # Camera controls
-│   ├── controls/        # UI controls plugin
-│   │   ├── mod.rs
-│   │   ├── builder.rs
-│   │   ├── constants.rs
-│   │   └── buttons/     # Individual button implementations
+│   ├── simulation/      # Core simulation: spawning, physics driver,
+│   │                    #   collisions, command handling
+│   ├── camera.rs        # Camera setup and controls
+│   ├── controls/        # Keyboard bindings and UI button bar
 │   ├── diagnostics_hud.rs
+│   ├── simulation_diagnostics.rs
 │   ├── trails.rs
 │   ├── visualization.rs # Octree/barycenter visualization
-│   ├── screenshot/      # Screenshot functionality
+│   ├── screenshot/      # Manual and automated capture
 │   ├── keep_awake.rs    # Screen sleep prevention
-│   ├── attribution.rs   # Attribution display
+│   ├── attribution.rs   # Version/attribution display
 │   └── embedded_assets.rs
 │
-├── resources/           # Global resources
-│   └── mod.rs
-│
-└── utils/               # Utility functions
-    └── mod.rs
+├── resources/           # Global resources (RNGs, body count, etc.)
+└── utils/               # Utilities (color scheme generators)
 ```
 
 ## Design Principles
 
 ### 1. Plugin-Based Architecture
 
-Each plugin is completely self-contained with its own:
+Each plugin is self-contained with its own:
 - Systems (logic that runs each frame)
 - Components (data attached to entities)
 - Resources (global state)
-- Events (inter-plugin communication)
+- Messages (inter-plugin communication)
 
 Plugins (ideally) don't reach into each other's internals. This enforces clear boundaries and makes the codebase easier to understand and modify.
 
-### 2. Event-Driven Communication
+### 2. Message-Driven Communication
 
-Plugins communicate exclusively through the `SimulationCommand` event system rather than directly accessing each other's state:
+Plugins communicate through the `SimulationCommand` message rather than directly accessing each other's state:
 
 ```rust
-// Example: Triggering a simulation restart from the controls plugin
-fn handle_restart_button(
-    mut commands: EventWriter<SimulationCommand>,
-) {
-    commands.send(SimulationCommand::Restart);
+// Triggering a restart from the controls plugin
+fn handle_restart(mut commands: MessageWriter<SimulationCommand>) {
+    commands.write(SimulationCommand::Restart);
 }
 
-// The simulation plugin listens for this event
-fn handle_simulation_commands(
-    mut commands: EventReader<SimulationCommand>,
-) {
+// The simulation plugin listens for the command
+fn handle_simulation_commands(mut commands: MessageReader<SimulationCommand>) {
     for command in commands.read() {
         match command {
             SimulationCommand::Restart => { /* restart logic */ }
@@ -108,21 +85,11 @@ fn handle_simulation_commands(
 
 ### 3. Zero Orchestration
 
-There's no central coordinator managing plugins. Each plugin:
-- Registers its own systems
-- Responds to relevant events
-- Manages its own state
-
-This reduces coupling and makes plugins truly independent.
+There's no central coordinator managing plugins. Each plugin registers its own systems, responds to relevant messages, and manages its own state. This reduces coupling and keeps plugins independent.
 
 ### 4. Configuration-Driven Behavior
 
-Runtime behavior is controlled through a centralized configuration system:
-- TOML configuration file for persistent settings
-- Command-line overrides for temporary changes
-- Type-safe configuration structs
-
-See [Configuration Reference](configuration.md) for details.
+Runtime behavior is controlled through a centralized configuration system: a TOML file for persistent settings, command-line overrides for temporary changes, and type-safe configuration structs. See [Configuration Reference](configuration.md).
 
 ## Core Plugins
 
@@ -132,76 +99,51 @@ See [Configuration Reference](configuration.md) for details.
 
 The heart of the application. Manages:
 - Body spawning and lifecycle
-- Physics updates (via the physics engine)
+- The staged integration driver (see [Integration design](integration.md))
 - Barycenter calculation
-- Collision detection (planned)
-
-**Key Systems:**
-- `spawn_initial_bodies` - Creates initial celestial bodies
-- `update_physics` - Runs physics simulation each frame
-- `update_barycenter` - Tracks center of mass
+- Merge-on-contact collisions (swept detection; momentum-conserving inelastic merges)
 
 ### Camera Plugin
 
 **Location**: `src/plugins/camera.rs`
 
-Handles 3D camera controls using `bevy_panorbit_camera`:
-- Pan, orbit, zoom controls
-- Touch support for mobile
-- Automatic barycenter tracking
+Sets up the 3D camera using `bevy_panorbit_camera`: pan, orbit, and zoom, with touch and trackpad support. The focus is fixed at the world origin — bodies spawn in the center-of-momentum frame, so the barycenter starts there and stays nearby. The initial distance is derived from the spawn region size.
 
 ### Controls Plugin
 
 **Location**: `src/plugins/controls/`
 
-UI button bar and keyboard shortcuts:
-- Toggle buttons for visualization options
-- Restart/screenshot buttons
-- Keyboard bindings
-
-Uses a builder pattern for button construction.
+Keyboard bindings and the UI button bar. Buttons are constructed with a builder pattern and dispatch `SimulationCommand` messages.
 
 ### Trails Plugin
 
 **Location**: `src/plugins/trails.rs`
 
-Renders fading trails behind moving bodies:
-- Trail point recording at configurable intervals
-- Multiple fade curves (linear, exponential, smooth)
-- Width tapering
-- Bloom effects
+Renders fading trails behind moving bodies: point recording at configurable intervals, fade curves, width tapering, and bloom.
 
 ### Visualization Plugin
 
 **Location**: `src/plugins/visualization.rs`
 
-Debug visualizations:
-- Octree wireframe rendering
-- Barycenter gizmo (crosshair indicator)
+Debug visualizations: octree wireframe rendering and the barycenter gizmo (cross-hair indicator).
 
 ### Diagnostics HUD Plugin
 
 **Location**: `src/plugins/diagnostics_hud.rs`
 
-On-screen display showing:
-- Frame rate (FPS)
-- Frame count
-- Body count
+On-screen display of frame rate, frame count, and body count.
 
 ### Screenshot Plugin
 
 **Location**: `src/plugins/screenshot/`
 
-Screenshot capture functionality:
-- Manual screenshots (hides UI)
-- Automated screenshots (preserves UI for testing)
-- Configurable output paths and naming
+Manual screenshots (hides UI) and automated capture (preserves UI for testing), with configurable output paths and naming.
 
 ## Physics Engine
 
 **Location**: `src/physics/`
 
-The physics engine is implemented as a library module (not a Bevy plugin) that the simulation plugin uses. This separation allows the physics code to be tested independently.
+The physics engine is implemented as a library module (not a Bevy plugin) that the simulation plugin drives. This separation allows the physics code to be tested independently.
 
 ### Barnes-Hut Algorithm
 
@@ -218,74 +160,44 @@ The `octree_theta` parameter controls the accuracy/speed tradeoff:
 
 ### Numerical Integration
 
-The physics module implements multiple numerical integrators:
-
-| Integrator | Order | Symplectic | Best For |
-|------------|-------|------------|----------|
-| Velocity Verlet | 2 | Yes | General use (default) |
-| PEFRL | 4 | Yes | Long-term accuracy |
-| Symplectic Euler | 1 | Yes | Performance |
-| RK4 | 4 | No | Short-term accuracy |
-
-See [Integrators Guide](integrators.md) for detailed selection advice.
+Multiple integrators are available, from symplectic methods (velocity Verlet, PEFRL) to classic Runge-Kutta. Selection, trade-offs, and the staged integration protocol are covered in the [Integrators Guide](integrators.md) and [Integration design](integration.md).
 
 ### Double Precision
 
-All physics calculations use `f64` (double precision) floating-point arithmetic. This is important for:
-- Numerical stability over long simulations
-- Accuracy when bodies have very different masses or distances
-- Proper energy conservation in symplectic integrators
-
-Rendering uses `f32` since GPU precision requirements are different.
+All physics calculations use `f64` (double precision) floating-point arithmetic, via the `Scalar` and `Vector` type aliases. This matters for numerical stability over long simulations, accuracy across widely varying masses and distances, and the conservation behavior of the symplectic integrators. Rendering uses `f32`, matching GPU precision.
 
 ## State Machine
 
 **Location**: `src/states.rs`
 
-The application uses Bevy's state system to manage lifecycle:
+The application uses Bevy's state system with a two-state machine:
 
 ```rust
-pub enum SimulationState {
-    Loading,    // Asset loading
-    Running,    // Active simulation
+pub enum AppState {
+    Running,    // Active simulation (default)
     Paused,     // Simulation paused
 }
 ```
 
-Systems are scheduled to run in specific states, preventing physics updates while paused, for example.
+Systems are scheduled to run in specific states — physics updates stop while paused, for example.
 
-## Performance Optimizations
+## Performance
 
 ### Build Profiles
 
-The project uses Cargo build profiles for different use cases:
-
-- **dev**: Fast compilation, some optimizations for dependencies
-- **release**: Full optimizations, suitable for normal use
-- **dist**: LTO (Link-Time Optimization), single codegen unit, smallest/fastest binary
+- **dev**: Fast compilation; dependencies still optimized at level 2
+- **release**: Full optimization — LTO, single codegen unit, stripped symbols
+- **bench**: Inherits from release
 
 ### Parallel Processing
 
-Physics calculations leverage Rayon for parallel processing where beneficial:
-- Octree construction
-- Force calculations
-- Position/velocity updates
+Force calculations and transform updates are parallelized across Bevy's `ComputeTaskPool` (`par_chunk_map_mut`/`par_iter_mut`), chunked by body count.
 
-### Benchmark Suite
+### Benchmarks and Correctness Tests
 
-**Location**: `benches/`
+**Location**: `benches/`, `tests/`
 
-Criterion benchmarks measure:
-- Integrator performance
-- Accuracy vs analytical solutions
-- Convergence order
-- Energy conservation
-- N-body scaling
-
-Run benchmarks with:
-```bash
-cargo bench
-```
+Criterion benchmarks (`cargo bench`) cover octree construction/traversal and the full simulation step at various body counts. Integrator accuracy, convergence order, and conservation properties are asserted by the test suites (`tests/integrator_correctness.rs`, `tests/two_body_system.rs`), not benchmarked.
 
 ## Platform Support
 
@@ -297,8 +209,8 @@ Full feature support with optimal performance. Uses native windowing and input h
 
 Browser-based version with some limitations:
 - WebGL2 for rendering
-- No native file system access
-- Some features (like screen sleep prevention) unavailable
+- No configuration file or command line
+- Some features (like screen sleep prevention and quitting) unavailable
 
 Build with:
 ```bash
@@ -309,4 +221,5 @@ trunk build --release
 
 - [Configuration Reference](configuration.md) - Configuration options
 - [Integrators Guide](integrators.md) - Numerical integration details
+- [Integration design](integration.md) - The staged integration pipeline
 - [Usage Guide](usage.md) - Using the application
