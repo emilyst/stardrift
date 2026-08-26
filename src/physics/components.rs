@@ -130,7 +130,8 @@ pub struct PhysicsBodyBundle {
 impl PhysicsBodyBundle {
     pub fn new(position: Vector, mass: Scalar, radius: f32, velocity: Vector) -> Self {
         Self {
-            transform: Transform::from_translation(position.as_vec3()),
+            transform: Transform::from_translation(position.as_vec3())
+                .with_scale(Vec3::splat(radius)),
             global_transform: GlobalTransform::default(),
             position: Position::new(position),
             previous_position: PreviousPosition(position),

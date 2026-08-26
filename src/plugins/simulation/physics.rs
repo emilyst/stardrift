@@ -303,7 +303,7 @@ pub fn counteract_barycentric_drift(
 /// Helper function to spawn bodies with the given parameters
 pub fn spawn_bodies(
     commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
+    body_mesh: &super::components::BodyMesh,
     materials: &mut ResMut<Assets<StandardMaterial>>,
     physics_rng: &mut ResMut<SharedRng>,
     rendering_rng: &mut ResMut<RenderingRng>,
@@ -314,14 +314,8 @@ pub fn spawn_bodies(
     use crate::config::ColorScheme;
     use crate::utils::color::*;
 
-    let mut pending: Vec<(
-        Vector,
-        Scalar,
-        Vector,
-        Handle<StandardMaterial>,
-        Handle<Mesh>,
-        f32,
-    )> = Vec::with_capacity(body_count);
+    let mut pending: Vec<(Vector, Scalar, Vector, Handle<StandardMaterial>, f32)> =
+        Vec::with_capacity(body_count);
 
     for _ in 0..body_count {
         // Use physics RNG for position, radius, and velocity (physics determinism)
@@ -371,8 +365,6 @@ pub fn spawn_bodies(
             config.rendering.saturation_intensity,
         );
 
-        let mesh = factory::create_detailed_mesh(meshes, radius);
-
         // Mass from the shared density relation, computed in Scalar so the
         // mass ∝ r³ invariant that collision merges rely on holds to a ulp.
         let mass = crate::physics::math::mass_for_radius(radius as Scalar);
@@ -382,7 +374,6 @@ pub fn spawn_bodies(
             mass,
             Vector::from(velocity),
             material,
-            mesh,
             radius,
         ));
     }
@@ -399,13 +390,15 @@ pub fn spawn_bodies(
         },
     );
 
+    let unit_sphere = &body_mesh.0;
+
     let (barycenter, barycenter_velocity) = if total_mass > Scalar::EPSILON {
         (weighted_pos / total_mass, momentum / total_mass)
     } else {
         (Vector::ZERO, Vector::ZERO)
     };
 
-    for (position, mass, velocity, material, mesh, radius) in pending {
+    for (position, mass, velocity, material, radius) in pending {
         commands.spawn((
             PhysicsBodyBundle::new(
                 position - barycenter,
@@ -414,7 +407,7 @@ pub fn spawn_bodies(
                 velocity - barycenter_velocity,
             ),
             MeshMaterial3d(material),
-            Mesh3d(mesh),
+            Mesh3d(unit_sphere.clone()),
         ));
     }
 }
@@ -422,7 +415,7 @@ pub fn spawn_bodies(
 /// Bevy system to spawn simulation bodies at startup
 pub fn spawn_simulation_bodies(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
+    body_mesh: Res<super::components::BodyMesh>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut physics_rng: ResMut<SharedRng>,
     mut rendering_rng: ResMut<RenderingRng>,
@@ -431,7 +424,7 @@ pub fn spawn_simulation_bodies(
 ) {
     spawn_bodies(
         &mut commands,
-        &mut meshes,
+        &body_mesh,
         &mut materials,
         &mut physics_rng,
         &mut rendering_rng,

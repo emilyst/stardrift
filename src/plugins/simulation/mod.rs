@@ -74,6 +74,7 @@ impl Plugin for SimulationPlugin {
         app.insert_resource(GravitationalConstant(config.physics.gravitational_constant));
         app.insert_resource(BodyCount(config.physics.body_count));
         app.init_resource::<Barycenter>();
+        app.init_resource::<components::BodyMesh>();
         app.insert_resource(GravitationalOctree::new(
             Octree::new(
                 config.physics.octree_theta,

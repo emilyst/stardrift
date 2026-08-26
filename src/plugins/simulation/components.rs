@@ -94,16 +94,28 @@ pub mod factory {
 
         velocity_dir * (speed as f32)
     }
+}
 
-    /// Creates a detailed mesh for a celestial body with high-quality subdivisions.
-    pub fn create_detailed_mesh(meshes: &mut Assets<Mesh>, radius: f32) -> Handle<Mesh> {
-        meshes.add(
-            Sphere::new(radius)
-                .mesh()
-                .kind(SphereKind::Ico {
-                    subdivisions: if cfg!(target_arch = "wasm32") { 1 } else { 4 },
-                })
-                .build(),
+/// Shared unit-sphere mesh for all celestial bodies.
+///
+/// Radius is carried by `Transform::scale` (set at spawn, multiplied on
+/// collision merges), so every body can share this one mesh asset and the
+/// renderer can batch bodies that also share a material.
+#[derive(Resource, Deref)]
+pub struct BodyMesh(pub Handle<Mesh>);
+
+impl FromWorld for BodyMesh {
+    fn from_world(world: &mut World) -> Self {
+        let mut meshes = world.resource_mut::<Assets<Mesh>>();
+        Self(
+            meshes.add(
+                Sphere::new(1.0)
+                    .mesh()
+                    .kind(SphereKind::Ico {
+                        subdivisions: if cfg!(target_arch = "wasm32") { 1 } else { 4 },
+                    })
+                    .build(),
+            ),
         )
     }
 }

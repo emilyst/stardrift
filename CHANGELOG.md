@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- All bodies now share a single unit-sphere mesh, with each body's radius
+  expressed through its transform scale instead of baked into a per-body
+  mesh asset. Frame rate at high body counts roughly doubles (measured at
+  5000 bodies); default-scale simulations are unaffected. Rendering output
+  is unchanged.
+
 ## [0.0.71] - 2026-08-26
 
 ### Added
