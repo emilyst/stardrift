@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.71] - 2026-08-26
+
 ### Added
 
 - `--print-default-config` flag: prints the complete default configuration
