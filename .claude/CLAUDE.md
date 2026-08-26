@@ -16,8 +16,8 @@ instead of rediscovering things:
 - `docs/configuration.md` — config file and all defaults
 - `docs/usage.md`, `docs/integrators.md`, `docs/color-schemes.md`, `docs/release.md`
 
-`docs/log/` (devlogs) and `docs/plans/` are gitignored and local-only; all
-other docs are tracked normally.
+`docs/plans/` is gitignored and local-only; all other docs are tracked
+normally.
 
 ## Commands
 

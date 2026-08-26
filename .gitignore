@@ -4,6 +4,5 @@
 **/.run
 **/.zed/
 **/dist
-docs/log/
 docs/plans/
 /**/target
