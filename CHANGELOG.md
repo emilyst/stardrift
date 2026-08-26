@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `--print-default-config` flag: prints the complete default configuration
+  as TOML and exits, for seeding a config file
+- `--no-prevent-screen-sleep` flag: the screen-sleep setting can now be
+  disabled from the command line, not only enabled
+  (`--prevent-screen-sleep` / `--no-prevent-screen-sleep` form a
+  last-one-wins pair)
+- A leading `~` in `screenshots.directory` (and `--screenshot-dir`) now
+  expands to the home directory instead of creating a literal `~` directory
+- Round-trip test asserting the default configuration serializes to TOML
+  and deserializes back unchanged
+
+### Changed
+
+- **Breaking (config):** the misnamed body-distribution fields are replaced
+  by a nested table that names their actual roles. The old
+  `physics.body_distribution_sphere_radius_multiplier` really set the
+  minimum inter-body spacing and `physics.body_distribution_min_distance`
+  the solver tolerance (they were passed to the spawn-shell solver in
+  role-inverted order). Now:
+
+  ```toml
+  [physics.body_distribution]
+  min_spacing = 500.0       # was body_distribution_sphere_radius_multiplier
+  radius_tolerance = 0.001  # was body_distribution_min_distance
+  ```
+
+  Behavior is unchanged; old keys in existing config files are ignored.
+- Documentation accuracy and editorial pass over `README.md` and all
+  reference docs
+  - Corrected stale claims: no automatic barycenter camera tracking (fixed
+    focus at origin), Bevy 0.19, `AppState` two-state machine, message-based
+    (not event-based) plugin communication, Bevy task pool (not Rayon)
+    parallelism, no `dist` profile, collisions implemented (no longer
+    "planned"), macOS releases are Apple Silicon only, Linux/Windows config
+    paths, benchmark vs test suite division of responsibility
+  - Documented the `--screenshot-count` schedule requirement and the
+    config-file integrator fallback vs CLI hard error
+  - Slimmed CLI flag tables in favor of `--help` as the authoritative
+    reference; trimmed redundant per-integrator ratings into one comparison
+    table; added Barnes-Hut symplecticity caveat with pointers to the
+    integration design doc
+
 ## [0.0.70] - 2026-08-26
 
 ### Added

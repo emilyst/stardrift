@@ -15,7 +15,7 @@ This project also serves as an exploration of AI capabilities in software develo
 - **N-body gravitational physics** with Barnes-Hut octree optimization (O(N log N))
 - **Multiple numerical integrators** including symplectic and Runge-Kutta methods
 - **Merging collisions** with swept (tunnel-proof) detection and momentum-conserving inelastic merges
-- **Real-time 3D visualization** with bloom effects, trails, and barycenter tracking
+- **Real-time 3D visualization** with bloom effects, trails, and octree/barycenter overlays
 - **Interactive camera** with pan, orbit, zoom, and touch support
 - **Cross-platform**: Windows, macOS, Linux, and WebAssembly
 
@@ -29,7 +29,7 @@ Download from the [releases page](https://github.com/emilyst/stardrift/releases)
 |----------|---------|
 | Linux | `.tar.gz` (x86_64, ARM64) |
 | Windows | `.zip` (x86_64, ARM64) |
-| macOS | `.dmg`, `.tar.gz` (Intel, Apple Silicon) |
+| macOS | `.dmg`, `.tar.gz` (Apple Silicon) |
 | Web | WebAssembly package |
 
 All packages include SHA256 checksums and [build provenance attestations](docs/release.md#build-provenance) for verification.
@@ -62,6 +62,9 @@ stardrift --color-scheme viridis
 
 # See all options
 stardrift --help
+
+# Seed a config file with the defaults (see docs/configuration.md for its location)
+stardrift --print-default-config > config.toml
 ```
 
 ## Controls
@@ -78,7 +81,7 @@ stardrift --help
 | **T** | Toggle trails |
 | **D** | Toggle diagnostics HUD |
 | **S** | Take screenshot |
-| **Escape** | Quit |
+| **Q** / **Escape** | Quit (desktop only) |
 
 Touch controls are supported on mobile/tablet devices.
 

@@ -1,40 +1,41 @@
 # Usage Guide
 
-This guide covers how to use Stardrift, including controls, command-line options, and advanced features like automated screenshots.
+How to use Stardrift: controls, command-line options, and automated screenshots.
 
 ## Controls
 
 ### Keyboard and Mouse
 
-| Key/Action      | Function                                        |
-|-----------------|-------------------------------------------------|
-| **Left-drag**   | Orbit camera around the simulation              |
-| **Right-drag**  | Pan camera                                      |
-| **Mouse Wheel** | Zoom in/out                                     |
-| **Space**       | Pause/Resume simulation                         |
-| **N**           | New simulation with new random bodies           |
-| **O**           | Toggle octree visualization on/off              |
-| **C**           | Toggle barycenter gizmo visibility on/off       |
-| **T**           | Toggle trail visibility on/off                  |
-| **D**           | Toggle diagnostics HUD visibility on/off        |
-| **S**           | Take screenshot (hides UI and HUD)              |
-| **Escape**      | Quit application                                |
+| Key/Action      | Function                                  |
+|-----------------|-------------------------------------------|
+| **Left-drag**   | Orbit camera                              |
+| **Right-drag**  | Pan camera                                |
+| **Mouse Wheel** | Zoom in/out                               |
+| **Space**       | Pause/Resume simulation                   |
+| **N**           | New simulation with new random bodies     |
+| **O**           | Toggle octree visualization               |
+| **C**           | Toggle barycenter gizmo                   |
+| **T**           | Toggle trails                             |
+| **D**           | Toggle diagnostics HUD                    |
+| **S**           | Take screenshot (hides UI and HUD)        |
+| **Q** / **Escape** | Quit (desktop only)                    |
 
-### Touch Controls
+Every action except quitting also has an on-screen button in the bottom-left
+button column.
 
-On mobile and tablet devices, touch gestures are supported:
+### Touch and Trackpad
 
-- **Single finger drag**: Pan and orbit the camera
-- **Pinch**: Zoom in/out
-- **Two finger drag**: Pan the view
+On touch devices: one-finger drag orbits, two-finger drag pans, and pinch
+zooms. On a trackpad, scrolling orbits, **Shift**+scroll pans, **Ctrl**+scroll
+zooms, and pinch zooms.
 
 ### Camera Behavior
 
-The camera automatically follows the barycenter (center of mass) of the system. As bodies interact gravitationally and the system's center of mass shifts, the camera tracks this movement to keep the action in view.
-
-- Pan and orbit controls allow you to view the simulation from any angle
-- Zoom controls let you get close to individual bodies or see the entire system
-- The camera smoothly interpolates its position to avoid jarring movements
+The camera orbits a fixed focus at the world origin. Bodies spawn in the
+center-of-momentum frame, so the system's barycenter starts at the origin and
+stays nearby; the camera does not track it. The initial camera distance is
+scaled to fit the spawn region (adjustable via
+`rendering.camera_radius_multiplier` in the [configuration](configuration.md)).
 
 ## Command-Line Options
 
@@ -42,42 +43,32 @@ The camera automatically follows the barycenter (center of mass) of the system. 
 stardrift [OPTIONS]
 ```
 
-### Simulation Options
+`stardrift --help` is the authoritative reference for all flags and their
+descriptions. The most commonly used:
 
 | Option | Description |
 |--------|-------------|
-| `--bodies COUNT` | Set number of bodies to simulate (default: 100) |
-| `--seed SEED` | Use specific random seed for reproducible simulations |
-| `--paused` | Start simulation in paused state |
-| `--integrator NAME` | Select numerical integrator (see [Integrators Guide](integrators.md)) |
-
-### Display Options
-
-| Option | Description |
-|--------|-------------|
+| `-n, --bodies COUNT` | Number of bodies to simulate |
+| `-s, --seed SEED` | Random seed for reproducible simulations |
+| `-g, --gravity VALUE` | Gravitational constant |
+| `-i, --integrator NAME` | Numerical integrator (see [Integrators Guide](integrators.md)) |
 | `--color-scheme NAME` | Color scheme for bodies (see [Color Schemes](color-schemes.md)) |
-| `--prevent-screen-sleep` | Prevent display from sleeping during simulation (enabled by default) |
+| `-p, --paused` | Start paused |
+| `-c, --config FILE` | Use a specific config file |
+| `-v, --verbose` | Debug logging (includes a dump of the effective configuration) |
+| `--list-integrators` | List available integrators and aliases, then exit |
+| `--print-default-config` | Print the default configuration as TOML, then exit |
 
-### Information Options
-
-| Option | Description |
-|--------|-------------|
-| `--help` | Show all available options |
-| `--list-integrators` | List all available integration methods |
-
-Run `stardrift --help` for the complete list of options including configuration overrides.
+Command-line values override the [configuration file](configuration.md).
 
 ### Example Commands
 
 ```bash
-# Run with specific body count and seed for reproducibility
+# Reproducible simulation with a specific body count
 stardrift --bodies 50 --seed 123
 
-# Try a specific color scheme
-stardrift --color-scheme viridis
-
 # Use a different integrator for better energy conservation
-stardrift --integrator pefrl --bodies 100
+stardrift --integrator pefrl
 
 # Start paused to set up the view before simulation begins
 stardrift --paused --bodies 200
@@ -92,20 +83,18 @@ done
 
 ### Manual Screenshots
 
-Press **S** to take a screenshot at any time. Manual screenshots:
+Press **S** (or the Screenshot button) to capture at any time. Manual
+screenshots hide the UI and HUD before capture, save as PNG at full window
+resolution to the configured directory (current directory by default), and
+include a timestamp in the filename. See the
+[screenshot configuration](configuration.md#screenshot-configuration) to
+customize this.
 
-- Automatically hide UI elements and HUD before capture
-- Save to the configured directory (or current directory by default)
-- Use PNG format at full window resolution
-- Include timestamps in filenames by default
+### Automated Screenshots
 
-Screenshot behavior can be customized in the [configuration file](configuration.md#screenshot-configuration).
-
-### Automated Screenshot Capture
-
-Stardrift includes comprehensive automated screenshot capabilities, useful for testing, generating promotional materials, or creating time-lapse sequences.
-
-#### Basic Automated Usage
+The `--screenshot-*` family of flags captures screenshots on a schedule,
+useful for testing and generating material. See `stardrift --help` for the
+full list.
 
 ```bash
 # Take a single screenshot after 2 seconds
@@ -118,24 +107,14 @@ stardrift --screenshot-interval 1 --screenshot-count 5 --exit-after-screenshots
 stardrift --screenshot-after 120 --screenshot-use-frames
 ```
 
-#### Automated Screenshot Options
-
-| Option | Description |
-|--------|-------------|
-| `--screenshot-after N` | Take screenshot after N seconds (or frames with `--screenshot-use-frames`) |
-| `--screenshot-interval N` | Take screenshots every N seconds/frames |
-| `--screenshot-count N` | Number of screenshots to take (default: 1) |
-| `--screenshot-use-frames` | Use frame counting instead of wall-clock time |
-| `--screenshot-dir PATH` | Output directory (creates if needed) |
-| `--screenshot-name NAME` | Base filename without extension |
-| `--screenshot-sequential` | Use sequential numbering (e.g., `test_0001.png`) |
-| `--screenshot-no-timestamp` | Disable timestamps for predictable filenames |
-| `--screenshot-list-paths` | Output file paths to stdout after capture |
-| `--exit-after-screenshots` | Exit application after all screenshots are taken |
+Note that `--screenshot-count` only takes effect alongside
+`--screenshot-after` or `--screenshot-interval` — one of those two defines the
+schedule.
 
 #### Deterministic Captures for Testing
 
-For regression testing or CI/CD pipelines, use frame-based timing with a fixed seed to produce identical screenshots:
+Frame-based timing with a fixed seed produces identical screenshots on every
+run, suitable for regression testing:
 
 ```bash
 stardrift --seed 42 --bodies 100 \
@@ -149,8 +128,6 @@ stardrift --seed 42 --bodies 100 \
 # Output: SCREENSHOT_PATH: ./test_output/ui_state.png
 ```
 
-This produces the same screenshot every time, making it suitable for automated visual testing.
-
 #### Automated vs Manual Screenshots
 
 | Behavior | Manual (S key) | Automated (CLI) |
@@ -161,38 +138,25 @@ This produces the same screenshot every time, making it suitable for automated v
 
 ## User Interface
 
-### Diagnostics HUD
+The bottom-left button column mirrors the keyboard shortcuts: New Simulation,
+Show/Hide Octree, Show/Hide Barycenter, Show/Hide Trails, Show/Hide
+Diagnostics, Pause/Resume, Screenshot, and (on desktop) Quit.
 
-The on-screen diagnostics display shows:
+At startup, trails are visible; the octree wireframe, barycenter gizmo, and
+diagnostics HUD are hidden until toggled.
 
-- **FPS**: Current frame rate
-- **Frame**: Total frame count since start
-- **Bodies**: Number of celestial bodies in the simulation
-
-Toggle with **D** or the UI button.
-
-### UI Buttons
-
-The interface includes toggle buttons for common actions:
-
-- **Octree**: Show/hide the spatial partitioning visualization
-- **Barycenter**: Show/hide the center of mass indicator
-- **Trails**: Show/hide body movement trails
-- **Diagnostics**: Show/hide the HUD
-- **Restart**: Generate new random bodies
-- **Screenshot**: Capture the current view
-
-### Visualization Toggles
-
-- **Octree visualization**: Shows the Barnes-Hut octree structure as wireframe boxes, useful for understanding how the spatial partitioning works
-- **Barycenter gizmo**: Displays a cross-hair at the system's center of mass
-- **Trails**: Fading trails behind each body showing recent movement paths
+- **Octree visualization**: wireframe boxes showing the Barnes-Hut spatial
+  partitioning
+- **Barycenter gizmo**: a cross-hair at the system's center of mass
+- **Trails**: fading paths showing each body's recent motion
+- **Diagnostics HUD**: FPS, frame count, and body count
 
 ## Platform-Specific Notes
 
 ### Desktop (Windows, macOS, Linux)
 
-The native desktop build offers the best performance. Use release builds for smooth simulation of larger body counts:
+The native desktop build offers the best performance. Use release builds for
+smooth simulation of larger body counts:
 
 ```bash
 cargo run -p stardrift --release
@@ -200,12 +164,12 @@ cargo run -p stardrift --release
 
 ### WebAssembly (Browser)
 
-The WASM version runs in modern browsers with WebGL2 support. Some considerations:
+The WASM version runs in modern browsers with WebGL2 support (Chrome 57+,
+Firefox 52+, Safari 15+, Edge 79+). Differences from desktop:
 
 - Performance may be lower than native builds
-- Browser hardware acceleration should be enabled
-- Some features like screen sleep prevention are not available
-- Minimum browser versions: Chrome 57+, Firefox 52+, Safari 15+, Edge 79+
+- No configuration file or command line; built-in defaults are used
+- No quit control or screen sleep prevention
 
 ## See Also
 

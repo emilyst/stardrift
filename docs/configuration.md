@@ -8,11 +8,19 @@ The configuration file is automatically loaded from platform-specific directorie
 
 | Platform | Path |
 |----------|------|
-| **Linux** | `~/.config/Stardrift/config.toml` |
+| **Linux** | `$XDG_CONFIG_HOME/stardrift/config.toml` (usually `~/.config/stardrift/config.toml`) |
 | **macOS** | `~/Library/Application Support/Stardrift/config.toml` |
-| **Windows** | `%APPDATA%\Stardrift\config.toml` |
+| **Windows** | `%APPDATA%\Stardrift\config\config.toml` |
 
-If no configuration file exists, the application uses sensible defaults. You can create a configuration file to override any settings you want to customize.
+A different file can be specified with `--config FILE`. WebAssembly builds do not load a configuration file.
+
+The file is layered over the built-in defaults key by key, so it only needs to contain the settings you want to change. If no file exists (or it fails to parse, with a warning), the defaults are used. Run with `--verbose` to log the full effective configuration at startup.
+
+To seed a config file with the complete defaults:
+
+```bash
+stardrift --print-default-config > path/to/config.toml
+```
 
 ## Quick Start
 
@@ -21,11 +29,9 @@ Here's a minimal configuration file to get started:
 ```toml
 [physics]
 body_count = 150
-gravitational_constant = 0.01
 
 [rendering]
 color_scheme = "viridis"
-bloom_intensity = 250.0
 
 [trails]
 trail_length_seconds = 15.0
@@ -63,10 +69,15 @@ The simulation uses the Barnes-Hut algorithm for efficient O(N log N) force calc
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `body_distribution_sphere_radius_multiplier` | `f32` | `500.0` | Multiplier for initial body distribution radius |
-| `body_distribution_min_distance` | `f32` | `0.001` | Tolerance for the spawn-shell radius calculation |
 | `min_body_radius` | `f32` | `2.0` | Minimum radius for generated bodies |
 | `max_body_radius` | `f32` | `4.0` | Maximum radius for generated bodies |
+
+The `[physics.body_distribution]` subsection controls the spawn shell bodies are placed on:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `min_spacing` | `f32` | `500.0` | Target minimum center-to-center spacing between spawned bodies, in world units; the spawn-shell radius is derived from it |
+| `radius_tolerance` | `f32` | `0.001` | Relative convergence tolerance for the spawn-shell radius solve |
 
 ### Force Calculation Limits
 
@@ -102,6 +113,8 @@ Available integrators (use snake_case):
 - `"heun"` - 2nd order explicit
 - `"runge_kutta_second_order_midpoint"` - 2nd order explicit
 - `"runge_kutta_fourth_order"` - 4th order explicit
+
+An unrecognized integrator name in the config file logs a warning and falls back to `velocity_verlet`; an unrecognized name passed via `--integrator` is an error. Run `stardrift --list-integrators` for the accepted names and aliases.
 
 For detailed information on choosing an integrator, see the [Integrators Guide](integrators.md).
 
@@ -230,7 +243,7 @@ The `[screenshots]` section controls screenshot behavior.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `directory` | `Option<String>` | `None` | Save directory. `None` = current working directory |
+| `directory` | `Option<String>` | `None` | Save directory (created if missing). `None` = current working directory. A leading `~` expands to your home directory |
 | `filename_prefix` | `String` | `"stardrift_screenshot"` | Filename prefix for screenshots |
 | `include_timestamp` | `bool` | `true` | Include timestamp in filenames |
 | `notification_enabled` | `bool` | `true` | Log screenshot captures to console |
@@ -251,7 +264,7 @@ The `[system]` section controls system-level behavior.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `prevent_screen_sleep` | `bool` | `true` | Prevent display from sleeping during simulation |
+| `prevent_screen_sleep` | `bool` | `true` | Prevent display from sleeping during simulation. Override per run with `--prevent-screen-sleep` / `--no-prevent-screen-sleep` |
 
 ## Complete Example
 
@@ -259,7 +272,7 @@ Here's a comprehensive configuration file demonstrating many options:
 
 ```toml
 [physics]
-gravitational_constant = 0.015
+gravitational_constant = 150.0
 body_count = 200
 octree_theta = 0.5
 initial_seed = 42
@@ -301,20 +314,7 @@ prevent_screen_sleep = true
 
 ## Command-Line Overrides
 
-Many configuration options can be overridden via command-line arguments. Command-line values take precedence over the configuration file.
-
-```bash
-# Override body count and seed
-stardrift --bodies 150 --seed 123
-
-# Override integrator
-stardrift --integrator pefrl
-
-# Override color scheme
-stardrift --color-scheme viridis
-```
-
-Run `stardrift --help` for all available command-line options.
+Several settings (body count, seed, gravitational constant, integrator, color scheme) can be overridden on the command line, taking precedence over the configuration file. Run `stardrift --help` for the full list.
 
 ## See Also
 
