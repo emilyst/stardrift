@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.72] - 2026-08-26
+
 ### Changed
 
 - Trails are now rendered as GPU ribbons: a custom vertex shader performs
