@@ -205,6 +205,52 @@ fn simultaneous_triangle_contact_merges_as_one_component() {
 }
 
 #[test]
+fn four_body_contact_chain_merges_as_one_component() {
+    // Four bodies in a row, each touching only its neighbors (gaps 3.5 <
+    // contact 4, non-adjacent gaps 7 > 4). The x-ordered sweep discovers the
+    // pairs as (0,1), (1,2), (2,3), building the deepest union-find chain
+    // this size allows. Regression test for the compression pass: path
+    // halving alone left parent = [2,3,3,3] and split body 0 out of the
+    // component, so only three of the four merged — and the outcome depended
+    // on discovery order. All spawn orders must produce exactly one body.
+    for order in [[0, 1, 2, 3], [3, 2, 1, 0], [1, 3, 0, 2]] {
+        let positions = [0.0, 3.5, 7.0, 10.5];
+        let mut sim = CollisionSim::new(0.0, default_config());
+        for &i in &order {
+            sim.spawn_body(Vector::new(positions[i], 0.0, 0.0), 2.0, Vector::ZERO);
+        }
+        let (mass_before, ..) = sim.totals();
+
+        sim.step_n(1);
+
+        let bodies = sim.bodies();
+        assert_eq!(
+            bodies.len(),
+            1,
+            "chain must merge as one component in one step (spawn order {order:?})"
+        );
+        assert!((bodies[0].2 - mass_before).abs() < 1e-12 * mass_before);
+    }
+}
+
+#[test]
+fn contact_factor_scales_the_merge_distance() {
+    // Gap 5 between surfaces-sum-4 bodies: no contact at factor 1.0, contact
+    // at factor 1.5 (scaled distance 6 > 5).
+    for (factor, expected_bodies) in [(1.0, 2), (1.5, 1)] {
+        let mut config = default_config();
+        config.physics.collisions.contact_factor = factor;
+        let mut sim = CollisionSim::new(0.0, config);
+        sim.spawn_body(Vector::ZERO, 2.0, Vector::ZERO);
+        sim.spawn_body(Vector::new(5.0, 0.0, 0.0), 2.0, Vector::ZERO);
+
+        sim.step_n(1);
+
+        assert_eq!(sim.bodies().len(), expected_bodies, "factor {factor}");
+    }
+}
+
+#[test]
 fn merged_radius_follows_density_relation() {
     let mut sim = CollisionSim::new(0.0, default_config());
     let r1 = 2.0;

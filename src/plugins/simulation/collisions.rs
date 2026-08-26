@@ -5,16 +5,20 @@
 //! for closest approach within contact distance. Sweeping is required rather
 //! than an end-of-step overlap test because the default scene collapses to a
 //! dense core where per-step relative displacement (~4-5 units) is comparable
-//! to contact distance (4-8 units); a discrete test there misses 5-15% of
-//! contacts, and a missed contact produces an unphysical interpenetrating
-//! slingshot exactly where merging is meant to remove that pathology.
+//! to contact distance (4-8 units); a uniform-phase model puts the discrete
+//! test's miss rate there at 5-15% of contacts (P ≈ L²/12R² for step length
+//! L against contact distance R — a derived estimate, not a measurement),
+//! and a missed contact produces an unphysical interpenetrating slingshot
+//! exactly where merging is meant to remove that pathology.
 //!
-//! Linearizing the step's motion is safe: an attracting pair's true relative
-//! orbit is convex toward the focus, so the chord underestimates minimum
-//! separation and curvature can only produce (slightly) early merges, never
-//! missed ones. The bias is bounded by (π/6)·G·ρ·dt² of the contact distance
-//! (~1.5% worst case at defaults); validity requires dt ≪ sqrt(6/(πGρ)),
-//! which the 60 Hz step clears by 8x.
+//! Linearizing the step's motion is safe: an isolated attracting pair's true
+//! relative orbit is convex toward the focus, so the chord underestimates
+//! minimum separation and pair curvature can only produce (slightly) early
+//! merges, not missed ones; third-body tidal bending of the relative path
+//! exists in principle but is orders of magnitude below the pair term at
+//! contact-scale separations. The early-merge bias is bounded by
+//! (π/6)·G·ρ·dt² of the contact distance (~1.5% worst case at defaults);
+//! validity requires dt ≪ sqrt(6/(πGρ)), which the 60 Hz step clears by 8x.
 //!
 //! Merging is perfectly inelastic: mass sums, position and velocity go to the
 //! mass-weighted mean of the end-of-step states, radius is re-derived from
@@ -147,14 +151,17 @@ pub fn detect_and_merge_collisions(
     mut buffers: Local<CollisionBuffers>,
 ) {
     // The pause guard is load-bearing beyond consistency with the other
-    // physics systems: while paused prev == curr, the sweep degenerates to a
-    // static overlap test, and any bodies left touching would merge in a
-    // frozen scene.
+    // physics systems: while paused, prev and curr stop advancing (the last
+    // completed step's segment just before the pause, or the spawn position
+    // before any step), and re-testing that stale segment every frame would
+    // merge bodies left near contact in a frozen scene.
     if physics_time.is_paused() || !config.physics.collisions.enabled {
         return;
     }
 
-    let contact_factor = config.physics.collisions.contact_factor;
+    // Negative values would make the broad phase (which uses the factor
+    // linearly) and the narrow phase (which squares it) disagree.
+    let contact_factor = config.physics.collisions.contact_factor.max(0.0);
     let buffers = &mut *buffers;
 
     buffers.bodies.clear();
@@ -229,8 +236,14 @@ pub fn detect_and_merge_collisions(
     // rounding), making the result independent of pair-discovery order —
     // query iteration order is archetype order and permutes after despawns,
     // so it must not leak into the physics.
+    //
+    // Grouping below keys on parent[i] directly, so every slot must hold its
+    // true root: find() alone only *halves* paths, which leaves depth-3+
+    // chains (a 4-body contact chain) partially compressed and would split
+    // the component. The write-back makes compression total.
     for i in 0..n {
-        find(&mut buffers.parent, i);
+        let root = find(&mut buffers.parent, i);
+        buffers.parent[i] = root;
     }
     buffers.grouped.clear();
     buffers.grouped.extend(0..n);
