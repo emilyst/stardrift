@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Trails are now rendered as GPU ribbons: a custom vertex shader performs
+  ribbon expansion, camera-facing width, and fade, so trail geometry is
+  re-uploaded only when a point is recorded or expires instead of being
+  re-tessellated on the CPU every frame
+- Trail width now follows the body's radius at the moment each point was
+  recorded, so a trail visibly widens where a collision merge grew the body
+  instead of retroactively widening the whole trail
+- Trails are no longer backface-culled, so they cannot vanish when the
+  camera crosses a ribbon's plane
+- The non-additive trail blending path (`trails.use_additive_blending =
+  false`) now premultiplies alpha correctly instead of compensating with an
+  approximate brightness hack; its output is slightly brighter and more
+  consistent
+- A body that does not move between trail samples now contributes an
+  invisible zero-width trail segment instead of an arbitrarily oriented quad
 - All bodies now share a single unit-sphere mesh, with each body's radius
   expressed through its transform scale instead of baked into a per-body
   mesh asset. Frame rate at high body counts roughly doubles (measured at

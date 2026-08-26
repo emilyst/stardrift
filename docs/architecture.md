@@ -39,7 +39,7 @@ src/
 │   ├── controls/        # Keyboard bindings and UI button bar
 │   ├── diagnostics_hud.rs
 │   ├── simulation_diagnostics.rs
-│   ├── trails.rs
+│   ├── trails/         # GPU ribbon trails (data + material + WGSL shader)
 │   ├── visualization.rs # Octree/barycenter visualization
 │   ├── screenshot/      # Manual and automated capture
 │   ├── keep_awake.rs    # Screen sleep prevention
@@ -117,9 +117,9 @@ Keyboard bindings and the UI button bar. Buttons are constructed with a builder 
 
 ### Trails Plugin
 
-**Location**: `src/plugins/trails.rs`
+**Location**: `src/plugins/trails/`
 
-Renders fading trails behind moving bodies: point recording at configurable intervals, fade curves, width tapering, and bloom.
+Renders fading trails behind moving bodies as GPU ribbons. Points are recorded on the CPU at configurable intervals; ribbon expansion, camera-facing width, fade curves, and bloom run in a custom vertex shader (`trail.wgsl`), with width tapering and per-point body radius baked into the vertex data. Trail geometry is re-uploaded only when the recorded point set changes, not every frame.
 
 ### Visualization Plugin
 

@@ -314,8 +314,16 @@ pub fn spawn_bodies(
     use crate::config::ColorScheme;
     use crate::utils::color::*;
 
-    let mut pending: Vec<(Vector, Scalar, Vector, Handle<StandardMaterial>, f32)> =
-        Vec::with_capacity(body_count);
+    use crate::physics::components::BodyColor;
+
+    let mut pending: Vec<(
+        Vector,
+        Scalar,
+        Vector,
+        Handle<StandardMaterial>,
+        BodyColor,
+        f32,
+    )> = Vec::with_capacity(body_count);
 
     for _ in 0..body_count {
         // Use physics RNG for position, radius, and velocity (physics determinism)
@@ -365,6 +373,13 @@ pub fn spawn_bodies(
             config.rendering.saturation_intensity,
         );
 
+        // Same saturation step create_emissive_material applies internally,
+        // so BodyColor matches the material's base_color exactly.
+        let body_color = {
+            let (r, g, b) = enhance_saturation(color, config.rendering.saturation_intensity);
+            BodyColor(Color::LinearRgba(LinearRgba::rgb(r, g, b)))
+        };
+
         // Mass from the shared density relation, computed in Scalar so the
         // mass ∝ r³ invariant that collision merges rely on holds to a ulp.
         let mass = crate::physics::math::mass_for_radius(radius as Scalar);
@@ -374,6 +389,7 @@ pub fn spawn_bodies(
             mass,
             Vector::from(velocity),
             material,
+            body_color,
             radius,
         ));
     }
@@ -398,7 +414,7 @@ pub fn spawn_bodies(
         (Vector::ZERO, Vector::ZERO)
     };
 
-    for (position, mass, velocity, material, radius) in pending {
+    for (position, mass, velocity, material, body_color, radius) in pending {
         commands.spawn((
             PhysicsBodyBundle::new(
                 position - barycenter,
@@ -408,6 +424,7 @@ pub fn spawn_bodies(
             ),
             MeshMaterial3d(material),
             Mesh3d(unit_sphere.clone()),
+            body_color,
         ));
     }
 }

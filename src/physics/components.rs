@@ -53,6 +53,12 @@ impl Radius {
     }
 }
 
+/// The body's display color, fixed at spawn (matches the material's
+/// `base_color`). Carried on the body so renderers (bodies, trails) can read
+/// it without reaching into another plugin's material assets.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct BodyColor(pub Color);
+
 /// High-precision position for physics calculations
 #[derive(Component, Debug, Clone, Copy, Default)]
 pub struct Position(pub Vector);

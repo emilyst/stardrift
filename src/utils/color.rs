@@ -194,7 +194,7 @@ pub fn create_emissive_material(
 /// // Returns more vivid orange with increased color separation from gray
 /// ```
 #[must_use]
-fn enhance_saturation(rgb: (f32, f32, f32), saturation_factor: f32) -> (f32, f32, f32) {
+pub(crate) fn enhance_saturation(rgb: (f32, f32, f32), saturation_factor: f32) -> (f32, f32, f32) {
     let (r, g, b) = rgb;
 
     // Calculate grayscale using ITU-R BT.709 (HDTV) luminance formula for perceptual accuracy
