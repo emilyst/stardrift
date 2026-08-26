@@ -63,23 +63,30 @@ The simulation uses the Barnes-Hut algorithm for efficient O(N log N) force calc
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `body_distribution_sphere_radius_multiplier` | `f32` | `100.0` | Multiplier for initial body distribution radius |
-| `body_distribution_min_distance` | `f32` | `0.001` | Minimum distance between bodies at spawn (prevents overlap) |
-| `min_body_radius` | `f32` | `1.0` | Minimum radius for generated bodies |
-| `max_body_radius` | `f32` | `2.0` | Maximum radius for generated bodies |
+| `body_distribution_sphere_radius_multiplier` | `f32` | `500.0` | Multiplier for initial body distribution radius |
+| `body_distribution_min_distance` | `f32` | `0.001` | Tolerance for the spawn-shell radius calculation |
+| `min_body_radius` | `f32` | `2.0` | Minimum radius for generated bodies |
+| `max_body_radius` | `f32` | `4.0` | Maximum radius for generated bodies |
 
 ### Force Calculation Limits
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `force_calculation_min_distance` | `f64` | `2.0` | Minimum distance for force calculations (softening parameter to prevent singularities) |
-| `force_calculation_max_force` | `f64` | `10000.0` | Maximum force magnitude to prevent numerical instabilities |
+| `force_calculation_min_distance` | `f64` | `1.0` | Minimum distance for force calculations (softening parameter to prevent singularities) |
+| `force_calculation_max_force` | `f64` | `1000000.0` | Maximum force magnitude to prevent numerical instabilities. With collisions enabled, pair separations are bounded by contact distance and this clamp only matters for pathological configurations |
 
 ### Simulation Behavior
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `barycentric_drift_correction` | `bool` | `true` | Automatically recenter simulation around barycenter. Set to `false` for pure physics without correction. |
+| `barycentric_drift_correction` | `bool` | `false` | Recenter the simulation around the barycenter every step. Off by default: bodies spawn in the center-of-momentum frame, so residual barycenter motion is a useful Barnes-Hut asymmetry diagnostic |
+
+### Collisions
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `collisions.enabled` | `bool` | `true` | Merge bodies on contact (perfectly inelastic: mass sums, momentum conserved, radius from volume conservation). Detection is swept, so fast bodies cannot tunnel through each other between steps |
+| `collisions.contact_factor` | `f64` | `1.0` | Multiplier on the sum of two bodies' radii that counts as contact. Below `1.0` requires overlap; above `1.0` merges early |
 
 ### Integrator Selection
 
@@ -256,7 +263,11 @@ gravitational_constant = 0.015
 body_count = 200
 octree_theta = 0.5
 initial_seed = 42
-barycentric_drift_correction = true
+barycentric_drift_correction = false
+
+[physics.collisions]
+enabled = true
+contact_factor = 1.0
 
 [physics.integrator]
 type = "velocity_verlet"

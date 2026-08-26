@@ -14,6 +14,7 @@ This project also serves as an exploration of AI capabilities in software develo
 
 - **N-body gravitational physics** with Barnes-Hut octree optimization (O(N log N))
 - **Multiple numerical integrators** including symplectic and Runge-Kutta methods
+- **Merging collisions** with swept (tunnel-proof) detection and momentum-conserving inelastic merges
 - **Real-time 3D visualization** with bloom effects, trails, and barycenter tracking
 - **Interactive camera** with pan, orbit, zoom, and touch support
 - **Cross-platform**: Windows, macOS, Linux, and WebAssembly

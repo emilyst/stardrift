@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Merge-on-contact collisions between bodies, enabled by default
+  (`[physics.collisions]` — `enabled`, `contact_factor`)
+  - Detection is swept (continuous): each body's per-step motion segment is
+    tested for closest approach within contact distance, so fast bodies
+    cannot tunnel through each other between steps — necessary because the
+    default scene collapses to a dense core where per-step displacement is
+    comparable to body size
+  - Broad phase is a sweep-and-prune pass over segment-bounding spheres;
+    the narrow-phase predicate is division-free and NaN-proof
+  - Merging is perfectly inelastic: mass sums, position and velocity go to
+    the mass-weighted mean, and radius follows from total mass through the
+    shared density relation (volume conservation). Linear momentum and the
+    barycenter are conserved to roundoff; kinetic energy drops at each
+    merge, which is the physics of inelastic collision, not an error
+  - Simultaneous and chained contacts merge as connected components in a
+    single deterministic operation, independent of discovery order
+  - System-level test suite (`tests/collisions.rs`): conservation through
+    the real pipeline, single-step tunneling detection, simultaneous
+    multi-body contact, pause/disable guards, and a drift-correction
+    regression witness
+
+### Changed
+
+- `force_calculation_max_force` default raised from `1e5` to `1e6`: the old
+  value was already binding at contact for default-sized bodies, and merged
+  bodies made it the dominant force error (clamp radius grows as mass,
+  contact radius as its cube root). With merge-on-contact bounding pair
+  separations, point-mass forces are exact by the shell theorem and the
+  clamp only matters for pathological configurations
+- Spawn mass is now computed in f64 through a shared density relation
+  (`mass_for_radius`/`radius_for_mass`), making the mass ∝ r³ invariant
+  exact instead of f32-approximate
+- The integration driver's FSAL acceleration cache now validates masses in
+  addition to the entity set, so any future between-step mass mutation
+  cannot silently reuse stale accelerations
+
+### Fixed
+
+- Orphaned trails (whose body was despawned) no longer freeze their last
+  geometry on screen forever once they decay below two points; they fade
+  out and their renderer entities are despawned
+- Trail width now tracks the body's current radius instead of the radius
+  captured at spawn (visible when merges grow a body)
+- Trail cleanup on restart moved from the simulation plugin into the trails
+  plugin, restoring the self-contained-plugin boundary
+
 ## [0.0.69] - 2026-08-25
 
 ### Added
