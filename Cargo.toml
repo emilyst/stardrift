@@ -85,6 +85,10 @@ getrandom = { version = "0.3", features = ["wasm_js"] }
 name = "octree"
 harness = false
 
+[[bench]]
+name = "simulation_step"
+harness = false
+
 [profile.dev]
 debug = 2
 opt-level = 0
