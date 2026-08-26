@@ -39,8 +39,8 @@ The `[physics]` section controls the simulation's physical behavior.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `gravitational_constant` | `f64` | `0.01` | Strength of gravitational attraction between bodies. Higher values create stronger gravity. |
-| `body_count` | `usize` | `100` | Number of celestial bodies to simulate |
+| `gravitational_constant` | `f64` | `100.0` | Strength of gravitational attraction between bodies. Higher values create stronger gravity. |
+| `body_count` | `usize` | `25` | Number of celestial bodies to simulate |
 | `initial_seed` | `Option<u64>` | `None` | Random seed for deterministic body generation. `None` uses a random seed each run. |
 
 ### Barnes-Hut Algorithm
@@ -50,7 +50,7 @@ The simulation uses the Barnes-Hut algorithm for efficient O(N log N) force calc
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `octree_theta` | `f64` | `0.5` | Accuracy parameter (0.0-2.0). Lower values are more accurate but slower. `0.0` = exact N-body calculation. |
-| `octree_leaf_threshold` | `usize` | `4` | Maximum bodies per octree leaf node before subdivision |
+| `octree_leaf_threshold` | `usize` | `1` | Maximum bodies per octree leaf node before subdivision |
 
 **Theta parameter guidance:**
 - `0.0` - Exact calculation (O(N²), no approximation)
@@ -112,9 +112,9 @@ The `[physics.initial_velocity]` subsection controls how bodies are given their 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | `bool` | `true` | Whether bodies spawn with initial velocities |
-| `min_speed` | `f64` | `10.0` | Minimum initial speed |
-| `max_speed` | `f64` | `100.0` | Maximum initial speed |
-| `velocity_mode` | `string` | `"random"` | Velocity distribution mode |
+| `min_speed` | `f64` | `5.0` | Minimum initial speed |
+| `max_speed` | `f64` | `5.0` | Maximum initial speed |
+| `velocity_mode` | `string` | `"orbital"` | Velocity distribution mode |
 | `tangential_bias` | `f64` | `0.7` | Bias toward tangential motion (0.0-1.0) for `"random"` mode |
 
 **Velocity modes:**
@@ -147,7 +147,7 @@ The `[rendering]` section controls visual appearance.
 | `max_temperature` | `f32` | `15000.0` | Maximum stellar temperature in Kelvin (for `"black_body"` scheme) |
 | `bloom_intensity` | `f32` | `250.0` | Intensity of bloom visual effect |
 | `saturation_intensity` | `f32` | `3.0` | Color saturation multiplier |
-| `camera_radius_multiplier` | `f32` | `4.0` | Camera distance relative to system size |
+| `camera_radius_multiplier` | `f32` | `3.0` | Camera distance relative to system size |
 
 For the complete list of color schemes and their descriptions, see [Color Schemes](color-schemes.md).
 
@@ -169,7 +169,7 @@ The `[trails]` section controls the visual trails behind moving bodies.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `trail_length_seconds` | `f32` | `10.0` | How long trails persist in seconds |
+| `trail_length_seconds` | `f32` | `60.0` | How long trails persist in seconds |
 | `update_interval_seconds` | `f32` | `0.03333` | How often to record trail points (~30 FPS) |
 | `max_points_per_trail` | `usize` | `10000` | Maximum trail points per body |
 
@@ -178,7 +178,7 @@ The `[trails]` section controls the visual trails behind moving bodies.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `base_width` | `f32` | `1.0` | Base trail width |
-| `width_relative_to_body` | `bool` | `false` | Scale trail width relative to body size |
+| `width_relative_to_body` | `bool` | `true` | Scale trail width relative to body size |
 | `body_size_multiplier` | `f32` | `2.0` | Trail width multiplier when `width_relative_to_body` is true |
 | `bloom_factor` | `f32` | `1.0` | Trail bloom intensity multiplier |
 | `use_additive_blending` | `bool` | `true` | Use additive blending for glowing effect |
