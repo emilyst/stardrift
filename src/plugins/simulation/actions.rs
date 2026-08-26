@@ -14,7 +14,6 @@ pub fn handle_restart_simulation_event(
     mut commands_reader: MessageReader<SimulationCommand>,
     mut commands: Commands,
     simulation_bodies: Query<Entity, With<PhysicsBody>>,
-    trail_renderers: Query<Entity, With<crate::plugins::trails::TrailRenderer>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut physics_rng: ResMut<SharedRng>,
@@ -29,13 +28,9 @@ pub fn handle_restart_simulation_event(
         if !matches!(command, SimulationCommand::Restart) {
             continue;
         }
-        // Despawn all bodies
+        // Despawn all bodies; the trails plugin handles its own renderers
+        // in response to the same Restart command.
         simulation_bodies.iter().for_each(|entity| {
-            commands.entity(entity).despawn();
-        });
-
-        // Despawn all trail renderers
-        trail_renderers.iter().for_each(|entity| {
             commands.entity(entity).despawn();
         });
 

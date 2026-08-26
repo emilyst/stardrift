@@ -298,7 +298,9 @@ impl Plugin for TrailsPlugin {
             Update,
             (
                 Self::initialize_trails.in_set(TrailSet::Initialize),
+                Self::handle_restart.in_set(TrailSet::Initialize),
                 Self::update_trails.in_set(TrailSet::Update),
+                Self::despawn_orphaned_trails.in_set(TrailSet::Update),
                 Self::render_trails.in_set(TrailSet::Render),
             )
                 .run_if(in_state(AppState::Running).or_else(in_state(AppState::Paused))),
@@ -313,7 +315,7 @@ impl Plugin for TrailsPlugin {
 impl TrailsPlugin {
     fn update_trails(
         mut trail_query: Query<(&mut Trail, &TrackedBody), With<TrailRenderer>>,
-        body_query: Query<&Transform, With<PhysicsBody>>,
+        body_query: Query<(&Transform, Option<&Radius>), With<PhysicsBody>>,
         time: Res<Time>,
         config: Res<SimulationConfig>,
         app_state: Res<State<AppState>>,
@@ -332,10 +334,15 @@ impl TrailsPlugin {
             }
 
             // Only add new points if we're tracking an active body
-            if let Ok(transform) = body_query.get(tracked_body.0)
-                && trail.should_update(current_time, config.trails.update_interval_seconds)
-            {
-                trail.add_point(transform.translation, current_time);
+            if let Ok((transform, radius)) = body_query.get(tracked_body.0) {
+                // Track the body's current radius: collision merges grow it,
+                // and trail width follows body size when configured to.
+                if let Some(radius) = radius {
+                    trail.body_radius = radius.value() as f32;
+                }
+                if trail.should_update(current_time, config.trails.update_interval_seconds) {
+                    trail.add_point(transform.translation, current_time);
+                }
             }
 
             // Always cleanup old points, even for orphaned trails
@@ -437,39 +444,78 @@ impl TrailsPlugin {
         let current_time = time.elapsed_secs();
 
         for (renderer_entity, trail, mesh_handle) in renderer_query.iter_mut() {
-            if trail.points.len() >= 2 {
-                let body_radius = Some(trail.body_radius);
+            let body_radius = Some(trail.body_radius);
 
-                match mesh_handle {
-                    Some(mesh_handle) => {
-                        // Update existing mesh
-                        if let Some(mut mesh) = trail_meshes.get_mut(&mesh_handle.0) {
-                            Self::update_trail_mesh(
-                                &mut mesh,
-                                trail,
-                                camera_pos,
-                                current_time,
-                                &config.trails,
-                                Some(trail.body_radius),
-                            );
-                        } else {
-                            warn!("Trail mesh handle exists but mesh not found in assets!");
-                        }
-                    }
-                    None => {
-                        // Create new mesh and add it to the entity
-                        let trail_mesh = Self::create_trail_mesh_with_data(
-                            &mut trail_meshes,
+            match mesh_handle {
+                Some(mesh_handle) => {
+                    // Update existing meshes unconditionally: gating on point
+                    // count would freeze the last geometry on screen forever
+                    // once an orphaned trail (from a collision merge) decays
+                    // below two points. update_trail_mesh already emits a
+                    // degenerate invisible strip for the empty case.
+                    if let Some(mut mesh) = trail_meshes.get_mut(&mesh_handle.0) {
+                        Self::update_trail_mesh(
+                            &mut mesh,
                             trail,
                             camera_pos,
                             current_time,
                             &config.trails,
-                            body_radius,
+                            Some(trail.body_radius),
                         );
-                        commands.entity(renderer_entity).insert(Mesh3d(trail_mesh));
+                    } else {
+                        warn!("Trail mesh handle exists but mesh not found in assets!");
                     }
                 }
+                None if trail.points.len() >= 2 => {
+                    // Create new mesh and add it to the entity
+                    let trail_mesh = Self::create_trail_mesh_with_data(
+                        &mut trail_meshes,
+                        trail,
+                        camera_pos,
+                        current_time,
+                        &config.trails,
+                        body_radius,
+                    );
+                    commands.entity(renderer_entity).insert(Mesh3d(trail_mesh));
+                }
+                None => {}
             }
+        }
+    }
+
+    /// Despawn trail renderers whose tracked body no longer exists once
+    /// their points have fully decayed. Bodies absorbed by collision merges
+    /// orphan their trails; update_trails stops feeding them and this
+    /// reclaims the renderer entity (and its mesh and material assets) after
+    /// the fade-out completes. Query::get on a despawned entity returns Err
+    /// via the generation bump, so a recycled index can never false-match.
+    fn despawn_orphaned_trails(
+        mut commands: Commands,
+        trail_query: Query<(Entity, &TrackedBody, &Trail), With<TrailRenderer>>,
+        body_query: Query<(), With<PhysicsBody>>,
+    ) {
+        for (entity, tracked_body, trail) in trail_query.iter() {
+            if body_query.get(tracked_body.0).is_err() && trail.points.is_empty() {
+                commands.entity(entity).despawn();
+            }
+        }
+    }
+
+    /// Despawn all trail renderers on restart. Owned by this plugin so the
+    /// simulation plugin does not have to reach across the boundary to clean
+    /// up trail entities.
+    fn handle_restart(
+        mut commands_reader: MessageReader<SimulationCommand>,
+        mut commands: Commands,
+        trail_renderers: Query<Entity, With<TrailRenderer>>,
+    ) {
+        for command in commands_reader.read() {
+            if !matches!(command, SimulationCommand::Restart) {
+                continue;
+            }
+            trail_renderers.iter().for_each(|entity| {
+                commands.entity(entity).despawn();
+            });
         }
     }
 
