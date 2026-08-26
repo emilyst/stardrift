@@ -199,7 +199,7 @@ impl AutomatedScreenshotNaming {
         let base_directory = directory
             .as_ref()
             .or(config.screenshots.directory.as_ref())
-            .map(PathBuf::from)
+            .map(|dir| crate::utils::paths::expand_tilde(dir))
             .unwrap_or_else(|| PathBuf::from("."));
 
         let base_name = name.unwrap_or_else(|| config.screenshots.filename_prefix.clone());

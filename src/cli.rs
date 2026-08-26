@@ -67,6 +67,10 @@ pub struct Args {
     #[arg(long)]
     pub list_integrators: bool,
 
+    /// Print the default configuration as TOML and exit
+    #[arg(long)]
+    pub print_default_config: bool,
+
     /// Take screenshot after N seconds (can be fractional)
     #[arg(long, value_name = "SECONDS")]
     pub screenshot_after: Option<f32>,
@@ -107,9 +111,13 @@ pub struct Args {
     #[arg(long)]
     pub exit_after_screenshots: bool,
 
-    /// Prevent screen from sleeping during simulation
-    #[arg(long)]
+    /// Prevent the screen from sleeping during simulation (overrides config file)
+    #[arg(long, overrides_with = "no_prevent_screen_sleep")]
     pub prevent_screen_sleep: bool,
+
+    /// Allow the screen to sleep during simulation (overrides config file)
+    #[arg(long, overrides_with = "prevent_screen_sleep")]
+    pub no_prevent_screen_sleep: bool,
 }
 
 /// Handles the --list-integrators flag by printing available integrators and exiting
@@ -125,6 +133,18 @@ pub fn handle_list_integrators() {
         println!("\nAliases:");
         for (alias, target) in aliases {
             println!("  - {alias} -> {target}");
+        }
+    }
+}
+
+/// Handles the --print-default-config flag by printing the default
+/// configuration as TOML
+pub fn handle_print_default_config() {
+    match toml::to_string_pretty(&SimulationConfig::default()) {
+        Ok(serialized) => print!("{serialized}"),
+        Err(e) => {
+            eprintln!("Error: failed to serialize default configuration: {e}");
+            std::process::exit(1);
         }
     }
 }
@@ -173,9 +193,13 @@ pub fn load_and_apply_config(args: &Args) -> Result<SimulationConfig, CliError> 
         config.rendering.color_scheme = color_scheme;
     }
 
+    // With overrides_with, at most one of the pair survives parsing
     if args.prevent_screen_sleep {
         println!("Enabling screen sleep prevention");
         config.system.prevent_screen_sleep = true;
+    } else if args.no_prevent_screen_sleep {
+        println!("Disabling screen sleep prevention");
+        config.system.prevent_screen_sleep = false;
     }
 
     Ok(config)

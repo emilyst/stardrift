@@ -32,6 +32,12 @@ fn main() {
         return;
     }
 
+    // Handle print-default-config flag
+    if args.print_default_config {
+        cli::handle_print_default_config();
+        return;
+    }
+
     // Load configuration and apply CLI overrides
     let config = match cli::load_and_apply_config(&args) {
         Ok(config) => config,

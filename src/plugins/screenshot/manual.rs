@@ -77,7 +77,7 @@ pub fn process_screenshot_capture(
 
         // Build full path
         let full_path = if let Some(ref dir) = config.screenshots.directory {
-            let dir_path = PathBuf::from(dir);
+            let dir_path = crate::utils::paths::expand_tilde(dir);
 
             // Create directory if it doesn't exist
             if !dir_path.exists() {
