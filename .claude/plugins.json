@@ -3,26 +3,6 @@
   "lastUpdated": 1764359779354,
   "plugins": [
     {
-      "filename": "task-decomposition-expert.md",
-      "type": "agent",
-      "metadata": {
-        "sourcePath": "agents/ai-specialists/task-decomposition-expert.md",
-        "filename": "task-decomposition-expert.md",
-        "name": "task-decomposition-expert",
-        "description": "Complex goal breakdown specialist. Use PROACTIVELY for multi-step projects requiring different capabilities. Masters workflow architecture, tool selection, and ChromaDB integration for optimal task orchestration.",
-        "tools": [
-          "Read",
-          "Write"
-        ],
-        "category": "ai-specialists",
-        "type": "agent",
-        "size": 5136,
-        "contentHash": "07671577361079bf38f1ac91d9ac946e13f5fa9a261922dc33077a5d3f4642cd",
-        "installedAt": 1764359769655,
-        "updatedAt": 1764359769655
-      }
-    },
-    {
       "filename": "rust-pro.md",
       "type": "agent",
       "metadata": {
