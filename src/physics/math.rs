@@ -59,24 +59,27 @@ pub fn radius_for_mass(mass: Scalar) -> Scalar {
 /// Re-export commonly used math constants
 use crate::prelude::Vec3;
 
+/// Minimum sphere radius on whose surface `n` points can sit at least
+/// `min_spacing` apart (Tammes-style approximation with iterative
+/// refinement; `radius_tolerance` is the relative convergence tolerance).
 pub fn min_sphere_radius_for_surface_distribution(
     n: usize,
-    min_distance: f32,
-    tolerance: f32,
+    min_spacing: f32,
+    radius_tolerance: f32,
 ) -> f32 {
-    let minimum_radius = min_distance * libm::sqrtf(n as f32 / 4.0);
+    let minimum_radius = min_spacing * libm::sqrtf(n as f32 / 4.0);
     let spherical_correction = if n > 4 {
         // Tammes problem approximation
         let solid_angle_per_point = 4.0 * std::f32::consts::PI / n as f32;
         let half_angle = solid_angle_per_point / libm::sqrtf(2.0 * std::f32::consts::PI);
-        min_distance / (2.0 * libm::sinf(half_angle))
+        min_spacing / (2.0 * libm::sinf(half_angle))
     } else {
         // For small N, use exact solutions
         match n {
-            1 => min_distance,                          // Any radius works
-            2 => min_distance / 2.0,                    // Points are antipodal
-            3 => min_distance / libm::sqrtf(3.0),       // Equilateral triangle
-            4 => min_distance / libm::sqrtf(8.0 / 3.0), // Tetrahedron
+            1 => min_spacing,                          // Any radius works
+            2 => min_spacing / 2.0,                    // Points are antipodal
+            3 => min_spacing / libm::sqrtf(3.0),       // Equilateral triangle
+            4 => min_spacing / libm::sqrtf(8.0 / 3.0), // Tetrahedron
             _ => minimum_radius,
         }
     };
@@ -84,7 +87,7 @@ pub fn min_sphere_radius_for_surface_distribution(
 
     // Iterative refinement using the sphere cap
     for _ in 0..10 {
-        let cap_radius = min_distance / 2.0;
+        let cap_radius = min_spacing / 2.0;
         let cap_area = 2.0
             * std::f32::consts::PI
             * corrected_minimum_radius
@@ -99,7 +102,7 @@ pub fn min_sphere_radius_for_surface_distribution(
 
         if total_cap_area > sphere_area {
             corrected_minimum_radius *= 1.1;
-        } else if sphere_area - total_cap_area > tolerance * sphere_area {
+        } else if sphere_area - total_cap_area > radius_tolerance * sphere_area {
             corrected_minimum_radius *= 0.95;
         } else {
             break; // Converged

@@ -84,8 +84,8 @@ pub struct PhysicsConfig {
     pub body_count: usize,
     pub octree_theta: Scalar,
     pub octree_leaf_threshold: usize,
-    pub body_distribution_sphere_radius_multiplier: f32,
-    pub body_distribution_min_distance: f32,
+    #[serde(default)]
+    pub body_distribution: BodyDistributionConfig,
     pub min_body_radius: f32,
     pub max_body_radius: f32,
     pub force_calculation_min_distance: Scalar,
@@ -106,8 +106,7 @@ impl Default for PhysicsConfig {
             body_count: 25,
             octree_theta: 0.5,
             octree_leaf_threshold: 1,
-            body_distribution_sphere_radius_multiplier: 500.0,
-            body_distribution_min_distance: 0.001,
+            body_distribution: BodyDistributionConfig::default(),
             min_body_radius: 2.0,
             max_body_radius: 4.0,
             force_calculation_min_distance: 1.0,
@@ -132,6 +131,25 @@ impl Default for PhysicsConfig {
             // Barnes-Hut force asymmetry (a useful diagnostic).
             barycentric_drift_correction: false,
             collisions: CollisionsConfig::default(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
+pub struct BodyDistributionConfig {
+    /// Target minimum center-to-center spacing between spawned bodies, in
+    /// world units. The spawn-shell radius is derived from it.
+    pub min_spacing: f32,
+    /// Relative convergence tolerance for the spawn-shell radius solve.
+    pub radius_tolerance: f32,
+}
+
+impl Default for BodyDistributionConfig {
+    fn default() -> Self {
+        Self {
+            min_spacing: 500.0,
+            radius_tolerance: 0.001,
         }
     }
 }
@@ -460,5 +478,23 @@ impl SimulationConfig {
     #[cfg(target_arch = "wasm32")]
     pub fn save_to_user_config(&self) -> Result<(), Box<dyn std::error::Error>> {
         Err("Configuration saving not supported on WebAssembly".into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The default config must serialize to TOML and deserialize back
+    /// unchanged — this is what `--print-default-config` emits and what the
+    /// loader layers user config over.
+    #[test]
+    fn default_config_round_trips_through_toml() {
+        let serialized = toml::to_string_pretty(&SimulationConfig::default())
+            .expect("default config must serialize");
+        let deserialized: SimulationConfig =
+            toml::from_str(&serialized).expect("serialized default config must deserialize");
+        let reserialized = toml::to_string_pretty(&deserialized).unwrap();
+        assert_eq!(serialized, reserialized);
     }
 }

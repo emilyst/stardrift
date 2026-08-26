@@ -18,8 +18,8 @@ pub mod factory {
     ) -> Vec3 {
         let body_distribution_sphere_radius = min_sphere_radius_for_surface_distribution(
             total_body_count,
-            config.physics.body_distribution_sphere_radius_multiplier,
-            config.physics.body_distribution_min_distance,
+            config.physics.body_distribution.min_spacing,
+            config.physics.body_distribution.radius_tolerance,
         );
         random_unit_vector(rng) * body_distribution_sphere_radius
     }
