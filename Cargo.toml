@@ -105,6 +105,15 @@ opt-level = 3
 panic = "abort"
 strip = true
 
+# Near-release performance with much faster rebuilds, for local
+# experimentation and perf measurement (`cargo build --profile perf`).
+[profile.perf]
+inherits = "release"
+lto = "thin"
+codegen-units = 16
+incremental = true
+strip = false
+
 [profile.bench]
 inherits = "release"
 
