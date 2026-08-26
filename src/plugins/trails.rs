@@ -298,9 +298,19 @@ impl Plugin for TrailsPlugin {
             Update,
             (
                 Self::initialize_trails.in_set(TrailSet::Initialize),
-                Self::handle_restart.in_set(TrailSet::Initialize),
+                // Explicitly before initialize_trails: the restart wipe must
+                // never be able to despawn renderers created for the fresh
+                // body set. Today's sync-point topology happens to guarantee
+                // this without the edge; the edge makes it structural.
+                Self::handle_restart
+                    .in_set(TrailSet::Initialize)
+                    .before(Self::initialize_trails),
                 Self::update_trails.in_set(TrailSet::Update),
-                Self::despawn_orphaned_trails.in_set(TrailSet::Update),
+                // After update_trails so "orphaned and fully decayed" is
+                // evaluated against this frame's decay, not last frame's.
+                Self::despawn_orphaned_trails
+                    .in_set(TrailSet::Update)
+                    .after(Self::update_trails),
                 Self::render_trails.in_set(TrailSet::Render),
             )
                 .run_if(in_state(AppState::Running).or_else(in_state(AppState::Paused))),
@@ -444,6 +454,12 @@ impl TrailsPlugin {
         let current_time = time.elapsed_secs();
 
         for (renderer_entity, trail, mesh_handle) in renderer_query.iter_mut() {
+            // A paused trail's geometry is frozen; rebuilding it every frame
+            // would be pure waste (and with many merge orphans on screen,
+            // meaningful waste). It resumes updating on unpause.
+            if trail.is_paused() {
+                continue;
+            }
             let body_radius = Some(trail.body_radius);
 
             match mesh_handle {

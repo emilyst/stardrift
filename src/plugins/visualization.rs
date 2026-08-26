@@ -166,7 +166,9 @@ fn draw_bounding_box_wireframe_gizmo(gizmos: &mut Gizmos, aabb: &Aabb3d, color: 
 /// Draws a cross gizmo at the barycenter position
 fn draw_barycenter_gizmo(
     mut gizmos: Gizmos,
-    body_count: Res<BodyCount>,
+    // Live entity count, not the BodyCount resource: that resource is the
+    // configured spawn count, which collision merges rightly leave alone.
+    bodies: Query<(), With<crate::physics::components::PhysicsBody>>,
     barycenter_gizmo_visibility: Res<BarycenterGizmoVisibility>,
     barycenter: Res<Barycenter>,
 ) {
@@ -174,9 +176,10 @@ fn draw_barycenter_gizmo(
         && let Some(barycenter) = **barycenter
         && barycenter.is_finite()
     {
+        let body_count = bodies.iter().count();
         gizmos.cross(
             barycenter.as_vec3(),
-            libm::cbrt(**body_count as Scalar * **body_count as Scalar / 3.0) as f32,
+            libm::cbrt(body_count as Scalar * body_count as Scalar / 3.0) as f32,
             css::WHITE,
         );
     }
