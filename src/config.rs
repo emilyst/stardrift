@@ -115,11 +115,14 @@ impl Default for PhysicsConfig {
             // below by the contact distance, so this clamp only matters for
             // pathological configurations. 1e5 was binding at contact for
             // default-sized bodies (contact force ~439·r⁴ reaches 1e5 at
-            // r = 3.89 < max_body_radius) and the threshold radius grows as
-            // m while contact radius grows as m^(1/3), so merged bodies made
-            // it the dominant force error. 1e6 clears the physically
-            // reachable maximum for the default scene.
-            force_calculation_max_force: 1e6,
+            // r = 3.89 < max_body_radius), and merging makes any fixed clamp
+            // worse over time: for equal merged clumps the contact force
+            // grows as m² / m^(2/3) = m^(4/3) ∝ N^(4/3), so the default
+            // scene's endgame — two half-scene clumps (m ≈ 1571 each,
+            // contact separation ≈ 14.4) — reaches ~1.2e6 at contact. 1e7
+            // clears that by ~8x while still bounding genuinely pathological
+            // configurations (overlapping bodies with collisions disabled).
+            force_calculation_max_force: 1e7,
             initial_seed: None,
             initial_velocity: InitialVelocityConfig::default(),
             integrator: IntegratorConfig::default(),
@@ -216,7 +219,10 @@ pub struct RenderingConfig {
 impl Default for RenderingConfig {
     fn default() -> Self {
         Self {
-            color_scheme: ColorScheme::Rainbow,
+            // BlackBody is the documented default (README, docs, CLAUDE.md
+            // all describe it as such); the code shipping Rainbow was a
+            // drift caught in review.
+            color_scheme: ColorScheme::BlackBody,
             min_temperature: 3000.0,
             max_temperature: 15000.0,
             bloom_intensity: 250.0,

@@ -51,12 +51,27 @@ fn build_sim(count: usize, collisions_enabled: bool) -> (World, Schedule) {
     world.insert_resource(Barycenter::default());
     world.insert_resource(config);
 
-    // Spherical shell distribution matching the real spawn, scaled so the
-    // scene stays collision-free: the steady state being measured is the
-    // every-frame cost with zero contacts.
+    // Spherical shell at constant surface density (radius ∝ sqrt(N)) with a
+    // minimum spawn separation, so the scene stays contact-free for the
+    // whole measured window at every N and the on/off delta isolates the
+    // collision pass itself. This is deliberate benchmark hygiene, learned
+    // the hard way: volume-matched shells (cbrt), normalized-cube direction
+    // sampling (density concentrates toward the cube diagonals), and the
+    // shearing tangential velocity field each caused merges during the
+    // window — and every merge step forfeits the FSAL cache and pays a
+    // second octree-build-and-force pass, which dominated the delta and
+    // masqueraded as superlinear collision-pass cost. Merge cost is real
+    // physics, but it belongs to the merge rate, not to this steady-state
+    // number. The separation must beat not just contact distance (8) plus
+    // shear drift (~10) but mutual two-body free-fall at G = 100: a pair
+    // 25 apart falls to contact within the measured second, so the
+    // separation is sized for a free-fall time comfortably beyond it.
+    const MIN_SEPARATION: Scalar = 60.0;
     let mut rng = ChaCha8Rng::seed_from_u64(42);
-    let shell_radius = 750.0 * (count as Scalar / 25.0).cbrt();
-    for _ in 0..count {
+    let shell_radius = 750.0 * (count as Scalar / 25.0).sqrt();
+    let mut accepted: Vec<Vector> = Vec::with_capacity(count);
+    while accepted.len() < count {
+        // Uniform on the sphere: rejection-sample the unit ball, normalize.
         let direction = loop {
             let v = Vector::new(
                 rng.random_range(-1.0..=1.0),
@@ -64,10 +79,18 @@ fn build_sim(count: usize, collisions_enabled: bool) -> (World, Schedule) {
                 rng.random_range(-1.0..=1.0),
             );
             let len = v.length();
-            if len > 1e-3 {
+            if len > 1e-3 && len <= 1.0 {
                 break v / len;
             }
         };
+        let position = direction * shell_radius;
+        if accepted
+            .iter()
+            .any(|p| p.distance_squared(position) < MIN_SEPARATION * MIN_SEPARATION)
+        {
+            continue;
+        }
+        accepted.push(position);
         let radius: Scalar = rng.random_range(2.0..=4.0);
         let tangent = direction.cross(Vector::Z).normalize_or_zero();
         let velocity = if tangent.length_squared() > 0.5 {
@@ -76,7 +99,7 @@ fn build_sim(count: usize, collisions_enabled: bool) -> (World, Schedule) {
             Vector::new(5.0, 0.0, 0.0)
         };
         world.spawn(PhysicsBodyBundle::new(
-            direction * shell_radius,
+            position,
             mass_for_radius(radius),
             radius as f32,
             velocity,

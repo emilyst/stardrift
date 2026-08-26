@@ -32,12 +32,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `force_calculation_max_force` default raised from `1e5` to `1e6`: the old
+- `force_calculation_max_force` default raised from `1e5` to `1e7`: the old
   value was already binding at contact for default-sized bodies, and merged
-  bodies made it the dominant force error (clamp radius grows as mass,
-  contact radius as its cube root). With merge-on-contact bounding pair
-  separations, point-mass forces are exact by the shell theorem and the
-  clamp only matters for pathological configurations
+  clumps make any fixed clamp worse over time — contact force between equal
+  merged clumps grows as N^(4/3), and the default scene's fully-merged
+  endgame reaches ~1.2e6. With merge-on-contact bounding pair separations,
+  point-mass forces are exact by the shell theorem (except transiently on
+  the merge step itself) and the clamp only matters for pathological
+  configurations. Note for collision-disabled configurations: overlapping
+  bodies now feel up to 100x stronger clamped forces than before
+- Default color scheme is now `black_body` in code, matching what README,
+  docs, and CLAUDE.md have documented all along (the code had drifted to
+  `rainbow`)
 - Spawn mass is now computed in f64 through a shared density relation
   (`mass_for_radius`/`radius_for_mass`), making the mass ∝ r³ invariant
   exact instead of f32-approximate
@@ -50,6 +56,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The diagnostics HUD body count now shows the live number of bodies; it
   was rendered once at startup from the configured spawn count and never
   updated, so it could not track collision merges
+- The barycenter cross gizmo is now sized from the live body count instead
+  of the configured spawn count (same stale-count class as the HUD bug)
+- The collision broad phase picks its sweep axis by midpoint variance each
+  step instead of always sweeping along x, avoiding quadratic degeneration
+  when the scene collapses into a dense core
+- Frozen (paused) trails are no longer rebuilt every frame, and trail
+  restart/orphan-cleanup ordering is now explicit instead of relying on
+  scheduler topology
 - Orphaned trails (whose body was despawned) no longer freeze their last
   geometry on screen forever once they decay below two points; they fade
   out and their renderer entities are despawned

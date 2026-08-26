@@ -73,7 +73,7 @@ The simulation uses the Barnes-Hut algorithm for efficient O(N log N) force calc
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `force_calculation_min_distance` | `f64` | `1.0` | Minimum distance for force calculations (softening parameter to prevent singularities) |
-| `force_calculation_max_force` | `f64` | `1000000.0` | Maximum force magnitude to prevent numerical instabilities. With collisions enabled, pair separations are bounded by contact distance and this clamp only matters for pathological configurations |
+| `force_calculation_max_force` | `f64` | `10000000.0` | Maximum force magnitude to prevent numerical instabilities. With collisions enabled, pair separations are bounded by contact distance and this clamp only matters for pathological configurations; sized to clear the default scene's fully-merged endgame (contact force between merged clumps grows as N^(4/3)) |
 
 ### Simulation Behavior
 

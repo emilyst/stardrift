@@ -88,18 +88,24 @@ integrators' docs claim:
   pair potential and the splitting integrators are exactly symplectic. The
   *bounded-energy-error* guarantee additionally assumes no pair sits inside
   the clamp radii. With merge-on-contact collisions enabled (the default),
-  pair separations are bounded below by the contact distance, so bodies
-  never visually overlap, both clamps are inactive for pairs, and — by the
-  shell theorem — the point-mass force is *exact* for the non-overlapping
-  uniform spheres the bodies represent. With collisions disabled,
-  overlapping bodies void the bounded-energy theorem (not the
-  symplecticity).
+  pair separations are bounded below by the contact distance in the steady
+  state, so — by the shell theorem — the point-mass force is exact for the
+  non-overlapping uniform spheres the bodies represent, up to one caveat:
+  merges are applied after the step, so on the merge step itself the force
+  evaluations (including velocity Verlet's cached final stage) see the
+  pre-merge, possibly overlapping configuration for that one step. With
+  collisions disabled, persistently overlapping bodies void the
+  bounded-energy theorem (not the symplecticity).
 - Collision detection sweeps each body's per-step segment
   (`PreviousPosition` → `Position`, both written by the driver) between
   integration and drift correction. Linearizing the step is valid for
-  dt ≪ sqrt(6/(πGρ)) ≈ 0.138 s at defaults — the 60 Hz step clears it 8x —
-  and errs only toward slightly-early merges (bounded by (π/6)Gρdt², ~1.5%
-  of contact distance worst case), never missed ones. Merges conserve mass,
+  dt ≪ sqrt(6/(πGρ)) ≈ 0.138 s at defaults — the 60 Hz step clears it 8x.
+  Pair curvature errs only toward slightly-early merges (bounded by
+  (π/6)Gρdt², ~1.5% of contact distance worst case); third-body tidal
+  bending near a massive merged clump can locally exceed the pair term and
+  in principle miss a grazing encounter by a hair, with still-converging
+  pairs caught on a later step (see the module doc in
+  `src/plugins/simulation/collisions.rs`). Merges conserve mass,
   linear momentum, and the mass-weighted position sum to roundoff; kinetic
   energy and the pair's internal angular momentum are physically lost
   (inelastic collision — the latter would be the merged body's spin, which
