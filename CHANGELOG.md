@@ -47,6 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The diagnostics HUD body count now shows the live number of bodies; it
+  was rendered once at startup from the configured spawn count and never
+  updated, so it could not track collision merges
 - Orphaned trails (whose body was despawned) no longer freeze their last
   geometry on screen forever once they decay below two points; they fade
   out and their renderer entities are despawned

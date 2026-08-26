@@ -19,6 +19,9 @@ struct FrameCountTextNode;
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
 struct FpsTextNode;
 
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct BodyCountTextNode;
+
 #[derive(Component)]
 pub struct DiagnosticsHudRoot;
 
@@ -191,6 +194,7 @@ impl DiagnosticsHudPlugin {
                                 regular_text_font.clone(),
                             ),
                             (
+                                BodyCountTextNode,
                                 Text::new(format!("{}", **body_count)),
                                 Node {
                                     min_width: Val::Px(100.0),
@@ -236,6 +240,18 @@ impl DiagnosticsHudPlugin {
         }
     }
 
+    fn update_body_count_text(
+        bodies: Query<(), With<crate::physics::components::PhysicsBody>>,
+        mut body_count_text: Single<&mut Text, With<BodyCountTextNode>>,
+        state: Res<DiagnosticsHudState>,
+    ) {
+        // Live entity count, not the BodyCount resource: that resource is the
+        // configured spawn count, which collision merges rightly leave alone.
+        if state.refresh_timer.is_finished() {
+            ***body_count_text = format!("{}", bodies.iter().count());
+        }
+    }
+
     fn update_diagnostics_hud_visibility(
         settings: Res<DiagnosticsHudSettings>,
         mut root_query: Query<&mut Node, With<DiagnosticsHudRoot>>,
@@ -263,6 +279,7 @@ impl Plugin for DiagnosticsHudPlugin {
                 Self::advance_refresh_timer,
                 Self::update_frame_count_text,
                 Self::update_fps_text,
+                Self::update_body_count_text,
                 Self::update_diagnostics_hud_visibility,
             ),
         );
