@@ -129,6 +129,9 @@ fn head_on_merge_conserves_mass_momentum_and_mass_weighted_position() {
     let bodies = sim.bodies();
     assert_eq!(bodies.len(), 1, "bodies on a collision course must merge");
     let (mass_after, momentum_after, weighted_after) = sim.totals();
+    // Bitwise equality is intentional here and holds only because this is a
+    // two-body merge: one commutative addition, same result in any order.
+    // Multi-body cases must use a tolerance (see the triangle test).
     assert_eq!(mass_after, mass_before);
     assert!(momentum_after.length() < 1e-12 * mass_before * 30.0);
     assert!(weighted_after.length() < 1e-12 * mass_before * 10.0);

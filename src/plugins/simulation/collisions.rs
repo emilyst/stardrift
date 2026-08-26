@@ -14,9 +14,12 @@
 //! Linearizing the step's motion is safe: an isolated attracting pair's true
 //! relative orbit is convex toward the focus, so the chord underestimates
 //! minimum separation and pair curvature can only produce (slightly) early
-//! merges, not missed ones; third-body tidal bending of the relative path
-//! exists in principle but is orders of magnitude below the pair term at
-//! contact-scale separations. The early-merge bias is bounded by
+//! merges, not missed ones. Third-body tidal bending can locally exceed the
+//! pair term near a massive merged clump (2GMd/D³ against the pair's
+//! G(mᵢ+mⱼ)/d²), so a grazing encounter there can in principle be missed by
+//! a hair; a still-converging pair is caught on a later step, and an exactly
+//! grazing one that isn't was a zero-measure contact to begin with. The
+//! early-merge bias from pair curvature is bounded by
 //! (π/6)·G·ρ·dt² of the contact distance (~1.5% worst case at defaults);
 //! validity requires dt ≪ sqrt(6/(πGρ)), which the 60 Hz step clears by 8x.
 //!
@@ -81,7 +84,11 @@ struct MergedState {
 #[inline]
 fn accumulate(acc: MergedState, mass: Scalar, position: Vector, velocity: Vector) -> MergedState {
     let total = acc.mass + mass;
-    let alpha = mass / total;
+    // Guard the massless-pair corner (e.g. a config with min_body_radius = 0):
+    // alpha would be 0/0 and the NaN survivor would poison the whole scene
+    // through the octree on the next step. An even split is as principled as
+    // anything for two zero-mass points.
+    let alpha = if total > 0.0 { mass / total } else { 0.5 };
     MergedState {
         mass: total,
         position: acc.position + alpha * (position - acc.position),
@@ -180,23 +187,50 @@ pub fn detect_and_merge_collisions(
         return;
     }
 
-    // Broad phase: sweep-and-prune along x over per-body bounding spheres.
-    // Keying on the segment midpoint with radius inflated by half the
-    // segment length bounds the swept volume exactly; keying on endpoints
-    // would double the slack.
+    // Broad phase: sweep-and-prune over per-body bounding spheres. Keying
+    // on the segment midpoint with radius inflated by half the segment
+    // length bounds the swept volume exactly; keying on endpoints would
+    // double the slack. The sweep axis is the one with the largest midpoint
+    // variance this step — a fixed axis degenerates to ~n²/2 sphere checks
+    // when the scene collapses into a core whose extent along that axis is
+    // smaller than the contact windows, which is precisely the dense
+    // configuration merging produces. One O(n) pass, deterministic.
     buffers.spheres.clear();
+    let mut mean = Vector::ZERO;
     for candidate in &buffers.bodies {
         let midpoint = (candidate.prev + candidate.curr) * 0.5;
         let inflated =
             candidate.radius * contact_factor + (candidate.curr - candidate.prev).length() * 0.5;
+        mean += midpoint;
         buffers.spheres.push((midpoint, inflated));
     }
+    mean /= n as Scalar;
+    let mut variance = Vector::ZERO;
+    for (midpoint, _) in &buffers.spheres {
+        let d = *midpoint - mean;
+        variance += d * d;
+    }
+    let axis = if variance.x >= variance.y && variance.x >= variance.z {
+        0
+    } else if variance.y >= variance.z {
+        1
+    } else {
+        2
+    };
+    let axis_value = |v: Vector| -> Scalar {
+        match axis {
+            0 => v.x,
+            1 => v.y,
+            _ => v.z,
+        }
+    };
 
     buffers.order.clear();
     buffers.order.extend(0..n);
     let spheres = &buffers.spheres;
     buffers.order.sort_unstable_by(|&i, &j| {
-        (spheres[i].0.x - spheres[i].1).total_cmp(&(spheres[j].0.x - spheres[j].1))
+        (axis_value(spheres[i].0) - spheres[i].1)
+            .total_cmp(&(axis_value(spheres[j].0) - spheres[j].1))
     });
 
     buffers.parent.clear();
@@ -204,10 +238,10 @@ pub fn detect_and_merge_collisions(
     let mut any_contact = false;
     for (rank, &i) in buffers.order.iter().enumerate() {
         let (center_i, inflated_i) = buffers.spheres[i];
-        let sweep_end = center_i.x + inflated_i;
+        let sweep_end = axis_value(center_i) + inflated_i;
         for &j in &buffers.order[rank + 1..] {
             let (center_j, inflated_j) = buffers.spheres[j];
-            if center_j.x - inflated_j > sweep_end {
+            if axis_value(center_j) - inflated_j > sweep_end {
                 break;
             }
             let inflated_sum = inflated_i + inflated_j;
@@ -280,6 +314,15 @@ pub fn detect_and_merge_collisions(
         // Survivor: the most massive member, ties broken toward the smaller
         // entity. Its trail continues naturally; the others' trails orphan
         // and fade out.
+        //
+        // Known limitation: the survivor's jump from its end-of-step
+        // position to the merged centroid is itself never swept against
+        // bystanders, so a third body sitting exactly in that gap is found
+        // only by the next step's static-overlap branch (one step late, or
+        // — if it is moving away fast enough — not at all). Accepted: the
+        // window is one step, the geometry requires a fast long-range merge
+        // with a precisely placed bystander, and sweeping the jump would
+        // mean re-running detection within the step.
         let survivor_index = members
             .iter()
             .copied()

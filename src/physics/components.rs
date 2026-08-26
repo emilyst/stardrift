@@ -99,8 +99,16 @@ impl PreviousPosition {
     }
 }
 
-/// Marker component for physics bodies that should be simulated
+/// Marker component for physics bodies that should be simulated.
+///
+/// Requires `PreviousPosition` so no spawn path can create a body that
+/// gravitates but is invisible to collision detection (the collision query
+/// hard-requires the component). A required-default `PreviousPosition` of
+/// zero never reaches the collision system: the integration driver's
+/// write-back overwrites it with the true start-of-step position before
+/// collisions run.
 #[derive(Component, Debug, Default)]
+#[require(PreviousPosition)]
 pub struct PhysicsBody;
 
 /// Component bundle for spawning physics bodies
