@@ -1,4 +1,5 @@
 pub mod attribution;
+pub mod bodies;
 pub mod camera;
 pub mod controls;
 pub mod diagnostics_hud;

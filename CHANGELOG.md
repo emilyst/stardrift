@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Bodies are now rendered with one shared custom GPU material and the shared
+  unit-sphere mesh, instead of one `StandardMaterial` asset per body; every
+  body now batches into a single instanced draw. Rendering output is
+  unchanged (seeded screenshot diffs against the previous build fall within
+  run-to-run measurement noise).
+
 ## [0.0.72] - 2026-08-26
 
 ### Changed

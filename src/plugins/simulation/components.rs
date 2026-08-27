@@ -3,7 +3,6 @@
 use crate::config::SimulationConfig;
 use crate::physics::math::{min_sphere_radius_for_surface_distribution, random_unit_vector};
 use crate::prelude::*;
-use bevy::mesh::SphereKind;
 use rand::prelude::*;
 
 /// Factory functions for creating celestial body components.
@@ -93,29 +92,5 @@ pub mod factory {
         };
 
         velocity_dir * (speed as f32)
-    }
-}
-
-/// Shared unit-sphere mesh for all celestial bodies.
-///
-/// Radius is carried by `Transform::scale` (set at spawn, multiplied on
-/// collision merges), so every body can share this one mesh asset and the
-/// renderer can batch bodies that also share a material.
-#[derive(Resource, Deref)]
-pub struct BodyMesh(pub Handle<Mesh>);
-
-impl FromWorld for BodyMesh {
-    fn from_world(world: &mut World) -> Self {
-        let mut meshes = world.resource_mut::<Assets<Mesh>>();
-        Self(
-            meshes.add(
-                Sphere::new(1.0)
-                    .mesh()
-                    .kind(SphereKind::Ico {
-                        subdivisions: if cfg!(target_arch = "wasm32") { 1 } else { 4 },
-                    })
-                    .build(),
-            ),
-        )
     }
 }

@@ -149,7 +149,6 @@ pub fn detect_and_merge_collisions(
             &mut Velocity,
             &mut Mass,
             &mut Radius,
-            &mut Transform,
         ),
         With<PhysicsBody>,
     >,
@@ -172,7 +171,7 @@ pub fn detect_and_merge_collisions(
     let buffers = &mut *buffers;
 
     buffers.bodies.clear();
-    for (entity, position, previous_position, velocity, mass, radius, _) in bodies.iter() {
+    for (entity, position, previous_position, velocity, mass, radius) in bodies.iter() {
         buffers.bodies.push(Candidate {
             entity,
             prev: previous_position.value(),
@@ -336,16 +335,14 @@ pub fn detect_and_merge_collisions(
 
         let new_radius = radius_for_mass(merged.mass);
         let survivor = &buffers.bodies[survivor_index];
-        if let Ok((_, mut position, _, mut velocity, mut mass, mut radius, mut transform)) =
+        if let Ok((_, mut position, _, mut velocity, mut mass, mut radius)) =
             bodies.get_mut(survivor.entity)
         {
             *position.value_mut() = merged.position;
             *velocity.value_mut() = merged.velocity;
             *mass = Mass::new(merged.mass);
-            // Scale the existing mesh rather than regenerating it: the sphere
-            // is scale-invariant, and sync_transform_from_position writes
-            // only translation, so scale persists.
-            transform.scale *= (new_radius / radius.value()) as f32;
+            // Rendering follows: the bodies plugin syncs Transform::scale
+            // from Radius on change, so the merge never touches Transform.
             *radius = Radius::new(new_radius);
         }
 

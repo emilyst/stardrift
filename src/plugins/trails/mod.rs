@@ -62,6 +62,14 @@ impl Plugin for TrailsPlugin {
             Update,
             (TrailSet::Initialize, TrailSet::Update, TrailSet::Render).chain(),
         );
+        // Restart despawns and respawns bodies from SimulationSet::Input;
+        // this edge (and the sync point Bevy inserts for it) guarantees
+        // initialize_trails sees the fresh bodies' Added<PhysicsBody> the
+        // same frame instead of relying on incidental schedule topology.
+        app.configure_sets(
+            Update,
+            crate::plugins::simulation::SimulationSet::Input.before(TrailSet::Initialize),
+        );
 
         app.add_systems(
             Update,

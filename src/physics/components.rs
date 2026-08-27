@@ -53,9 +53,9 @@ impl Radius {
     }
 }
 
-/// The body's display color, fixed at spawn (matches the material's
-/// `base_color`). Carried on the body so renderers (bodies, trails) can read
-/// it without reaching into another plugin's material assets.
+/// The body's display color, fixed at spawn (saturation already applied).
+/// The source of truth for both renderers: the bodies plugin packs it into
+/// `MeshTag`, the trails plugin into its own tag encoding.
 #[derive(Component, Debug, Clone, Copy)]
 pub struct BodyColor(pub Color);
 
@@ -106,6 +106,12 @@ impl PreviousPosition {
 }
 
 /// Marker component for physics bodies that should be simulated.
+///
+/// The `Added<PhysicsBody>` window is load-bearing for rendering: both the
+/// bodies plugin (mesh/material/tag attach) and the trails plugin (trail
+/// renderer spawn) react to it from `Update`, after `SimulationSet::Input`.
+/// A spawn path added outside that ordering must still flush its commands
+/// before those systems run, or the body comes up invisible and trail-less.
 ///
 /// Requires `PreviousPosition` so no spawn path can create a body that
 /// gravitates but is invisible to collision detection (the collision query

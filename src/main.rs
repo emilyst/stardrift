@@ -14,8 +14,8 @@ use stardrift::plugins::keep_awake::KeepAwakePlugin;
 use stardrift::plugins::screenshot::ScreenshotPlugin;
 use stardrift::plugins::trails::TrailsPlugin;
 use stardrift::plugins::{
-    attribution::AttributionPlugin, camera::CameraPlugin, controls::ControlsPlugin,
-    embedded_assets::EmbeddedAssetsPlugin, simulation::SimulationPlugin,
+    attribution::AttributionPlugin, bodies::BodiesPlugin, camera::CameraPlugin,
+    controls::ControlsPlugin, embedded_assets::EmbeddedAssetsPlugin, simulation::SimulationPlugin,
     visualization::VisualizationPlugin,
 };
 use stardrift::plugins::{
@@ -105,6 +105,7 @@ fn main() {
 
     app.add_plugins((
         SimulationPlugin::with_config(config),
+        BodiesPlugin,
         CameraPlugin,
         ControlsPlugin,
         VisualizationPlugin,

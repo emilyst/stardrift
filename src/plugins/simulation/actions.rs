@@ -14,8 +14,6 @@ pub fn handle_restart_simulation_event(
     mut commands_reader: MessageReader<SimulationCommand>,
     mut commands: Commands,
     simulation_bodies: Query<Entity, With<PhysicsBody>>,
-    body_mesh: Res<super::components::BodyMesh>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut physics_rng: ResMut<SharedRng>,
     mut rendering_rng: ResMut<RenderingRng>,
     body_count: Res<BodyCount>,
@@ -46,8 +44,6 @@ pub fn handle_restart_simulation_event(
 
         spawn_bodies(
             &mut commands,
-            &body_mesh,
-            &mut materials,
             &mut physics_rng,
             &mut rendering_rng,
             **body_count,

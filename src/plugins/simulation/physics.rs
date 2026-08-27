@@ -9,8 +9,6 @@ use crate::physics::{
 use crate::resources::{
     Barycenter, GravitationalConstant, GravitationalOctree, RenderingRng, SharedRng,
 };
-use bevy::pbr::MeshMaterial3d;
-use bevy::prelude::Mesh3d;
 use bevy::prelude::*;
 use bevy::tasks::{ComputeTaskPool, ParallelSliceMut};
 
@@ -301,10 +299,11 @@ pub fn counteract_barycentric_drift(
 }
 
 /// Helper function to spawn bodies with the given parameters
+///
+/// Spawns physics state plus `BodyColor` only; the bodies plugin attaches
+/// mesh, material, and `MeshTag` reactively on `Added<PhysicsBody>`.
 pub fn spawn_bodies(
     commands: &mut Commands,
-    body_mesh: &super::components::BodyMesh,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
     physics_rng: &mut ResMut<SharedRng>,
     rendering_rng: &mut ResMut<RenderingRng>,
     body_count: usize,
@@ -316,14 +315,7 @@ pub fn spawn_bodies(
 
     use crate::physics::components::BodyColor;
 
-    let mut pending: Vec<(
-        Vector,
-        Scalar,
-        Vector,
-        Handle<StandardMaterial>,
-        BodyColor,
-        f32,
-    )> = Vec::with_capacity(body_count);
+    let mut pending: Vec<(Vector, Scalar, Vector, BodyColor, f32)> = Vec::with_capacity(body_count);
 
     for _ in 0..body_count {
         // Use physics RNG for position, radius, and velocity (physics determinism)
@@ -365,16 +357,9 @@ pub fn spawn_bodies(
             ColorScheme::Agender => agender_pride_color(rendering_rng),
         };
 
-        // Create material from color (single API path)
-        let material = create_emissive_material(
-            materials,
-            color,
-            config.rendering.bloom_intensity,
-            config.rendering.saturation_intensity,
-        );
-
-        // Same saturation step create_emissive_material applies internally,
-        // so BodyColor matches the material's base_color exactly.
+        // Saturation is applied once here, CPU-side; both renderers read the
+        // result from BodyColor (bodies pack it into MeshTag, trails into
+        // their own tag encoding). The bloom ramp lives in body.wgsl.
         let body_color = {
             let (r, g, b) = enhance_saturation(color, config.rendering.saturation_intensity);
             BodyColor(Color::LinearRgba(LinearRgba::rgb(r, g, b)))
@@ -388,7 +373,6 @@ pub fn spawn_bodies(
             Vector::from(position),
             mass,
             Vector::from(velocity),
-            material,
             body_color,
             radius,
         ));
@@ -406,15 +390,13 @@ pub fn spawn_bodies(
         },
     );
 
-    let unit_sphere = &body_mesh.0;
-
     let (barycenter, barycenter_velocity) = if total_mass > Scalar::EPSILON {
         (weighted_pos / total_mass, momentum / total_mass)
     } else {
         (Vector::ZERO, Vector::ZERO)
     };
 
-    for (position, mass, velocity, material, body_color, radius) in pending {
+    for (position, mass, velocity, body_color, radius) in pending {
         commands.spawn((
             PhysicsBodyBundle::new(
                 position - barycenter,
@@ -422,8 +404,6 @@ pub fn spawn_bodies(
                 radius,
                 velocity - barycenter_velocity,
             ),
-            MeshMaterial3d(material),
-            Mesh3d(unit_sphere.clone()),
             body_color,
         ));
     }
@@ -432,8 +412,6 @@ pub fn spawn_bodies(
 /// Bevy system to spawn simulation bodies at startup
 pub fn spawn_simulation_bodies(
     mut commands: Commands,
-    body_mesh: Res<super::components::BodyMesh>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut physics_rng: ResMut<SharedRng>,
     mut rendering_rng: ResMut<RenderingRng>,
     body_count: Res<crate::resources::BodyCount>,
@@ -441,8 +419,6 @@ pub fn spawn_simulation_bodies(
 ) {
     spawn_bodies(
         &mut commands,
-        &body_mesh,
-        &mut materials,
         &mut physics_rng,
         &mut rendering_rng,
         **body_count,

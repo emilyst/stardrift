@@ -35,6 +35,7 @@ src/
 ├── plugins/             # Bevy plugins
 │   ├── simulation/      # Core simulation: spawning, physics driver,
 │   │                    #   collisions, command handling
+│   ├── bodies/          # Body rendering (shared mesh + material + WGSL shader)
 │   ├── camera.rs        # Camera setup and controls
 │   ├── controls/        # Keyboard bindings and UI button bar
 │   ├── diagnostics_hud.rs
@@ -102,6 +103,12 @@ The heart of the application. Manages:
 - The staged integration driver (see [Integration design](integration.md))
 - Barycenter calculation
 - Merge-on-contact collisions (swept detection; momentum-conserving inelastic merges)
+
+### Bodies Plugin
+
+**Location**: `src/plugins/bodies/`
+
+Renders every physics body with one shared unit-sphere mesh and one shared custom `BodyMaterial` (a fragment-only shader, `body.wgsl`, reproducing the ambient/fresnel and bloom-emissive look a per-body `StandardMaterial` used to produce). Per-body color travels in `MeshTag` rather than the material, so all bodies share one mesh handle and one material handle and batch into a single instanced draw. The simulation plugin spawns bodies with physics state only; this plugin attaches mesh, material, and color reactively on `Added<PhysicsBody>`, and keeps `Transform::scale` in sync with `Radius` (including on collision merges).
 
 ### Camera Plugin
 

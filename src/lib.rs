@@ -22,8 +22,9 @@ pub use physics::{
     math::{Scalar, Vector},
 };
 pub use plugins::{
-    camera::CameraPlugin, controls::ControlsPlugin, diagnostics_hud::DiagnosticsHudPlugin,
-    simulation::SimulationPlugin, trails::TrailsPlugin, visualization::VisualizationPlugin,
+    bodies::BodiesPlugin, camera::CameraPlugin, controls::ControlsPlugin,
+    diagnostics_hud::DiagnosticsHudPlugin, simulation::SimulationPlugin, trails::TrailsPlugin,
+    visualization::VisualizationPlugin,
 };
 pub use prelude::*;
 pub use states::AppState;
