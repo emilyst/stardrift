@@ -65,10 +65,11 @@ pub struct Trail {
     pub points: VecDeque<TrailPoint>,
     /// Effective time of the last recorded point.
     last_update: f32,
-    /// Set when the point set changes; cleared by the mesh rebuild system.
-    /// This is what decouples GPU uploads from frame rate: fade and
-    /// camera-facing width are shader-side, so unchanged points need no new
-    /// geometry.
+    /// Set when recording changes the point set; cleared by the mesh rebuild
+    /// system. This is what decouples GPU uploads from frame rate: fade,
+    /// camera-facing width, and expiry are all shader-side, so uploads track
+    /// the record rate. Expiry deliberately does not set this — see
+    /// [`Trail::trim_expired`].
     pub dirty: bool,
 }
 
@@ -85,7 +86,13 @@ impl Trail {
         effective_now - self.last_update >= update_interval
     }
 
-    pub fn add_point(&mut self, position: Vec3, radius: f32, effective_now: f32) {
+    pub fn add_point(
+        &mut self,
+        position: Vec3,
+        radius: f32,
+        effective_now: f32,
+        max_points: usize,
+    ) {
         // Tangent toward the older neighbor, matching the CPU tessellator's
         // `points[i + 1] - points[i]` (index 0 is newest). A body that hasn't
         // moved gets a zero tangent, which the mesh builder turns into zero
@@ -108,23 +115,30 @@ impl Trail {
             radius,
         });
 
+        // The count cap is enforced here, at record time, so it holds exactly
+        // at all times without a per-frame cleanup pass. At default config it
+        // is not binding (the age bound trims first); it is a safety valve,
+        // and record time is where a safety valve belongs. Clamped to 1 so a
+        // zero cap cannot empty the deque it just pushed into.
+        while self.points.len() > max_points.max(1) {
+            self.points.pop_back();
+        }
+
         self.last_update = effective_now;
         self.dirty = true;
     }
 
-    pub fn cleanup_old_points(&mut self, effective_now: f32, max_age: f32, max_points: usize) {
+    /// Drop points older than `max_age`. Deliberately does NOT set `dirty`:
+    /// expired points are already invisible (the vertex shader collapses
+    /// them against `effective_time`), live trails fold removals into their
+    /// next record rebuild, and orphaned trails stop uploading entirely
+    /// during fade-out. Called at a coarse cadence, not per frame. Returns
+    /// the number of points removed.
+    pub fn trim_expired(&mut self, effective_now: f32, max_age: f32) -> usize {
         let before = self.points.len();
-
         self.points
             .retain(|point| effective_now - point.birth <= max_age);
-
-        if self.points.len() > max_points {
-            self.points.truncate(max_points);
-        }
-
-        if self.points.len() != before {
-            self.dirty = true;
-        }
+        before - self.points.len()
     }
 }
 

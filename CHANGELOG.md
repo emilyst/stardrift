@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Trail point expiry now happens in the vertex shader (expired points
+  collapse to zero width and alpha against the shared time uniform) instead
+  of by CPU removal every frame. CPU-side cleanup is amortized to a ~1 Hz
+  trim that no longer marks meshes dirty, so trail meshes re-upload at the
+  point-record rate (30 Hz by default) rather than every rendered frame —
+  previously the dominant per-frame cost at high body counts — and orphaned
+  trails stop re-uploading entirely during their fade-out. The
+  `max_points_per_trail` cap is now enforced at record time. Visual output
+  is unchanged.
+
 ## [0.0.73] - 2026-08-28
 
 ### Added

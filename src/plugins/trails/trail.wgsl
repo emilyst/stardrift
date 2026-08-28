@@ -94,16 +94,29 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     } else {
         perp = perp * inverseSqrt(l2);
     }
+    // Expired points are hidden here rather than removed CPU-side every
+    // frame (removal would re-upload every trail mesh at frame rate; the
+    // CPU trims them at a coarse cadence instead). Zeroing the offset
+    // collapses them to degenerate zero-area triangles — no fragments —
+    // and zeroing alpha below fades the one boundary segment into the last
+    // live pair. A non-positive trail length disables expiry, mirroring
+    // fade_alpha's max_age guard.
+    let age = trail.effective_time - vertex.birth;
+    let live = select(
+        0.0,
+        1.0,
+        trail.trail_length_seconds <= 0.0 || age <= trail.trail_length_seconds,
+    );
+
     // A zero tangent (stationary body) zeroes the cross product on both
     // paths above; the epsilon nudges keep normalize() finite and the
     // vertex collapses to zero width via a zero `offset` set CPU-side.
-    world_pos += perp * vertex.offset;
+    world_pos += perp * vertex.offset * live;
 
     out.clip_position = view.clip_from_world * vec4<f32>(world_pos, 1.0);
 
     let base = unpack_tag_color(mesh_functions::get_tag(vertex.instance_index));
-    let age = trail.effective_time - vertex.birth;
-    let alpha = fade_alpha(age);
+    let alpha = fade_alpha(age) * live;
 
     // Same luminance-scaled HDR boost the bodies use for bloom; the
     // luminance rides in the tag's high byte.

@@ -9,14 +9,15 @@
 //!   per-trail adjustment;
 //! - a second `pause()` while paused is a no-op (first pause wins);
 //! - `Trail::add_point` pushes the newest point to index 0, records
-//!   birth/radius as given, and maintains the tangent convention (toward
+//!   birth/radius as given, maintains the tangent convention (toward
 //!   the older neighbor; first point backfilled once a second exists; zero
-//!   tangent for a stationary body);
+//!   tangent for a stationary body), and enforces the point-count cap at
+//!   record time (evicting the oldest; a cap of 0 clamps to 1);
 //! - `should_update` is inclusive at exactly one interval elapsed;
-//! - `cleanup_old_points` keeps age == max_age (strict cutoff is `<=`),
-//!   truncates to the newest `max_points`, and sets `dirty` only when it
-//!   actually removed something — the contract the mesh rebuild system
-//!   relies on to skip GPU uploads.
+//! - `trim_expired` keeps age == max_age (strict cutoff is `<=`) and never
+//!   sets `dirty` — expired points are hidden shader-side, so the trim must
+//!   not trigger GPU uploads; that is the contract the whole
+//!   upload-at-record-rate design rests on.
 
 use bevy::prelude::*;
 use stardrift::plugins::trails::{Trail, TrailClock, TrailPoint};
@@ -127,8 +128,8 @@ fn new_trail_is_empty_and_clean() {
 #[test]
 fn add_point_pushes_front_and_records_birth_and_radius() {
     let mut trail = Trail::new();
-    trail.add_point(Vec3::new(1.0, 2.0, 3.0), 0.5, 10.0);
-    trail.add_point(Vec3::new(4.0, 5.0, 6.0), 0.75, 11.0);
+    trail.add_point(Vec3::new(1.0, 2.0, 3.0), 0.5, 10.0, usize::MAX);
+    trail.add_point(Vec3::new(4.0, 5.0, 6.0), 0.75, 11.0, usize::MAX);
 
     assert_eq!(trail.points.len(), 2);
     // Newest at index 0; pass-through values are exact.
@@ -144,7 +145,7 @@ fn add_point_pushes_front_and_records_birth_and_radius() {
 #[test]
 fn first_point_has_zero_tangent_until_a_second_point_exists() {
     let mut trail = Trail::new();
-    trail.add_point(Vec3::new(1.0, 2.0, 3.0), 0.5, 0.0);
+    trail.add_point(Vec3::new(1.0, 2.0, 3.0), 0.5, 0.0, usize::MAX);
 
     assert_eq!(point(&trail, 0).tangent, Vec3::ZERO);
 }
@@ -152,10 +153,10 @@ fn first_point_has_zero_tangent_until_a_second_point_exists() {
 #[test]
 fn second_point_sets_tangent_toward_older_neighbor_and_backfills_first() {
     let mut trail = Trail::new();
-    trail.add_point(Vec3::ZERO, 0.5, 0.0);
+    trail.add_point(Vec3::ZERO, 0.5, 0.0, usize::MAX);
     // Displacement (3, 4, 0): tangent from the newer point toward the older
     // one is normalize(older - newer) = (-0.6, -0.8, 0).
-    trail.add_point(Vec3::new(3.0, 4.0, 0.0), 0.5, 1.0);
+    trail.add_point(Vec3::new(3.0, 4.0, 0.0), 0.5, 1.0, usize::MAX);
 
     let expected = Vec3::new(-0.6, -0.8, 0.0);
     assert_vec3_close(point(&trail, 0).tangent, expected, 1e-6, "newest tangent");
@@ -173,8 +174,8 @@ fn second_point_sets_tangent_toward_older_neighbor_and_backfills_first() {
 fn stationary_body_records_zero_tangent_and_does_not_backfill() {
     let mut trail = Trail::new();
     let here = Vec3::new(1.0, 2.0, 3.0);
-    trail.add_point(here, 0.5, 0.0);
-    trail.add_point(here, 0.5, 1.0); // hasn't moved
+    trail.add_point(here, 0.5, 0.0, usize::MAX);
+    trail.add_point(here, 0.5, 1.0, usize::MAX); // hasn't moved
 
     // Zero tangent means zero ribbon width (invisible), never an arbitrarily
     // oriented quad — and a zero direction must not overwrite the first
@@ -191,7 +192,7 @@ fn should_update_is_inclusive_at_one_full_interval() {
     assert!(!trail.should_update(0.5, 1.0));
     assert!(trail.should_update(1.0, 1.0));
 
-    trail.add_point(Vec3::ZERO, 0.5, 1.0);
+    trail.add_point(Vec3::ZERO, 0.5, 1.0, usize::MAX);
     // All values exactly representable: 2.0 - 1.0 == 1.0 tests >= precisely.
     assert!(!trail.should_update(1.5, 1.0));
     assert!(trail.should_update(2.0, 1.0), "boundary must be inclusive");
@@ -199,76 +200,75 @@ fn should_update_is_inclusive_at_one_full_interval() {
 }
 
 #[test]
-fn cleanup_keeps_points_at_exactly_max_age() {
+fn trim_keeps_points_at_exactly_max_age() {
     let mut trail = Trail::new();
-    trail.add_point(Vec3::new(0.0, 0.0, 0.0), 0.5, 0.0); // age 3 at now = 3
-    trail.add_point(Vec3::new(1.0, 0.0, 0.0), 0.5, 1.0); // age 2
-    trail.add_point(Vec3::new(2.0, 0.0, 0.0), 0.5, 2.0); // age 1
+    trail.add_point(Vec3::new(0.0, 0.0, 0.0), 0.5, 0.0, usize::MAX); // age 3 at now = 3
+    trail.add_point(Vec3::new(1.0, 0.0, 0.0), 0.5, 1.0, usize::MAX); // age 2
+    trail.add_point(Vec3::new(2.0, 0.0, 0.0), 0.5, 2.0, usize::MAX); // age 1
 
-    trail.cleanup_old_points(3.0, 2.0, 100);
+    let removed = trail.trim_expired(3.0, 2.0);
 
     // The cutoff is age <= max_age: the age-2 point survives, age-3 does not.
+    assert_eq!(removed, 1);
     assert_eq!(trail.points.len(), 2);
     assert_eq!(point(&trail, 0).birth, 2.0);
     assert_eq!(point(&trail, 1).birth, 1.0);
 }
 
 #[test]
-fn cleanup_truncates_to_max_points_keeping_the_newest() {
+fn trim_never_sets_dirty() {
+    let mut trail = Trail::new();
+    trail.add_point(Vec3::ZERO, 0.5, 0.0, usize::MAX);
+    trail.add_point(Vec3::new(1.0, 0.0, 0.0), 0.5, 1.0, usize::MAX);
+    trail.dirty = false; // as the mesh rebuild system does after an upload
+
+    // A no-op trim stays clean, and so does a removing trim: expired points
+    // are hidden shader-side, so the trim must never trigger a GPU upload.
+    // Live trails sync the buffer at their next record; orphaned trails
+    // stop uploading entirely during fade-out.
+    assert_eq!(trail.trim_expired(1.0, 100.0), 0);
+    assert!(!trail.dirty, "no-op trim must not dirty the trail");
+    assert_eq!(trail.points.len(), 2);
+
+    assert_eq!(trail.trim_expired(200.0, 100.0), 2);
+    assert!(!trail.dirty, "a removing trim must not dirty the trail");
+    assert!(trail.points.is_empty());
+}
+
+#[test]
+fn add_point_evicts_the_oldest_beyond_the_cap() {
     let mut trail = Trail::new();
     for i in 0..5 {
-        trail.add_point(Vec3::new(i as f32, 0.0, 0.0), 0.5, i as f32);
+        trail.add_point(Vec3::new(i as f32, 0.0, 0.0), 0.5, i as f32, 3);
     }
 
-    trail.cleanup_old_points(4.0, 100.0, 3);
-
+    // The cap holds exactly at record time — no cleanup pass involved.
     assert_eq!(trail.points.len(), 3);
-    // Newest-first: births 4, 3, 2 survive; the oldest two are dropped.
+    // Newest-first: births 4, 3, 2 survive; the oldest two were evicted.
     assert_eq!(point(&trail, 0).birth, 4.0);
     assert_eq!(point(&trail, 1).birth, 3.0);
     assert_eq!(point(&trail, 2).birth, 2.0);
 }
 
 #[test]
-fn cleanup_sets_dirty_only_when_it_removes_something() {
+fn add_point_cap_of_zero_clamps_to_one() {
     let mut trail = Trail::new();
-    trail.add_point(Vec3::ZERO, 0.5, 0.0);
-    trail.add_point(Vec3::new(1.0, 0.0, 0.0), 0.5, 1.0);
-    trail.dirty = false; // as the mesh rebuild system does after an upload
+    trail.add_point(Vec3::ZERO, 0.5, 0.0, 0);
+    trail.add_point(Vec3::new(1.0, 0.0, 0.0), 0.5, 1.0, 0);
 
-    // Nothing expires, nothing truncated: must stay clean so the rebuild
-    // system skips the GPU upload.
-    trail.cleanup_old_points(1.0, 100.0, 100);
-    assert!(!trail.dirty, "no-op cleanup must not dirty the trail");
-    assert_eq!(trail.points.len(), 2);
-
-    // Age-based removal dirties.
-    trail.cleanup_old_points(200.0, 100.0, 100);
-    assert!(trail.dirty, "expiring a point must dirty the trail");
-    assert!(trail.points.is_empty());
-}
-
-#[test]
-fn cleanup_truncation_alone_sets_dirty() {
-    let mut trail = Trail::new();
-    for i in 0..4 {
-        trail.add_point(Vec3::new(i as f32, 0.0, 0.0), 0.5, i as f32);
-    }
-    trail.dirty = false;
-
-    trail.cleanup_old_points(3.0, 100.0, 2); // no point is too old
-
-    assert_eq!(trail.points.len(), 2);
-    assert!(trail.dirty, "truncation must dirty the trail");
+    // A zero cap must not empty the deque it just pushed into: the newest
+    // point always survives.
+    assert_eq!(trail.points.len(), 1);
+    assert_eq!(point(&trail, 0).birth, 1.0);
 }
 
 #[test]
 fn dirty_is_clearable_and_add_point_sets_it_again() {
     let mut trail = Trail::new();
-    trail.add_point(Vec3::ZERO, 0.5, 0.0);
+    trail.add_point(Vec3::ZERO, 0.5, 0.0, usize::MAX);
     assert!(trail.dirty);
 
     trail.dirty = false;
-    trail.add_point(Vec3::new(1.0, 0.0, 0.0), 0.5, 1.0);
+    trail.add_point(Vec3::new(1.0, 0.0, 0.0), 0.5, 1.0, usize::MAX);
     assert!(trail.dirty, "add_point after a clear must re-dirty");
 }

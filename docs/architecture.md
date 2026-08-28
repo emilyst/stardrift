@@ -126,7 +126,7 @@ Keyboard bindings and the UI button bar. Buttons are constructed with a builder 
 
 **Location**: `src/plugins/trails/`
 
-Renders fading trails behind moving bodies as GPU ribbons. Points are recorded on the CPU at configurable intervals; ribbon expansion, camera-facing width, fade curves, and bloom run in a custom vertex shader (`trail.wgsl`), with width tapering and per-point body radius baked into the vertex data. Trail geometry is re-uploaded only when the recorded point set changes, not every frame.
+Renders fading trails behind moving bodies as GPU ribbons. Points are recorded on the CPU at configurable intervals; ribbon expansion, camera-facing width, fade curves, expiry, and bloom run in a custom vertex shader (`trail.wgsl`), with width tapering and per-point body radius baked into the vertex data. Trail geometry is re-uploaded only when a point is recorded, not every frame: expired points are hidden by the shader (collapsed against the shared time uniform) and trimmed from the CPU buffers at a coarse ~1 Hz cadence that does not trigger uploads.
 
 ### Visualization Plugin
 

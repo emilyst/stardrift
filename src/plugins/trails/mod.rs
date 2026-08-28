@@ -1,10 +1,11 @@
 //! Trails plugin - Self-contained plugin pattern
 //!
 //! Renders fading, tapering ribbons behind moving bodies. Point recording is
-//! CPU-side (`trail.rs`); ribbon expansion, camera-facing width, and fade all
-//! run in the vertex shader (`trail.wgsl`), so trail meshes are re-uploaded
-//! only when the recorded point set changes (~the record interval), not every
-//! rendered frame.
+//! CPU-side (`trail.rs`); ribbon expansion, camera-facing width, fade, and
+//! expiry all run in the vertex shader (`trail.wgsl`), so trail meshes are
+//! re-uploaded only when a point is recorded (~the record interval), not
+//! every rendered frame. Expired points linger invisibly in the buffers
+//! until a coarse (~1 Hz) CPU trim drops them.
 
 mod material;
 mod trail;
@@ -92,8 +93,14 @@ impl Plugin for TrailsPlugin {
                     .in_set(TrailSet::Update)
                     .before(Self::update_trails),
                 Self::update_trails.in_set(TrailSet::Update),
-                // After update_trails so "orphaned and fully decayed" is
-                // evaluated against this frame's decay, not last frame's.
+                // Explicitly before despawn_orphaned_trails: both touch
+                // `Trail` after update_trails and would otherwise be
+                // ambiguously ordered, and "orphaned and fully decayed" must
+                // be evaluated against this tick's trim.
+                Self::trim_expired_points
+                    .in_set(TrailSet::Update)
+                    .after(Self::update_trails)
+                    .before(Self::despawn_orphaned_trails),
                 Self::despawn_orphaned_trails
                     .in_set(TrailSet::Update)
                     .after(Self::update_trails),
@@ -115,7 +122,9 @@ impl Plugin for TrailsPlugin {
 
 impl TrailsPlugin {
     /// Total recorded points across all live trails. Trail CPU cost scales
-    /// with this, not with body count alone.
+    /// with this, not with body count alone. Includes expired points still
+    /// awaiting the coarse trim (up to ~1 s of record rate per trail), so it
+    /// measures buffer load, not visible length.
     pub const TRAIL_POINTS: DiagnosticPath = DiagnosticPath::const_new("trails/points");
     /// Trails whose meshes will be rebuilt (re-uploaded) this frame.
     pub const TRAIL_MESH_REBUILDS: DiagnosticPath =
@@ -171,15 +180,48 @@ impl TrailsPlugin {
                 // Radius at record time: collision merges grow the body, and
                 // the trail width follows per point from here on.
                 let radius = radius.map(|r| r.value() as f32).unwrap_or(1.0);
-                trail.add_point(transform.translation, radius, now);
+                trail.add_point(
+                    transform.translation,
+                    radius,
+                    now,
+                    config.trails.max_points_per_trail,
+                );
             }
+        }
+    }
 
-            // Always cleanup old points, even for orphaned trails
-            trail.cleanup_old_points(
-                now,
-                config.trails.trail_length_seconds,
-                config.trails.max_points_per_trail,
-            );
+    /// Interval between CPU trims of expired points. Expiry is visually
+    /// instant (shader-side); this only bounds how much invisible data
+    /// lingers in the buffers, so it can be very coarse.
+    const TRIM_INTERVAL_SECONDS: f32 = 1.0;
+
+    /// Drop expired points at a coarse cadence. Doing this per frame marked
+    /// every trail dirty ~every frame at steady state, re-uploading every
+    /// trail mesh at frame rate — the dominant frame cost at high body
+    /// counts. The trim never marks trails dirty: live trails fold removals
+    /// into their next record rebuild, and orphaned trails stop uploading
+    /// entirely during fade-out. The gate lives in effective time, so pause
+    /// freezes it along with the ages it checks.
+    fn trim_expired_points(
+        mut trail_query: Query<&mut Trail, With<TrailRenderer>>,
+        time: Res<Time>,
+        config: Res<SimulationConfig>,
+        clock: Res<TrailClock>,
+        mut last_trim: Local<f32>,
+    ) {
+        if clock.is_paused() {
+            return;
+        }
+        let now = clock.effective_time(time.elapsed_secs());
+        if now - *last_trim < Self::TRIM_INTERVAL_SECONDS {
+            return;
+        }
+        // Unconditionally, not only when something was removed: an idle tick
+        // must close the gate too, or it stays open forever.
+        *last_trim = now;
+
+        for mut trail in trail_query.iter_mut() {
+            trail.trim_expired(now, config.trails.trail_length_seconds);
         }
     }
 
@@ -231,6 +273,10 @@ impl TrailsPlugin {
                 // Nothing here needs the bounds: the scene has no lights or
                 // shadow culling, transparent sorting uses the render mesh's
                 // stored center, and the camera frames the whole system.
+                // Shader-side expiry makes this more load-bearing still:
+                // meshes now go un-mutated for up to a second (or an entire
+                // orphan fade-out), so mutation-driven bounds would also be
+                // badly stale.
                 NoFrustumCulling,
             ));
         }
@@ -279,8 +325,10 @@ impl TrailsPlugin {
     /// their points have fully decayed. Bodies absorbed by collision merges
     /// orphan their trails; update_trails stops feeding them and this
     /// reclaims the renderer entity (and its mesh asset) after the fade-out
-    /// completes. Query::get on a despawned entity returns Err via the
-    /// generation bump, so a recycled index can never false-match.
+    /// completes — the point buffer empties at the trim tick following full
+    /// decay, so reclamation lags by up to the trim interval. Query::get on
+    /// a despawned entity returns Err via the generation bump, so a recycled
+    /// index can never false-match.
     fn despawn_orphaned_trails(
         mut commands: Commands,
         trail_query: Query<(Entity, &TrackedBody, &Trail), With<TrailRenderer>>,
@@ -344,6 +392,9 @@ fn write_trail_mesh(mesh: &mut Mesh, trail: &Trail, config: &crate::config::Trai
 
         let taper = if config.enable_tapering {
             // Position along trail: 0.0 at head (newest), 1.0 at tail.
+            // Expired-but-untrimmed points count toward n, compressing live
+            // ratios by up to ~2% at defaults (one trim interval of points
+            // out of a full trail) — invisible at the min-width tail.
             taper_factor(
                 &config.taper_curve,
                 i as f32 / (n - 1) as f32,

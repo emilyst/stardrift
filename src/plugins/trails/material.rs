@@ -41,6 +41,11 @@ pub struct TrailParams {
     /// frame by `sync_trail_material`. (`globals.time` is unusable here: it
     /// wraps hourly and ignores pause.)
     pub effective_time: f32,
+    /// Doubles as the shader-side expiry cutoff (`live` in trail.wgsl), not
+    /// just fade shaping: points older than this collapse to nothing. Written
+    /// once from config; if a runtime config-reload path is ever added,
+    /// resync this whole struct, not just `effective_time` — a stale value
+    /// here blanks or resurrects geometry.
     pub trail_length_seconds: f32,
     pub min_alpha: f32,
     pub max_alpha: f32,
