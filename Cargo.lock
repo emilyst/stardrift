@@ -5002,7 +5002,7 @@ dependencies = [
 
 [[package]]
 name = "stardrift"
-version = "0.0.72"
+version = "0.0.73"
 dependencies = [
  "bevy",
  "bevy_panorbit_camera",
