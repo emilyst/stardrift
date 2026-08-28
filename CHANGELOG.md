@@ -9,17 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Trails are now rendered by a custom instanced pipeline on native: every
-  trail draws in a single call from one persistent GPU segment ring, with
-  fade, age-keyed taper, expiry, and a new soft-edged additive glow profile
-  all evaluated in the shader. Segment uploads happen once per record tick
-  instead of once per trail, and orphaned trails cost nothing during their
-  fade-out. The `use_additive_blending` trail option no longer applies on
-  native (the new renderer is additive by design; the setting still affects
-  the web build, which keeps the previous ribbon renderer until the new
-  pipeline is ported). New diagnostic `trails/segment_uploads` replaces
-  `trails/mesh_rebuilds` on native.
-
 - Trail width taper is now driven by point age (time toward expiry) instead
   of position along the trail. Young trails render as uniform-width ribbons
   from the start rather than compressing the full taper into a short

@@ -65,10 +65,6 @@ pub struct Trail {
     pub points: VecDeque<TrailPoint>,
     /// Effective time of the last recorded point.
     last_update: f32,
-    /// Smoothed record-time speed (EMA over ~3 ticks), feeding the
-    /// instanced renderer's long-exposure energy term. Zero until the
-    /// first segment.
-    pub speed_ema: f32,
     /// Set when recording changes the point set; cleared by the mesh rebuild
     /// system. This is what decouples GPU uploads from frame rate: fade,
     /// camera-facing width, and expiry are all shader-side, so uploads track
@@ -82,7 +78,6 @@ impl Trail {
         Self {
             points: VecDeque::new(),
             last_update: 0.0,
-            speed_ema: 0.0,
             dirty: false,
         }
     }

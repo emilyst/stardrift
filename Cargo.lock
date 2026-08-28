@@ -5006,7 +5006,6 @@ version = "0.0.73"
 dependencies = [
  "bevy",
  "bevy_panorbit_camera",
- "bytemuck",
  "chrono",
  "clap",
  "config",
