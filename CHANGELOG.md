@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Default trail record rate lowered from 30 Hz to 10 Hz
+  (`update_interval_seconds` 0.0333 → 0.1) and default trail length halved
+  (`trail_length_seconds` 60 → 30). Visually near-identical at typical body
+  counts, and measured to cut trail mesh upload cost dramatically at high
+  body counts (frame time at 1000 bodies roughly halved by the rate change
+  alone in interleaved A/B runs). Both remain configurable.
+
 ## [0.0.74] - 2026-08-28
 
 ### Changed

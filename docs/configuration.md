@@ -182,8 +182,8 @@ The `[trails]` section controls the visual trails behind moving bodies.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `trail_length_seconds` | `f32` | `60.0` | How long trails persist in seconds |
-| `update_interval_seconds` | `f32` | `0.03333` | How often to record trail points (~30 FPS) |
+| `trail_length_seconds` | `f32` | `30.0` | How long trails persist in seconds |
+| `update_interval_seconds` | `f32` | `0.1` | How often to record trail points (10 Hz) |
 | `max_points_per_trail` | `usize` | `10000` | Maximum trail points per body |
 
 ### Trail Appearance

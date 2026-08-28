@@ -283,8 +283,8 @@ impl Default for TrailConfig {
     fn default() -> Self {
         Self {
             // Length & Timing
-            trail_length_seconds: 60.0,
-            update_interval_seconds: 1.0 / 30.0,
+            trail_length_seconds: 30.0,
+            update_interval_seconds: 0.1,
             max_points_per_trail: 10000,
 
             // Visual Appearance
