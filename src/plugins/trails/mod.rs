@@ -8,23 +8,32 @@
 //! until a coarse (~1 Hz) CPU trim drops them.
 
 mod material;
+#[cfg(not(target_arch = "wasm32"))]
+mod render;
+mod segment;
 mod trail;
 
 pub use material::{TrailMaterial, TrailMaterialHandle};
+pub use segment::{TrailSegment, TrailSegmentQueue};
 pub use trail::{Trail, TrailClock, TrailPoint};
+
+pub use crate::plugins::visualization::TrailsVisualizationSettings;
 
 use crate::physics::components::{BodyColor, PhysicsBody, Radius};
 use crate::prelude::*;
 use crate::states::AppState;
+#[cfg(target_arch = "wasm32")]
 use bevy::asset::RenderAssetUsages;
 use bevy::asset::embedded_asset;
+#[cfg(target_arch = "wasm32")]
 use bevy::camera::visibility::NoFrustumCulling;
 use bevy::diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic};
+#[cfg(target_arch = "wasm32")]
 use bevy::mesh::{MeshTag, PrimitiveTopology};
 use bevy::pbr::MaterialPlugin;
-use material::{
-    ATTRIBUTE_TRAIL_BIRTH, ATTRIBUTE_TRAIL_OFFSET, ATTRIBUTE_TRAIL_TANGENT, pack_trail_color,
-};
+use material::pack_trail_color;
+#[cfg(target_arch = "wasm32")]
+use material::{ATTRIBUTE_TRAIL_BIRTH, ATTRIBUTE_TRAIL_OFFSET, ATTRIBUTE_TRAIL_TANGENT};
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TrailSet {
@@ -39,6 +48,7 @@ pub struct TrailRenderer;
 #[derive(Component)]
 pub struct TrackedBody(pub Entity);
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Bundle)]
 struct TrailBundle {
     renderer: TrailRenderer,
@@ -59,8 +69,16 @@ impl Plugin for TrailsPlugin {
         app.add_plugins(MaterialPlugin::<TrailMaterial>::default());
         app.init_resource::<TrailClock>();
         app.init_resource::<TrailMaterialHandle>();
+        app.init_resource::<TrailSegmentQueue>();
+
+        // The instanced ring renderer owns trail visuals on native; the
+        // legacy per-trail mesh path stays wasm-only until the port.
+        #[cfg(not(target_arch = "wasm32"))]
+        app.add_plugins(render::TrailRenderPlugin);
 
         app.register_diagnostic(Diagnostic::new(Self::TRAIL_POINTS).with_smoothing_factor(0.0));
+        app.register_diagnostic(Diagnostic::new(Self::TRAIL_SEGMENT_UPLOADS));
+        #[cfg(target_arch = "wasm32")]
         app.register_diagnostic(Diagnostic::new(Self::TRAIL_MESH_REBUILDS));
 
         app.configure_sets(
@@ -104,12 +122,23 @@ impl Plugin for TrailsPlugin {
                 Self::despawn_orphaned_trails
                     .in_set(TrailSet::Update)
                     .after(Self::update_trails),
+                Self::record_trail_diagnostics.in_set(TrailSet::Render),
+            )
+                .run_if(in_state(AppState::Running).or_else(in_state(AppState::Paused))),
+        );
+
+        // The legacy renderer's mesh maintenance, wasm-only.
+        #[cfg(target_arch = "wasm32")]
+        app.add_systems(
+            Update,
+            (
                 // Before rebuild_trail_meshes: `dirty` flags are consumed by
-                // the rebuild, so the upload count must be sampled first.
-                Self::record_trail_diagnostics
+                // the rebuild, so the diagnostics sampling above must not be
+                // reordered after it either (both live in TrailSet::Render;
+                // the explicit edge keeps the count honest).
+                (Self::rebuild_trail_meshes, Self::sync_trail_material)
                     .in_set(TrailSet::Render)
-                    .before(Self::rebuild_trail_meshes),
-                (Self::rebuild_trail_meshes, Self::sync_trail_material).in_set(TrailSet::Render),
+                    .after(Self::record_trail_diagnostics),
             )
                 .run_if(in_state(AppState::Running).or_else(in_state(AppState::Paused))),
         );
@@ -126,12 +155,19 @@ impl TrailsPlugin {
     /// awaiting the coarse trim (up to ~1 s of record rate per trail), so it
     /// measures buffer load, not visible length.
     pub const TRAIL_POINTS: DiagnosticPath = DiagnosticPath::const_new("trails/points");
+    /// Segments queued for upload into the ring this frame (nonzero on
+    /// record ticks; the whole batch is one `write_buffer`).
+    pub const TRAIL_SEGMENT_UPLOADS: DiagnosticPath =
+        DiagnosticPath::const_new("trails/segment_uploads");
     /// Trails whose meshes will be rebuilt (re-uploaded) this frame.
+    /// Legacy renderer only, hence wasm-only.
+    #[cfg(target_arch = "wasm32")]
     pub const TRAIL_MESH_REBUILDS: DiagnosticPath =
         DiagnosticPath::const_new("trails/mesh_rebuilds");
 
     fn record_trail_diagnostics(
         trails: Query<&Trail, With<TrailRenderer>>,
+        segments: Res<TrailSegmentQueue>,
         mut diagnostics: Diagnostics,
     ) {
         let mut points = 0;
@@ -142,7 +178,13 @@ impl TrailsPlugin {
                 dirty += 1;
             }
         }
+        #[cfg(not(target_arch = "wasm32"))]
+        let _ = dirty;
         diagnostics.add_measurement(&Self::TRAIL_POINTS, || points as f64);
+        diagnostics.add_measurement(&Self::TRAIL_SEGMENT_UPLOADS, || {
+            segments.pending.len() as f64
+        });
+        #[cfg(target_arch = "wasm32")]
         diagnostics.add_measurement(&Self::TRAIL_MESH_REBUILDS, || dirty as f64);
     }
 
@@ -160,10 +202,11 @@ impl TrailsPlugin {
 
     fn update_trails(
         mut trail_query: Query<(&mut Trail, &TrackedBody), With<TrailRenderer>>,
-        body_query: Query<(&Transform, Option<&Radius>), With<PhysicsBody>>,
+        body_query: Query<(&Transform, Option<&Radius>, Option<&BodyColor>), With<PhysicsBody>>,
         time: Res<Time>,
         config: Res<SimulationConfig>,
         clock: Res<TrailClock>,
+        mut segments: ResMut<TrailSegmentQueue>,
     ) {
         // Effective time is frozen while paused: nothing records, nothing
         // expires, and the shader's fade input holds still.
@@ -174,18 +217,34 @@ impl TrailsPlugin {
 
         for (mut trail, tracked_body) in trail_query.iter_mut() {
             // Only add new points if we're tracking an active body
-            if let Ok((transform, radius)) = body_query.get(tracked_body.0)
+            if let Ok((transform, radius, color)) = body_query.get(tracked_body.0)
                 && trail.should_update(now, config.trails.update_interval_seconds)
             {
                 // Radius at record time: collision merges grow the body, and
                 // the trail width follows per point from here on.
                 let radius = radius.map(|r| r.value() as f32).unwrap_or(1.0);
-                trail.add_point(
-                    transform.translation,
-                    radius,
-                    now,
-                    config.trails.max_points_per_trail,
-                );
+                let position = transform.translation;
+
+                // Feed the instanced renderer: the segment from the previous
+                // sample to this one. Color is sampled at record time, so a
+                // body recolored by a merge leaves its old color in older
+                // segments. Wasm has no ring renderer draining this queue,
+                // so it must not fill it.
+                #[cfg(not(target_arch = "wasm32"))]
+                if let Some(prev) = trail.points.front() {
+                    segments.pending.push(TrailSegment {
+                        p0: prev.position.to_array(),
+                        p1: position.to_array(),
+                        birth0: prev.birth,
+                        birth1: now,
+                        radius,
+                        color: pack_trail_color(color.map(|c| c.0).unwrap_or(Color::WHITE)),
+                    });
+                }
+                #[cfg(target_arch = "wasm32")]
+                let _ = (&segments, color);
+
+                trail.add_point(position, radius, now, config.trails.max_points_per_trail);
             }
         }
     }
@@ -239,51 +298,67 @@ impl TrailsPlugin {
             let color = color.map(|c| c.0).unwrap_or(Color::WHITE);
             let trail = Trail::new();
 
-            // Create the mesh up front (degenerate and invisible until two
-            // points exist) so the rebuild path never has to branch on a
-            // missing Mesh3d.
-            let mut mesh = Mesh::new(
-                PrimitiveTopology::TriangleStrip,
-                RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
-            );
-            // The trail is empty here, so the degenerate branch runs and no
-            // taper is evaluated; the timestamp is irrelevant.
-            write_trail_mesh(&mut mesh, &trail, &config.trails, 0.0);
+            // Native renders trails through the instanced ring renderer
+            // (`render/`): the trail entity is pure recording state, with no
+            // render components at all. The legacy per-trail mesh path in
+            // the wasm block remains for the WASM build until the ring
+            // renderer is ported.
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let _ = (&color, &mut meshes, &material, &config, &trails_visible);
+                commands.spawn((TrailRenderer, TrackedBody(entity), trail));
+            }
 
-            let visibility = if trails_visible.enabled {
-                Visibility::Visible
-            } else {
-                Visibility::Hidden
-            };
+            #[cfg(target_arch = "wasm32")]
+            {
+                // Create the mesh up front (degenerate and invisible until
+                // two points exist) so the rebuild path never has to branch
+                // on a missing Mesh3d.
+                let mut mesh = Mesh::new(
+                    PrimitiveTopology::TriangleStrip,
+                    RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+                );
+                // The trail is empty here, so the degenerate branch runs and
+                // no taper is evaluated; the timestamp is irrelevant.
+                write_trail_mesh(&mut mesh, &trail, &config.trails, 0.0);
 
-            commands.spawn((
-                TrailBundle {
-                    renderer: TrailRenderer,
-                    tracked: TrackedBody(entity),
-                    trail,
-                    mesh: Mesh3d(meshes.add(mesh)),
-                    material: MeshMaterial3d(material.clone()),
-                    tag: MeshTag(pack_trail_color(color)),
-                    transform: Transform::default(),
-                    visibility,
-                },
-                // Deliberate, not a workaround: a CPU-side AABB cannot
-                // describe geometry that is expanded in the vertex shader,
-                // and Bevy's dynamic AABB updating would otherwise recompute
-                // bounds over every trail whenever the shared material is
-                // touched (which is every frame, for the time uniform).
-                // Nothing here needs the bounds: the scene has no lights or
-                // shadow culling, transparent sorting uses the render mesh's
-                // stored center, and the camera frames the whole system.
-                // Shader-side expiry makes this more load-bearing still:
-                // meshes now go un-mutated for up to a second (or an entire
-                // orphan fade-out), so mutation-driven bounds would also be
-                // badly stale.
-                NoFrustumCulling,
-            ));
+                let visibility = if trails_visible.enabled {
+                    Visibility::Visible
+                } else {
+                    Visibility::Hidden
+                };
+
+                commands.spawn((
+                    TrailBundle {
+                        renderer: TrailRenderer,
+                        tracked: TrackedBody(entity),
+                        trail,
+                        mesh: Mesh3d(meshes.add(mesh)),
+                        material: MeshMaterial3d(material.clone()),
+                        tag: MeshTag(pack_trail_color(color)),
+                        transform: Transform::default(),
+                        visibility,
+                    },
+                    // Deliberate, not a workaround: a CPU-side AABB cannot
+                    // describe geometry that is expanded in the vertex
+                    // shader, and Bevy's dynamic AABB updating would
+                    // otherwise recompute bounds over every trail whenever
+                    // the shared material is touched (which is every frame,
+                    // for the time uniform). Nothing here needs the bounds:
+                    // the scene has no lights or shadow culling, transparent
+                    // sorting uses the render mesh's stored center, and the
+                    // camera frames the whole system. Shader-side expiry
+                    // makes this more load-bearing still: meshes now go
+                    // un-mutated for up to a second (or an entire orphan
+                    // fade-out), so mutation-driven bounds would also be
+                    // badly stale.
+                    NoFrustumCulling,
+                ));
+            }
         }
     }
 
+    #[cfg(target_arch = "wasm32")]
     /// Upload changed trail geometry. Gated on `Trail::dirty`, so uploads
     /// track the point-record rate, not the frame rate.
     fn rebuild_trail_meshes(
@@ -308,6 +383,7 @@ impl TrailsPlugin {
         }
     }
 
+    #[cfg(target_arch = "wasm32")]
     /// Push the pause-aware clock into the shared material once per frame.
     /// Skipped while the value is unchanged (pause) so the material asset is
     /// not marked modified for nothing.
@@ -353,6 +429,7 @@ impl TrailsPlugin {
         mut commands_reader: MessageReader<SimulationCommand>,
         mut commands: Commands,
         trail_renderers: Query<Entity, With<TrailRenderer>>,
+        mut segments: ResMut<TrailSegmentQueue>,
     ) {
         for command in commands_reader.read() {
             if !matches!(command, SimulationCommand::Restart) {
@@ -361,10 +438,15 @@ impl TrailsPlugin {
             trail_renderers.iter().for_each(|entity| {
                 commands.entity(entity).despawn();
             });
+            // Wipe the instanced renderer's ring: drop anything not yet
+            // extracted and signal the render world via the generation.
+            segments.pending.clear();
+            segments.reset_generation = segments.reset_generation.wrapping_add(1);
         }
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 /// Write the trail's point set into its mesh: two coincident vertices per
 /// point whose signed offsets carry side, per-point width, and taper. The
 /// vertex shader does the rest.
@@ -443,6 +525,7 @@ fn write_trail_mesh(
     mesh.remove_indices();
 }
 
+#[cfg(target_arch = "wasm32")]
 fn taper_factor(
     curve: &crate::config::TaperCurve,
     position_ratio: f32,

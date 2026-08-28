@@ -1,7 +1,6 @@
 ---
 name: architecture-guardian
 description: Use this agent to review architectural decisions, module structure, or cross-system dependencies — evaluating new features for architectural fit, reviewing refactoring proposals, or assessing overall design health. Use it after implementing anything that touches multiple modules or changes an established pattern.
-tools:
 model: opus
 color: red
 ---
