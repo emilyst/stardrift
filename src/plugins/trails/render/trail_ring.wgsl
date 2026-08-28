@@ -1,15 +1,25 @@
-// Trail ring shader. Each instance is one 40-byte segment record; the
+// Trail ring shader. Each instance is one 64-byte segment record; the
 // vertex stage expands it into a camera-facing quad (six vertices from
 // vertex_index, no vertex-rate buffer), evaluates fade and the age-keyed
-// taper, and the fragment stage shades a soft capsule cross-profile: full
-// energy inside the core, a Gaussian skirt outside it. Expired segments
-// collapse to zero area against the effective-time uniform, so ring slots
+// taper, and the fragment stage shades a soft lateral profile: full energy
+// inside the core, a Gaussian skirt outside it. Expired segments collapse
+// to zero area against the effective-time uniform, so ring slots
 // overwritten laps later never need a CPU touch.
 //
-// Joints (v1 policy): no cap extension — quads end exactly at their
-// endpoints, so consecutive segments tile with zero overlap and additive
-// blending shows no beading; the skirt blurs the hairline notch on the
-// outside of sharp bends.
+// Joints are MITERED: each end edge is rotated onto the bisector of this
+// segment's direction and its neighbor's (t_prev / t_next in the instance
+// data), scaled so the perpendicular width is preserved. Adjacent quads
+// therefore share their edges exactly — no gaps at bends, no overlap, and
+// no additive seams, at any width-to-speed ratio. (Both cap-extension and
+// crossfade joints were tried first and produce visible artifacts when
+// segment length drops below ribbon width; see the plan doc.) The newest
+// segment's t_next is provisional (its successor doesn't exist yet) and is
+// corrected one tick later by the rewrite batch.
+//
+// Anti-aliasing: the lateral outset is clamped to a minimum of ~2 pixels
+// (computed from the projection) and the fragment's sigma to ~0.75 px via
+// fwidth, so edges stay soft at any zoom instead of quantizing when the
+// world-space skirt drops below a pixel.
 
 #import bevy_render::view::View
 
@@ -44,13 +54,17 @@ struct Instance {
     @location(2) births: vec2<f32>,
     @location(3) radius: f32,
     @location(4) color: u32,
+    @location(5) t_prev: vec3<f32>,
+    @location(6) t_next: vec3<f32>,
 };
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     // rgb: HDR base color; a: fade alpha at this vertex.
     @location(0) color: vec4<f32>,
-    // Signed distance from the centerline, world units.
+    // Perpendicular distance from the segment axis, world units (exact
+    // even on mitered edges: the miter scale preserves the projection onto
+    // the segment's own perpendicular).
     @location(1) across: f32,
     // Core half-width at this vertex, world units (taper applied).
     @location(2) core_half: f32,
@@ -117,6 +131,17 @@ fn taper_factor(age: f32) -> f32 {
     }
 }
 
+// Camera-facing perpendicular for a tangent, with the degenerate-view
+// fallback the legacy renderer used.
+fn facing_perp(tangent: vec3<f32>, to_cam: vec3<f32>) -> vec3<f32> {
+    var perp = cross(tangent, to_cam);
+    let l2 = dot(perp, perp);
+    if l2 < 1e-6 {
+        return normalize(cross(tangent, vec3(0.0, 1.0, 0.0)) + vec3(1e-30, 0.0, 0.0));
+    }
+    return perp * inverseSqrt(l2);
+}
+
 @vertex
 fn vertex(@builtin(vertex_index) index: u32, instance: Instance) -> VertexOutput {
     // Quad corners as (t along the segment, s across it).
@@ -141,18 +166,35 @@ fn vertex(@builtin(vertex_index) index: u32, instance: Instance) -> VertexOutput
         params.trail_length_seconds <= 0.0 || age <= params.trail_length_seconds,
     );
 
+    let seg = instance.p1 - instance.p0;
     let p = mix(instance.p0, instance.p1, corner.x);
-    // The epsilon nudge keeps normalize() finite for zero-length segments
-    // (a stationary body); the quad then has near-zero visible extent.
-    let tangent = normalize(instance.p1 - instance.p0 + vec3(1e-30, 0.0, 0.0));
+    // The epsilon nudges keep normalize() finite for zero-length segments
+    // and zero neighbor tangents; those quads have zero area anyway.
+    let t_this = normalize(seg + vec3(1e-30, 0.0, 0.0));
+    let t_raw = select(instance.t_prev, instance.t_next, corner.x > 0.5);
+    let t_nbr = normalize(t_raw + vec3(1e-30, 0.0, 0.0));
+
     let to_cam = normalize(view.world_position - p);
-    var perp = cross(tangent, to_cam);
-    let l2 = dot(perp, perp);
-    if l2 < 1e-6 {
-        perp = normalize(cross(tangent, vec3(0.0, 1.0, 0.0)) + vec3(1e-30, 0.0, 0.0));
-    } else {
-        perp = perp * inverseSqrt(l2);
+    let perp = facing_perp(t_this, to_cam);
+    var perp_nbr = facing_perp(t_nbr, to_cam);
+    // Keep the two perpendiculars on the same side across sharp reversals,
+    // or the bisector collapses through the segment axis.
+    if dot(perp, perp_nbr) < 0.0 {
+        perp_nbr = -perp_nbr;
     }
+
+    // Miter: the end edge lies along the bisector of the two
+    // perpendiculars, scaled so this segment's perpendicular half-width is
+    // preserved. The clamp caps the miter at 2x for extreme angles
+    // (degrading toward a bevel rather than a spike).
+    var miter = perp + perp_nbr;
+    let ml2 = dot(miter, miter);
+    if ml2 < 1e-6 {
+        miter = perp;
+    } else {
+        miter = miter * inverseSqrt(ml2);
+    }
+    let miter_scale = 1.0 / max(abs(dot(miter, perp)), 0.5);
 
     var core_half: f32;
     if (params.flags & TRAIL_FLAG_WIDTH_RELATIVE) != 0u {
@@ -166,10 +208,16 @@ fn vertex(@builtin(vertex_index) index: u32, instance: Instance) -> VertexOutput
     core_half *= taper;
     let sigma = params.skirt_sigma * taper;
 
-    // The quad extends 3 sigma past the core; beyond that the Gaussian is
-    // visually zero.
-    let outset = (core_half + 3.0 * sigma) * live;
-    let world = p + perp * corner.y * outset;
+    // World units per screen pixel (vertically) at this vertex's depth:
+    // keeps the quad wide enough that the fragment stage always has at
+    // least ~2 px of skirt to soften, at any zoom.
+    let clip_center = view.clip_from_world * vec4(p, 1.0);
+    let world_per_px =
+        2.0 * max(clip_center.w, 1e-6) / (view.viewport.w * view.clip_from_view[1][1]);
+    let margin = max(3.0 * sigma, 2.0 * world_per_px);
+    let outset = (core_half + margin) * live;
+
+    let world = p + miter * (corner.y * outset * miter_scale);
 
     var out: VertexOutput;
     out.clip_position = view.clip_from_world * vec4(world, 1.0);
@@ -185,12 +233,16 @@ fn vertex(@builtin(vertex_index) index: u32, instance: Instance) -> VertexOutput
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
-    // Capsule cross-profile: full energy inside the core, Gaussian falloff
-    // outside it. True additive blending (src One, dst One), so emit
-    // premultiplied energy; the alpha channel does not participate.
+    // Lateral soft profile: full energy inside the core, Gaussian skirt
+    // outside. Resolution-aware: never let the falloff drop below ~0.75 px,
+    // so edges do not alias when the world-space skirt is sub-pixel.
+    let px = fwidth(in.across);
+    let sigma = max(in.sigma, 0.75 * px);
     let d = max(abs(in.across) - in.core_half, 0.0);
-    let sigma = max(in.sigma, 1e-5);
     let skirt = exp(-0.5 * d * d / (sigma * sigma));
+
+    // True additive blending (src One, dst One): emit premultiplied energy;
+    // the alpha channel does not participate.
     let a = in.color.a * skirt;
     return vec4(in.color.rgb * a, a);
 }

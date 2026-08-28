@@ -87,7 +87,11 @@ impl TrailParams {
 /// Snapshot taken from the main world once per render frame.
 #[derive(Resource, Default)]
 pub struct ExtractedTrailFrame {
-    pub segments: Vec<TrailSegment>,
+    /// This tick's new segments, appended at the ring head.
+    pub fresh: Vec<TrailSegment>,
+    /// The previous tick's batch with corrected outgoing tangents,
+    /// re-uploaded over the slots it already occupies.
+    pub rewrite: Vec<TrailSegment>,
     pub reset_generation: u32,
     pub visible: bool,
     pub params: TrailParams,
@@ -105,6 +109,10 @@ pub struct TrailRing {
     pub head: u32,
     /// Number of valid slots behind `head` (saturates at `capacity`).
     pub live: u32,
+    /// Size of the most recent fresh batch — the slots directly behind
+    /// `head`, which the next tick's rewrite batch overwrites with
+    /// corrected tangents.
+    last_batch: u32,
     seen_generation: u32,
 }
 
@@ -148,12 +156,42 @@ pub fn extract_trails(mut main_world: ResMut<MainWorld>, mut frame: ResMut<Extra
 
     let mut queue = world.resource_mut::<TrailSegmentQueue>();
     frame.reset_generation = queue.reset_generation;
-    frame.segments.clear();
-    frame.segments.append(&mut queue.pending);
+    frame.fresh.clear();
+    frame.rewrite.clear();
+    if queue.fresh_is_new {
+        queue.fresh_is_new = false;
+        // The rewrite batch is finished (its fix-ups happened during this
+        // tick) — drain it. The fresh batch is cloned: it stays behind to
+        // receive its own fix-ups next tick.
+        frame.rewrite.append(&mut queue.rewrite);
+        frame.fresh.extend_from_slice(&queue.fresh);
+    }
 }
 
-/// Write the frame's segments into the ring. One `write_buffer` per record
-/// tick (two across a wrap) — this is the entire per-frame upload cost.
+/// Write a batch into the ring starting at `start`, splitting across the
+/// wrap if needed.
+fn write_wrapped(
+    render_queue: &RenderQueue,
+    buffer: &Buffer,
+    capacity: u32,
+    start: u32,
+    segments: &[TrailSegment],
+) {
+    let first_len = (capacity - start).min(segments.len() as u32) as usize;
+    render_queue.write_buffer(
+        buffer,
+        start as u64 * SEGMENT_STRIDE,
+        bytemuck::cast_slice(&segments[..first_len]),
+    );
+    if first_len < segments.len() {
+        render_queue.write_buffer(buffer, 0, bytemuck::cast_slice(&segments[first_len..]));
+    }
+}
+
+/// Write the frame's batches into the ring: the rewrite batch over the
+/// slots directly behind `head` (tangent corrections), the fresh batch at
+/// `head`. A handful of `write_buffer` calls per record tick — this is the
+/// entire upload cost.
 pub fn prepare_trail_ring(
     mut ring: ResMut<TrailRing>,
     frame: Res<ExtractedTrailFrame>,
@@ -164,6 +202,7 @@ pub fn prepare_trail_ring(
         ring.capacity = frame.capacity.max(1);
         ring.head = 0;
         ring.live = 0;
+        ring.last_batch = 0;
         ring.seen_generation = frame.reset_generation;
         ring.buffer = Some(render_device.create_buffer(&BufferDescriptor {
             label: Some("trail segment ring"),
@@ -176,35 +215,38 @@ pub fn prepare_trail_ring(
     if ring.seen_generation != frame.reset_generation {
         ring.head = 0;
         ring.live = 0;
+        ring.last_batch = 0;
         ring.seen_generation = frame.reset_generation;
     }
 
-    let segments: &[TrailSegment] = &frame.segments;
+    let buffer = ring.buffer.as_ref().unwrap().clone();
+
+    // Tangent corrections for the previous batch, over its original slots.
+    // A size mismatch means the batches raced a reset; skip rather than
+    // corrupt unrelated slots.
+    let n_rewrite = frame.rewrite.len() as u32;
+    if n_rewrite > 0 && n_rewrite == ring.last_batch {
+        let start = (ring.head + ring.capacity - ring.last_batch) % ring.capacity;
+        write_wrapped(&render_queue, &buffer, ring.capacity, start, &frame.rewrite);
+    }
+
     // A batch larger than the whole ring can only happen under degenerate
     // config; keep the newest slots' worth.
-    let segments = if segments.len() as u32 > ring.capacity {
-        &segments[segments.len() - ring.capacity as usize..]
+    let fresh: &[TrailSegment] = &frame.fresh;
+    let fresh = if fresh.len() as u32 > ring.capacity {
+        &fresh[fresh.len() - ring.capacity as usize..]
     } else {
-        segments
+        fresh
     };
-    let n = segments.len() as u32;
+    let n = fresh.len() as u32;
     if n == 0 {
         return;
     }
 
-    let buffer = ring.buffer.as_ref().unwrap();
-    let first_len = (ring.capacity - ring.head).min(n) as usize;
-    render_queue.write_buffer(
-        buffer,
-        ring.head as u64 * SEGMENT_STRIDE,
-        bytemuck::cast_slice(&segments[..first_len]),
-    );
-    if first_len < segments.len() {
-        render_queue.write_buffer(buffer, 0, bytemuck::cast_slice(&segments[first_len..]));
-    }
-
+    write_wrapped(&render_queue, &buffer, ring.capacity, ring.head, fresh);
     ring.head = (ring.head + n) % ring.capacity;
     ring.live = (ring.live + n).min(ring.capacity);
+    ring.last_batch = n;
 }
 
 /// Push this frame's params into the uniform buffer.

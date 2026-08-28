@@ -146,6 +146,18 @@ fn segment_instance_layout() -> VertexBufferLayout {
                 offset: 36,
                 shader_location: 4,
             },
+            // previous segment direction (miter at the older end)
+            VertexAttribute {
+                format: VertexFormat::Float32x3,
+                offset: 40,
+                shader_location: 5,
+            },
+            // next segment direction (miter at the newer end)
+            VertexAttribute {
+                format: VertexFormat::Float32x3,
+                offset: 52,
+                shader_location: 6,
+            },
         ],
     }
 }

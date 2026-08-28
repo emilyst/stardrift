@@ -121,7 +121,7 @@ pub fn queue_trails(
     }
     // Queue runs before this frame's ring prepare; count the extracted batch
     // so the very first segments still draw this frame.
-    if ring.live == 0 && frame.segments.is_empty() {
+    if ring.live == 0 && frame.fresh.is_empty() {
         return;
     }
 

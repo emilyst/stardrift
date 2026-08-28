@@ -182,7 +182,7 @@ impl TrailsPlugin {
         let _ = dirty;
         diagnostics.add_measurement(&Self::TRAIL_POINTS, || points as f64);
         diagnostics.add_measurement(&Self::TRAIL_SEGMENT_UPLOADS, || {
-            segments.pending.len() as f64
+            (segments.fresh.len() + segments.rewrite.len()) as f64
         });
         #[cfg(target_arch = "wasm32")]
         diagnostics.add_measurement(&Self::TRAIL_MESH_REBUILDS, || dirty as f64);
@@ -215,10 +215,27 @@ impl TrailsPlugin {
         }
         let now = clock.effective_time(time.elapsed_secs());
 
+        // One shared record tick for every trail — this is what keeps each
+        // tick's batch contiguous in the ring, and it doubles as the moment
+        // the previous batch rotates into the rewrite slot to receive its
+        // outgoing-tangent fix-ups (mitered joints need the successor
+        // direction, which only exists one tick later).
+        #[cfg(not(target_arch = "wasm32"))]
+        let due = {
+            let tick = segments.should_tick(now, config.trails.update_interval_seconds);
+            if tick {
+                segments.begin_tick();
+            }
+            tick
+        };
+
         for (mut trail, tracked_body) in trail_query.iter_mut() {
+            #[cfg(target_arch = "wasm32")]
+            let due = trail.should_update(now, config.trails.update_interval_seconds);
+
             // Only add new points if we're tracking an active body
             if let Ok((transform, radius, color)) = body_query.get(tracked_body.0)
-                && trail.should_update(now, config.trails.update_interval_seconds)
+                && due
             {
                 // Radius at record time: collision merges grow the body, and
                 // the trail width follows per point from here on.
@@ -232,14 +249,33 @@ impl TrailsPlugin {
                 // so it must not fill it.
                 #[cfg(not(target_arch = "wasm32"))]
                 if let Some(prev) = trail.points.front() {
-                    segments.pending.push(TrailSegment {
+                    let dir = (position - prev.position).normalize_or_zero();
+                    // A stationary body records a zero direction; leave the
+                    // previous segment's end edge alone rather than rotating
+                    // it toward an arbitrary axis.
+                    if dir != Vec3::ZERO {
+                        segments.fix_up_prev(tracked_body.0, dir.to_array());
+                    }
+                    // TrailPoint tangents point toward the OLDER neighbor;
+                    // segment directions run the other way.
+                    let t_prev = if prev.tangent == Vec3::ZERO {
+                        dir
+                    } else {
+                        -prev.tangent
+                    };
+                    let index = segments.fresh.len();
+                    segments.fresh.push(TrailSegment {
                         p0: prev.position.to_array(),
                         p1: position.to_array(),
                         birth0: prev.birth,
                         birth1: now,
                         radius,
                         color: pack_trail_color(color.map(|c| c.0).unwrap_or(Color::WHITE)),
+                        t_prev: t_prev.to_array(),
+                        // Corrected one tick later via fix_up_prev.
+                        t_next: dir.to_array(),
                     });
+                    segments.fresh_index.insert(tracked_body.0, index);
                 }
                 #[cfg(target_arch = "wasm32")]
                 let _ = (&segments, color);
@@ -438,10 +474,9 @@ impl TrailsPlugin {
             trail_renderers.iter().for_each(|entity| {
                 commands.entity(entity).despawn();
             });
-            // Wipe the instanced renderer's ring: drop anything not yet
-            // extracted and signal the render world via the generation.
-            segments.pending.clear();
-            segments.reset_generation = segments.reset_generation.wrapping_add(1);
+            // Wipe the instanced renderer's ring: drop all staged batches
+            // and signal the render world via the generation.
+            segments.clear_for_restart();
         }
     }
 }
