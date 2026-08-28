@@ -18,6 +18,7 @@ use crate::states::AppState;
 use bevy::asset::RenderAssetUsages;
 use bevy::asset::embedded_asset;
 use bevy::camera::visibility::NoFrustumCulling;
+use bevy::diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic};
 use bevy::mesh::{MeshTag, PrimitiveTopology};
 use bevy::pbr::MaterialPlugin;
 use material::{
@@ -58,6 +59,9 @@ impl Plugin for TrailsPlugin {
         app.init_resource::<TrailClock>();
         app.init_resource::<TrailMaterialHandle>();
 
+        app.register_diagnostic(Diagnostic::new(Self::TRAIL_POINTS).with_smoothing_factor(0.0));
+        app.register_diagnostic(Diagnostic::new(Self::TRAIL_MESH_REBUILDS));
+
         app.configure_sets(
             Update,
             (TrailSet::Initialize, TrailSet::Update, TrailSet::Render).chain(),
@@ -93,6 +97,11 @@ impl Plugin for TrailsPlugin {
                 Self::despawn_orphaned_trails
                     .in_set(TrailSet::Update)
                     .after(Self::update_trails),
+                // Before rebuild_trail_meshes: `dirty` flags are consumed by
+                // the rebuild, so the upload count must be sampled first.
+                Self::record_trail_diagnostics
+                    .in_set(TrailSet::Render)
+                    .before(Self::rebuild_trail_meshes),
                 (Self::rebuild_trail_meshes, Self::sync_trail_material).in_set(TrailSet::Render),
             )
                 .run_if(in_state(AppState::Running).or_else(in_state(AppState::Paused))),
@@ -105,6 +114,29 @@ impl Plugin for TrailsPlugin {
 }
 
 impl TrailsPlugin {
+    /// Total recorded points across all live trails. Trail CPU cost scales
+    /// with this, not with body count alone.
+    pub const TRAIL_POINTS: DiagnosticPath = DiagnosticPath::const_new("trails/points");
+    /// Trails whose meshes will be rebuilt (re-uploaded) this frame.
+    pub const TRAIL_MESH_REBUILDS: DiagnosticPath =
+        DiagnosticPath::const_new("trails/mesh_rebuilds");
+
+    fn record_trail_diagnostics(
+        trails: Query<&Trail, With<TrailRenderer>>,
+        mut diagnostics: Diagnostics,
+    ) {
+        let mut points = 0;
+        let mut dirty = 0;
+        for trail in &trails {
+            points += trail.points.len();
+            if trail.dirty {
+                dirty += 1;
+            }
+        }
+        diagnostics.add_measurement(&Self::TRAIL_POINTS, || points as f64);
+        diagnostics.add_measurement(&Self::TRAIL_MESH_REBUILDS, || dirty as f64);
+    }
+
     fn update_trail_clock(
         mut clock: ResMut<TrailClock>,
         app_state: Res<State<AppState>>,

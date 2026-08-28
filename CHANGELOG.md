@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Two trail diagnostics, `trails/points` (total recorded points across all
+  trails) and `trails/mesh_rebuilds` (trail meshes re-uploaded per frame),
+  reported through Bevy's diagnostics system alongside the existing
+  simulation diagnostics.
+
 ### Changed
 
 - Bodies are now rendered with one shared custom GPU material and the shared
