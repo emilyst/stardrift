@@ -1,25 +1,21 @@
 // Trail ring shader. Each instance is one 64-byte segment record; the
-// vertex stage expands it into a camera-facing quad (six vertices from
-// vertex_index, no vertex-rate buffer), evaluates fade and the age-keyed
-// taper, and the fragment stage shades a soft lateral profile: full energy
-// inside the core, a Gaussian skirt outside it. Expired segments collapse
-// to zero area against the effective-time uniform, so ring slots
-// overwritten laps later never need a CPU touch.
+// vertex stage projects it to SCREEN SPACE and expands it there into a
+// mitered quad (six vertices from vertex_index, no vertex-rate buffer),
+// evaluates fade and the age-keyed taper, and the fragment stage shades a
+// soft lateral profile in pixels: full energy inside the core, a Gaussian
+// skirt outside it. Expired segments collapse to zero area against the
+// effective-time uniform, so ring slots overwritten laps later never need
+// a CPU touch.
 //
-// Joints are MITERED: each end edge is rotated onto the bisector of this
-// segment's direction and its neighbor's (t_prev / t_next in the instance
-// data), scaled so the perpendicular width is preserved. Adjacent quads
-// therefore share their edges exactly — no gaps at bends, no overlap, and
-// no additive seams, at any width-to-speed ratio. (Both cap-extension and
-// crossfade joints were tried first and produce visible artifacts when
-// segment length drops below ribbon width; see the plan doc.) The newest
-// segment's t_next is provisional (its successor doesn't exist yet) and is
-// corrected one tick later by the rewrite batch.
-//
-// Anti-aliasing: the lateral outset is clamped to a minimum of ~2 pixels
-// (computed from the projection) and the fragment's sigma to ~0.75 px via
-// fwidth, so edges stay soft at any zoom instead of quantizing when the
-// world-space skirt drops below a pixel.
+// Why screen space: world-space camera-facing quads twist around a path
+// that curves in depth, so adjacent quads lie in different planes and
+// alternately overlap and gap — visible as regular banding at segment
+// pitch under additive blending (measured; see the plan doc). In 2D there
+// is no out-of-plane direction: adjacent quads are coplanar by definition,
+// and because both quads at a joint project the exact same three points
+// (p_prev/p0/p1/p_next chain), their mitered shared edge agrees by
+// arithmetic. This is the same transformation bevy_gizmos_render ships in
+// lines.wgsl, including the near-plane clipping guard.
 
 #import bevy_render::view::View
 
@@ -48,6 +44,7 @@ const TRAIL_FLAG_FADING: u32 = 1u;
 const TRAIL_FLAG_TAPERING: u32 = 2u;
 const TRAIL_FLAG_WIDTH_RELATIVE: u32 = 4u;
 const PI: f32 = 3.14159265358979;
+const EPSILON: f32 = 4.88e-04;
 
 @group(1) @binding(0) var<uniform> params: TrailParams;
 
@@ -58,21 +55,21 @@ struct Instance {
     @location(2) births: vec2<f32>,
     @location(3) radius: f32,
     @location(4) color: u32,
-    @location(5) t_prev: vec3<f32>,
-    @location(6) t_next: vec3<f32>,
+    @location(5) p_prev: vec3<f32>,
+    @location(6) p_next: vec3<f32>,
+    // Smoothed record-time speed (per-trail EMA), for the exposure law.
+    @location(7) speed: f32,
 };
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     // rgb: HDR base color; a: fade alpha at this vertex.
     @location(0) color: vec4<f32>,
-    // Perpendicular distance from the segment axis, world units (exact
-    // even on mitered edges: the miter scale preserves the projection onto
-    // the segment's own perpendicular).
+    // Signed lateral distance from the segment's screen axis, pixels.
     @location(1) across: f32,
-    // Core half-width at this vertex, world units (taper applied).
+    // Core half-width at this vertex, pixels (taper applied).
     @location(2) core_half: f32,
-    // Gaussian sigma at this vertex, world units (taper applied).
+    // Gaussian sigma at this vertex, pixels (taper applied).
     @location(3) sigma: f32,
 };
 
@@ -135,15 +132,32 @@ fn taper_factor(age: f32) -> f32 {
     }
 }
 
-// Camera-facing perpendicular for a tangent, with the degenerate-view
-// fallback the legacy renderer used.
-fn facing_perp(tangent: vec3<f32>, to_cam: vec3<f32>) -> vec3<f32> {
-    var perp = cross(tangent, to_cam);
-    let l2 = dot(perp, perp);
-    if l2 < 1e-6 {
-        return normalize(cross(tangent, vec3(0.0, 1.0, 0.0)) + vec3(1e-30, 0.0, 0.0));
+// Verbatim from bevy_gizmos_render lines.wgsl: move `a` to the near plane
+// when it sits behind it and `b` is in front, so the perspective divide
+// stays valid.
+fn clip_near_plane(a: vec4<f32>, b: vec4<f32>) -> vec4<f32> {
+    if a.z > a.w && b.z <= b.w {
+        let distance_a = a.z - a.w;
+        let distance_b = b.z - b.w;
+        let t = distance_a / (distance_a - distance_b) + EPSILON;
+        return mix(a, b, t);
     }
-    return perp * inverseSqrt(l2);
+    return a;
+}
+
+fn screen_of(clip: vec4<f32>, resolution: vec2<f32>) -> vec2<f32> {
+    return resolution * (0.5 * clip.xy / clip.w + 0.5);
+}
+
+// Screen-space direction from `from` toward `to`, falling back when the
+// projection is degenerate (coincident on screen, or behind the camera).
+fn screen_dir(tail: vec2<f32>, tip: vec2<f32>, fallback: vec2<f32>) -> vec2<f32> {
+    let d = tip - tail;
+    let l2 = dot(d, d);
+    if l2 < 1e-6 {
+        return fallback;
+    }
+    return d * inverseSqrt(l2);
 }
 
 @vertex
@@ -170,35 +184,51 @@ fn vertex(@builtin(vertex_index) index: u32, instance: Instance) -> VertexOutput
         params.trail_length_seconds <= 0.0 || age <= params.trail_length_seconds,
     );
 
-    let seg = instance.p1 - instance.p0;
-    let p = mix(instance.p0, instance.p1, corner.x);
-    // The epsilon nudges keep normalize() finite for zero-length segments
-    // and zero neighbor tangents; those quads have zero area anyway.
-    let t_this = normalize(seg + vec3(1e-30, 0.0, 0.0));
-    let t_raw = select(instance.t_prev, instance.t_next, corner.x > 0.5);
-    let t_nbr = normalize(t_raw + vec3(1e-30, 0.0, 0.0));
+    let resolution = view.viewport.zw;
 
-    let to_cam = normalize(view.world_position - p);
-    let perp = facing_perp(t_this, to_cam);
-    var perp_nbr = facing_perp(t_nbr, to_cam);
-    // Keep the two perpendiculars on the same side across sharp reversals,
-    // or the bisector collapses through the segment axis.
-    if dot(perp, perp_nbr) < 0.0 {
-        perp_nbr = -perp_nbr;
+    var clip0 = view.clip_from_world * vec4(instance.p0, 1.0);
+    var clip1 = view.clip_from_world * vec4(instance.p1, 1.0);
+    let clip0n = clip_near_plane(clip0, clip1);
+    let clip1n = clip_near_plane(clip1, clip0);
+    clip0 = clip0n;
+    clip1 = clip1n;
+
+    let s0 = screen_of(clip0, resolution);
+    let s1 = screen_of(clip1, resolution);
+    let dir = screen_dir(s0, s1, vec2(1.0, 0.0));
+    let n_this = vec2(-dir.y, dir.x);
+
+    // Neighbor chords, projected the same way. The neighbor of a joint
+    // endpoint is the SAME world point in the adjacent instance, so both
+    // quads compute identical edge geometry there.
+    var clip_prev = view.clip_from_world * vec4(instance.p_prev, 1.0);
+    clip_prev = clip_near_plane(clip_prev, clip0);
+    var clip_next = view.clip_from_world * vec4(instance.p_next, 1.0);
+    clip_next = clip_near_plane(clip_next, clip1);
+    let d_prev = screen_dir(screen_of(clip_prev, resolution), s0, dir);
+    let d_next = screen_dir(s1, screen_of(clip_next, resolution), dir);
+
+    let end_is_new = corner.x > 0.5;
+    let s_end = select(s0, s1, end_is_new);
+    let clip_end = select(clip0, clip1, end_is_new);
+    let d_nbr = select(d_prev, d_next, end_is_new);
+
+    // Miter: end edge along the 2D bisector of this segment's normal and
+    // the neighbor chord's, scaled to preserve this segment's
+    // perpendicular width; clamped 2x (degrading toward a bevel at extreme
+    // angles). Sign-matching keeps the bisector stable across reversals.
+    var n_nbr = vec2(-d_nbr.y, d_nbr.x);
+    if dot(n_this, n_nbr) < 0.0 {
+        n_nbr = -n_nbr;
     }
-
-    // Miter: the end edge lies along the bisector of the two
-    // perpendiculars, scaled so this segment's perpendicular half-width is
-    // preserved. The clamp caps the miter at 2x for extreme angles
-    // (degrading toward a bevel rather than a spike).
-    var miter = perp + perp_nbr;
+    var miter = n_this + n_nbr;
     let ml2 = dot(miter, miter);
     if ml2 < 1e-6 {
-        miter = perp;
+        miter = n_this;
     } else {
         miter = miter * inverseSqrt(ml2);
     }
-    let miter_scale = 1.0 / max(abs(dot(miter, perp)), 0.5);
+    let miter_scale = 1.0 / max(abs(dot(miter, n_this)), 0.5);
 
     var core_half: f32;
     if (params.flags & TRAIL_FLAG_WIDTH_RELATIVE) != 0u {
@@ -210,49 +240,58 @@ fn vertex(@builtin(vertex_index) index: u32, instance: Instance) -> VertexOutput
     // tail thins as one shape rather than dissolving into bare halo.
     let taper = taper_factor(age);
     core_half *= taper;
-    let sigma = params.skirt_sigma * taper;
+    let sigma_world = params.skirt_sigma * taper;
 
-    // World units per screen pixel (vertically) at this vertex's depth:
-    // keeps the quad wide enough that the fragment stage always has at
-    // least ~2 px of skirt to soften, at any zoom.
-    let clip_center = view.clip_from_world * vec4(p, 1.0);
+    // World units per pixel at this endpoint's depth: converts the profile
+    // to pixels, which also keeps width perspective-correct (nearer ends
+    // draw wider).
     let world_per_px =
-        2.0 * max(clip_center.w, 1e-6) / (view.viewport.w * view.clip_from_view[1][1]);
-    let margin = max(3.0 * sigma, 2.0 * world_per_px);
-    let outset = (core_half + margin) * live;
+        2.0 * max(clip_end.w, 1e-6) / (resolution.y * view.clip_from_view[1][1]);
+    let core_px = core_half / world_per_px;
+    let sigma_px = sigma_world / world_per_px;
+    // At least ~2 px of skirt so edges always have room to soften.
+    let margin_px = max(3.0 * sigma_px, 2.0);
+    let outset_px = (core_px + margin_px) * live;
 
-    let world = p + miter * (corner.y * outset * miter_scale);
+    let screen = s_end + miter * (corner.y * outset_px * miter_scale);
 
     var out: VertexOutput;
-    out.clip_position = view.clip_from_world * vec4(world, 1.0);
+    // Write the offset screen position back to clip space at this
+    // endpoint's original depth (the gizmo-line reconstruction).
+    out.clip_position = vec4(
+        clip_end.w * ((2.0 * screen) / resolution - 1.0),
+        clip_end.z,
+        clip_end.w,
+    );
 
     let base = unpack_color(instance.color);
     var hdr = base.rgb * (params.bloom_factor * base.a + 1.0);
 
     // Long-exposure energy: light deposited per unit length goes as
     // 1/speed, like a beam writing on film — slow passages pool hot, fast
-    // ones streak faint. Clamped so near-stationary bodies don't blow out
-    // and ejections stay legible.
+    // ones streak faint. Uses the CPU-smoothed speed (raw per-segment
+    // speed jitters and beads). Clamped so near-stationary bodies don't
+    // blow out and ejections stay legible.
     if params.exposure_reference_speed > 0.0 {
-        let dt = max(instance.births.y - instance.births.x, 1e-5);
-        let speed = length(seg) / dt;
-        hdr *= clamp(params.exposure_reference_speed / max(speed, 1e-5), 0.15, 5.0);
+        hdr *= clamp(
+            params.exposure_reference_speed / max(instance.speed, 1e-5),
+            0.15,
+            5.0,
+        );
     }
 
     out.color = vec4(hdr, fade_alpha(age) * live);
-    out.across = corner.y * outset;
-    out.core_half = core_half;
-    out.sigma = sigma;
+    out.across = corner.y * outset_px;
+    out.core_half = core_px;
+    out.sigma = sigma_px;
     return out;
 }
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
-    // Lateral soft profile: full energy inside the core, Gaussian skirt
-    // outside. Resolution-aware: never let the falloff drop below ~0.75 px,
-    // so edges do not alias when the world-space skirt is sub-pixel.
-    let px = fwidth(in.across);
-    let sigma = max(in.sigma, 0.75 * px);
+    // Lateral soft profile in pixels: full energy inside the core, Gaussian
+    // skirt outside, never sharper than ~0.75 px so edges cannot alias.
+    let sigma = max(in.sigma, 0.75);
     let d = max(abs(in.across) - in.core_half, 0.0);
     let skirt = exp(-0.5 * d * d / (sigma * sigma));
 

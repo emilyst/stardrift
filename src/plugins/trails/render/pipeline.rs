@@ -158,6 +158,12 @@ fn segment_instance_layout() -> VertexBufferLayout {
                 offset: 52,
                 shader_location: 6,
             },
+            // smoothed speed (long-exposure energy)
+            VertexAttribute {
+                format: VertexFormat::Float32,
+                offset: 64,
+                shader_location: 7,
+            },
         ],
     }
 }

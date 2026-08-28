@@ -5,18 +5,20 @@ use crate::prelude::*;
 use bevy::platform::collections::HashMap;
 use bytemuck::{Pod, Zeroable};
 
-/// One trail segment exactly as the GPU reads it: 64 bytes, instance-rate.
+/// One trail segment exactly as the GPU reads it: 68 bytes, instance-rate.
 /// The layout is mirrored by `segment_instance_layout()` in
 /// `render/pipeline.rs` and by the `Instance` struct in `trail_ring.wgsl`;
 /// all three must change together.
 ///
-/// The neighbor tangents exist for mitered joints: the vertex shader
-/// rotates each end edge onto the bisector of the adjacent segment
-/// directions, so consecutive quads share their edges exactly — no gaps at
-/// bends, no overlap, no additive seams. `t_next` is unknowable when a
-/// segment is first recorded (its successor does not exist yet), so it is
-/// written as the segment's own direction and corrected one tick later via
-/// the rewrite batch (see [`TrailSegmentQueue`]).
+/// The neighbor positions exist for mitered joints: the vertex shader
+/// projects them to screen space and rotates each end edge onto the 2D
+/// bisector, so the two quads at a joint project the exact same three
+/// points and share their edge by arithmetic — no gaps, no overlap, no
+/// additive seams, and (because the expansion is screen-space) no
+/// out-of-plane twist banding. `p_next` is unknowable when a segment is
+/// first recorded (its successor does not exist yet), so it is written as
+/// a straight extrapolation and corrected one tick later via the rewrite
+/// batch (see [`TrailSegmentQueue`]).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
 pub struct TrailSegment {
@@ -31,12 +33,17 @@ pub struct TrailSegment {
     pub radius: f32,
     /// Packed color (see `pack_trail_color`).
     pub color: u32,
-    /// Direction of the previous segment (into `p0`); this segment's own
-    /// direction when there is no previous segment.
-    pub t_prev: [f32; 3],
-    /// Direction of the next segment (out of `p1`); this segment's own
-    /// direction until the fix-up one tick later.
-    pub t_next: [f32; 3],
+    /// The point before `p0` (the previous segment's older endpoint);
+    /// a straight backward extrapolation when there is no previous segment.
+    pub p_prev: [f32; 3],
+    /// The point after `p1` (the next segment's newer endpoint); a straight
+    /// forward extrapolation until the fix-up one tick later.
+    pub p_next: [f32; 3],
+    /// Smoothed body speed at record time (per-trail EMA). Raw per-segment
+    /// speed jitters — positions quantize to physics fixed-steps while
+    /// birth stamps ride frame time — and the long-exposure energy law
+    /// turns that jitter into pearl-chain beading (measured).
+    pub speed: f32,
 }
 
 pub const SEGMENT_STRIDE: u64 = size_of::<TrailSegment>() as u64;
@@ -93,10 +100,10 @@ impl TrailSegmentQueue {
         self.fresh_is_new = true;
     }
 
-    /// Correct the previous batch's outgoing tangent for one trail.
-    pub fn fix_up_prev(&mut self, body: Entity, t_next: [f32; 3]) {
+    /// Correct the previous batch's successor endpoint for one trail.
+    pub fn fix_up_prev(&mut self, body: Entity, p_next: [f32; 3]) {
         if let Some(&index) = self.rewrite_index.get(&body) {
-            self.rewrite[index].t_next = t_next;
+            self.rewrite[index].p_next = p_next;
         }
     }
 

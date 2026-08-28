@@ -248,34 +248,47 @@ impl TrailsPlugin {
                 // segments. Wasm has no ring renderer draining this queue,
                 // so it must not fill it.
                 #[cfg(not(target_arch = "wasm32"))]
-                if let Some(prev) = trail.points.front() {
-                    let dir = (position - prev.position).normalize_or_zero();
-                    // A stationary body records a zero direction; leave the
-                    // previous segment's end edge alone rather than rotating
-                    // it toward an arbitrary axis.
-                    if dir != Vec3::ZERO {
-                        segments.fix_up_prev(tracked_body.0, dir.to_array());
+                {
+                    let prev = trail.points.front().map(|p| (p.position, p.birth));
+                    let second = trail.points.get(1).map(|p| p.position);
+                    if let Some((prev_position, prev_birth)) = prev {
+                        // The previous segment's true successor endpoint is
+                        // this new sample; both quads at the joint then
+                        // project the exact same points and their mitered
+                        // edges agree by arithmetic.
+                        segments.fix_up_prev(tracked_body.0, position.to_array());
+                        // Smooth the record-time speed: raw per-segment
+                        // speed jitters (positions quantize to physics
+                        // fixed-steps while birth stamps ride frame time),
+                        // and the long-exposure energy law turns that
+                        // jitter into beading.
+                        let dt = (now - prev_birth).max(1e-5);
+                        let raw_speed = position.distance(prev_position) / dt;
+                        trail.speed_ema = if trail.speed_ema <= 0.0 {
+                            raw_speed
+                        } else {
+                            0.7 * trail.speed_ema + 0.3 * raw_speed
+                        };
+                        // The point before p0 is the second-newest sample,
+                        // or a straight backward extrapolation for a
+                        // trail's first segment (an unrotated end edge).
+                        let p_prev = second.unwrap_or(prev_position + (prev_position - position));
+                        let index = segments.fresh.len();
+                        segments.fresh.push(TrailSegment {
+                            p0: prev_position.to_array(),
+                            p1: position.to_array(),
+                            birth0: prev_birth,
+                            birth1: now,
+                            radius,
+                            color: pack_trail_color(color.map(|c| c.0).unwrap_or(Color::WHITE)),
+                            p_prev: p_prev.to_array(),
+                            // Straight extrapolation; corrected one tick
+                            // later via fix_up_prev.
+                            p_next: (position + (position - prev_position)).to_array(),
+                            speed: trail.speed_ema,
+                        });
+                        segments.fresh_index.insert(tracked_body.0, index);
                     }
-                    // TrailPoint tangents point toward the OLDER neighbor;
-                    // segment directions run the other way.
-                    let t_prev = if prev.tangent == Vec3::ZERO {
-                        dir
-                    } else {
-                        -prev.tangent
-                    };
-                    let index = segments.fresh.len();
-                    segments.fresh.push(TrailSegment {
-                        p0: prev.position.to_array(),
-                        p1: position.to_array(),
-                        birth0: prev.birth,
-                        birth1: now,
-                        radius,
-                        color: pack_trail_color(color.map(|c| c.0).unwrap_or(Color::WHITE)),
-                        t_prev: t_prev.to_array(),
-                        // Corrected one tick later via fix_up_prev.
-                        t_next: dir.to_array(),
-                    });
-                    segments.fresh_index.insert(tracked_body.0, index);
                 }
                 #[cfg(target_arch = "wasm32")]
                 let _ = (&segments, color);
