@@ -108,7 +108,7 @@ The heart of the application. Manages:
 
 **Location**: `src/plugins/bodies/`
 
-Renders every physics body with one shared unit-sphere mesh and one shared custom `BodyMaterial` (a fragment-only shader, `body.wgsl`, reproducing the ambient/fresnel and bloom-emissive look a per-body `StandardMaterial` used to produce). Per-body color travels in `MeshTag` rather than the material, so all bodies share one mesh handle and one material handle and batch into a single instanced draw. The simulation plugin spawns bodies with physics state only; this plugin attaches mesh, material, and color reactively on `Added<PhysicsBody>`, and keeps `Transform::scale` in sync with `Radius` (including on collision merges).
+Renders every physics body as a camera-facing disc impostor: one shared quad mesh, billboarded in the vertex shader (`body.wgsl`) and shaded with a fake sphere normal reproducing the ambient/fresnel and bloom-emissive look the earlier per-body `StandardMaterial` spheres produced. Per-body color travels in `MeshTag` rather than the material, so all bodies share one mesh handle and one material handle and batch into a single instanced draw. The simulation plugin spawns bodies with physics state only; this plugin attaches mesh, material, color, and a billboard-safe bounding volume reactively on `Added<PhysicsBody>`, and keeps `Transform::scale` in sync with `Radius` (including on collision merges) — with a unit mesh, scale is the radius.
 
 ### Camera Plugin
 

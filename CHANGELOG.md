@@ -16,8 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Bodies are now rendered as camera-facing disc impostors: a shared quad,
+  billboarded in the vertex shader and shaded with a fake sphere normal that
+  reproduces the previous sphere look. Silhouettes are true circles at every
+  distance (the WASM build previously used a visibly faceted low-poly
+  sphere), and the body's appearance is now fully defined in one small
+  shader, ready for future visual effects. Seeded screenshots match the
+  sphere renderer within run-to-run noise.
 - Bodies are now rendered with one shared custom GPU material and the shared
-  unit-sphere mesh, instead of one `StandardMaterial` asset per body; every
+  body mesh, instead of one `StandardMaterial` asset per body; every
   body now batches into a single instanced draw. Rendering output is
   unchanged (seeded screenshot diffs against the previous build fall within
   run-to-run measurement noise).

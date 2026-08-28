@@ -32,10 +32,26 @@ pub struct BodyMaterial {
 }
 
 impl Material for BodyMaterial {
-    // Default vertex shader and AlphaMode::Opaque: same binned opaque phase,
-    // depth writes, and batching behavior as the StandardMaterial it replaces.
+    // Custom vertex shader billboards the shared quad (see body.wgsl). The
+    // material pipeline swaps only the shader handle: shader-defs and the
+    // mesh-derived vertex layout survive from the default mesh pipeline.
+    fn vertex_shader() -> ShaderRef {
+        BODY_SHADER_PATH.into()
+    }
+
     fn fragment_shader() -> ShaderRef {
         BODY_SHADER_PATH.into()
+    }
+
+    // Mask routes into the binned AlphaMask3d phase: depth writes on, no
+    // blending, batching preserved (vs the sorted Transparent3d phase, which
+    // would forfeit all of that). The cutoff value is never read — Bevy
+    // injects no alpha test for custom materials; body.wgsl discards
+    // explicitly. If the hard discard edge ever aliases visibly under MSAA,
+    // AlphaMode::AlphaToCoverage (output coverage alpha, remove the discard)
+    // is the one-line fallback.
+    fn alpha_mode(&self) -> AlphaMode {
+        AlphaMode::Mask(0.5)
     }
 
     // The scene has no lights and the camera no prepass, so both pipelines

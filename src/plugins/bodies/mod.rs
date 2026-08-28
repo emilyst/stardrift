@@ -1,6 +1,7 @@
 //! Bodies plugin - Self-contained plugin pattern
 //!
-//! Renders every physics body with one shared unit-sphere mesh and one shared
+//! Renders every physics body as a camera-facing disc impostor: one shared
+//! quad mesh billboarded and shaded in `body.wgsl`, one shared
 //! `BodyMaterial`; per-body color is packed into `MeshTag` (see
 //! `material.rs`), so all bodies collapse into a single instanced draw.
 //! Visuals attach reactively on `Added<PhysicsBody>` — the simulation plugin
@@ -14,33 +15,29 @@ use crate::physics::components::{BodyColor, PhysicsBody, Radius};
 use crate::plugins::simulation::SimulationSet;
 use crate::prelude::*;
 use bevy::asset::embedded_asset;
-use bevy::mesh::{MeshTag, SphereKind};
+use bevy::camera::primitives::Aabb;
+use bevy::camera::visibility::NoAutoAabb;
+use bevy::math::Vec3A;
+use bevy::mesh::MeshTag;
 use bevy::pbr::MaterialPlugin;
 use material::pack_body_color;
 
-/// Shared unit-sphere mesh for all celestial bodies.
+/// Shared quad mesh for all celestial bodies, billboarded in the vertex
+/// shader (`body.wgsl`) into a camera-facing disc.
 ///
 /// Radius is carried by `Transform::scale` (set at spawn, synced from
 /// `Radius` by this plugin), so every body shares this one mesh asset and
-/// batches with bodies sharing the material.
+/// batches with bodies sharing the material. Sized 2×2 so local positions
+/// are the [-1, 1] disc coordinates the shader expects; NORMAL and UV_0 stay
+/// on the mesh because the pipeline derives its vertex layout and shader-defs
+/// from mesh attributes, even though the shader ignores their values.
 #[derive(Resource, Deref)]
 pub struct BodyMesh(pub Handle<Mesh>);
 
 impl FromWorld for BodyMesh {
     fn from_world(world: &mut World) -> Self {
         let mut meshes = world.resource_mut::<Assets<Mesh>>();
-        Self(
-            meshes.add(
-                Sphere::new(1.0)
-                    .mesh()
-                    .kind(SphereKind::Ico {
-                        // The default vertex shader needs ATTRIBUTE_NORMAL
-                        // (ico meshes carry it) for world_normal.
-                        subdivisions: if cfg!(target_arch = "wasm32") { 1 } else { 4 },
-                    })
-                    .build(),
-            ),
-        )
+        Self(meshes.add(Rectangle::new(2.0, 2.0)))
     }
 }
 
@@ -87,6 +84,18 @@ impl BodiesPlugin {
                 Mesh3d(mesh.0.clone()),
                 MeshMaterial3d(material.0.clone()),
                 MeshTag(pack_body_color(color)),
+                // The quad billboards along camera axes, so the mesh-derived
+                // AABB (a flat plate in local XY) is wrong in a
+                // camera-dependent way — bodies would pop out at screen
+                // edges. This unit-sphere bound matches what the shader can
+                // reach. NoAutoAabb is required, not decorative: without it
+                // the Changed<Mesh3d> from this very insert triggers
+                // calculate_bounds to overwrite the Aabb with the flat one.
+                Aabb {
+                    center: Vec3A::ZERO,
+                    half_extents: Vec3A::splat(1.0),
+                },
+                NoAutoAabb,
             ));
         }
     }
