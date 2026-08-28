@@ -38,6 +38,10 @@ struct TrailParams {
     fade_curve: u32,
     taper_curve: u32,
     flags: u32,
+    exposure_reference_speed: f32,
+    _pad0: f32,
+    _pad1: f32,
+    _pad2: f32,
 };
 
 const TRAIL_FLAG_FADING: u32 = 1u;
@@ -223,7 +227,18 @@ fn vertex(@builtin(vertex_index) index: u32, instance: Instance) -> VertexOutput
     out.clip_position = view.clip_from_world * vec4(world, 1.0);
 
     let base = unpack_color(instance.color);
-    let hdr = base.rgb * (params.bloom_factor * base.a + 1.0);
+    var hdr = base.rgb * (params.bloom_factor * base.a + 1.0);
+
+    // Long-exposure energy: light deposited per unit length goes as
+    // 1/speed, like a beam writing on film — slow passages pool hot, fast
+    // ones streak faint. Clamped so near-stationary bodies don't blow out
+    // and ejections stay legible.
+    if params.exposure_reference_speed > 0.0 {
+        let dt = max(instance.births.y - instance.births.x, 1e-5);
+        let speed = length(seg) / dt;
+        hdr *= clamp(params.exposure_reference_speed / max(speed, 1e-5), 0.15, 5.0);
+    }
+
     out.color = vec4(hdr, fade_alpha(age) * live);
     out.across = corner.y * outset;
     out.core_half = core_half;

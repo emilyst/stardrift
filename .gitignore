@@ -6,3 +6,4 @@
 **/dist
 docs/plans/
 /**/target
+preview-light-*.toml

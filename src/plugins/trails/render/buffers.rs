@@ -40,6 +40,11 @@ pub struct TrailParams {
     /// 0 Linear, 1 Exponential, 2 SmoothStep.
     pub taper_curve: u32,
     pub flags: u32,
+    /// Long-exposure energy scaling reference speed; 0 disables.
+    pub exposure_reference_speed: f32,
+    pub _pad0: f32,
+    pub _pad1: f32,
+    pub _pad2: f32,
 }
 
 impl TrailParams {
@@ -64,10 +69,7 @@ impl TrailParams {
             base_width: config.base_width,
             body_size_multiplier: config.body_size_multiplier,
             min_width_ratio: config.min_width_ratio,
-            // Placeholder until the stage-4 tuning session: a skirt of a
-            // quarter of the default-radius core reads as a soft edge
-            // without smearing.
-            skirt_sigma: 0.25 * config.body_size_multiplier.max(0.05),
+            skirt_sigma: config.glow_sigma.max(0.001),
             fade_curve: match config.fade_curve {
                 FadeCurve::Linear => 0,
                 FadeCurve::Exponential => 1,
@@ -80,6 +82,10 @@ impl TrailParams {
                 TaperCurve::SmoothStep => 2,
             },
             flags,
+            exposure_reference_speed: config.exposure_reference_speed,
+            _pad0: 0.0,
+            _pad1: 0.0,
+            _pad2: 0.0,
         }
     }
 }

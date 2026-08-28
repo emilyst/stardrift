@@ -277,6 +277,15 @@ pub struct TrailConfig {
     // Bloom Effect
     pub bloom_factor: f32,
     pub use_additive_blending: bool,
+
+    // Glow profile (instanced renderer only)
+    /// Gaussian halo width around the trail core, world units.
+    pub glow_sigma: f32,
+    /// Long-exposure energy scaling: segment brightness scales as
+    /// (this reference speed / segment speed), so slow passages pool hot
+    /// and fast ones streak faint, like light writing in a long-exposure
+    /// photograph. 0.0 disables the effect (uniform energy).
+    pub exposure_reference_speed: f32,
 }
 
 impl Default for TrailConfig {
@@ -306,6 +315,10 @@ impl Default for TrailConfig {
             // Bloom Effect
             bloom_factor: 1.0,
             use_additive_blending: true,
+
+            // Glow profile
+            glow_sigma: 0.18,
+            exposure_reference_speed: 0.0,
         }
     }
 }
