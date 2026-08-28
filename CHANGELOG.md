@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.75] - 2026-08-28
+
 ### Changed
 
 - Default trail record rate lowered from 30 Hz to 10 Hz
