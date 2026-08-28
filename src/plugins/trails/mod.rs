@@ -246,7 +246,9 @@ impl TrailsPlugin {
                 PrimitiveTopology::TriangleStrip,
                 RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
             );
-            write_trail_mesh(&mut mesh, &trail, &config.trails);
+            // The trail is empty here, so the degenerate branch runs and no
+            // taper is evaluated; the timestamp is irrelevant.
+            write_trail_mesh(&mut mesh, &trail, &config.trails, 0.0);
 
             let visibility = if trails_visible.enabled {
                 Visibility::Visible
@@ -288,7 +290,10 @@ impl TrailsPlugin {
         mut meshes: ResMut<Assets<Mesh>>,
         mut query: Query<(&mut Trail, &Mesh3d), With<TrailRenderer>>,
         config: Res<SimulationConfig>,
+        clock: Res<TrailClock>,
+        time: Res<Time>,
     ) {
+        let now = clock.effective_time(time.elapsed_secs());
         for (mut trail, mesh_handle) in query.iter_mut() {
             if !trail.dirty {
                 continue;
@@ -296,7 +301,7 @@ impl TrailsPlugin {
             trail.dirty = false;
 
             if let Some(mut mesh) = meshes.get_mut(&mesh_handle.0) {
-                write_trail_mesh(&mut mesh, &trail, &config.trails);
+                write_trail_mesh(&mut mesh, &trail, &config.trails, now);
             } else {
                 warn!("Trail mesh handle exists but mesh not found in assets!");
             }
@@ -363,7 +368,12 @@ impl TrailsPlugin {
 /// Write the trail's point set into its mesh: two coincident vertices per
 /// point whose signed offsets carry side, per-point width, and taper. The
 /// vertex shader does the rest.
-fn write_trail_mesh(mesh: &mut Mesh, trail: &Trail, config: &crate::config::TrailConfig) {
+fn write_trail_mesh(
+    mesh: &mut Mesh,
+    trail: &Trail,
+    config: &crate::config::TrailConfig,
+    effective_now: f32,
+) {
     let n = trail.points.len();
 
     if n < 2 {
@@ -383,7 +393,7 @@ fn write_trail_mesh(mesh: &mut Mesh, trail: &Trail, config: &crate::config::Trai
     let mut births = Vec::with_capacity(n * 2);
     let mut offsets = Vec::with_capacity(n * 2);
 
-    for (i, point) in trail.points.iter().enumerate() {
+    for point in trail.points.iter() {
         let base_width = if config.width_relative_to_body {
             point.radius * config.body_size_multiplier
         } else {
@@ -391,15 +401,19 @@ fn write_trail_mesh(mesh: &mut Mesh, trail: &Trail, config: &crate::config::Trai
         };
 
         let taper = if config.enable_tapering {
-            // Position along trail: 0.0 at head (newest), 1.0 at tail.
-            // Expired-but-untrimmed points count toward n, compressing live
-            // ratios by up to ~2% at defaults (one trim interval of points
-            // out of a full trail) — invisible at the min-width tail.
-            taper_factor(
-                &config.taper_curve,
-                i as f32 / (n - 1) as f32,
-                config.min_width_ratio,
-            )
+            // Age toward expiry, not index position: a young trail is a
+            // uniform-width ribbon and thinning appears only as the tail
+            // genuinely ages out (index-based taper compressed the full
+            // fat-to-point range into short young trails — the "tadpole").
+            // Baked at rebuild time, so it animates at the record rate for
+            // live trails and freezes for orphans mid-fade; the foundation
+            // renderer will evaluate it in the shader instead.
+            let age_ratio = if config.trail_length_seconds > 0.0 {
+                ((effective_now - point.birth) / config.trail_length_seconds).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            taper_factor(&config.taper_curve, age_ratio, config.min_width_ratio)
         } else {
             1.0
         };

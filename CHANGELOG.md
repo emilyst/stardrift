@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Trail width taper is now driven by point age (time toward expiry) instead
+  of position along the trail. Young trails render as uniform-width ribbons
+  from the start rather than compressing the full taper into a short
+  "tadpole"; thinning appears only as the tail genuinely ages out. New
+  defaults to match: `body_size_multiplier` 2.0 → 0.7, `taper_curve`
+  linear → smooth_step, `min_width_ratio` 0.2 → 0.6.
+
 - Trail point expiry now happens in the vertex shader (expired points
   collapse to zero width and alpha against the shared time uniform) instead
   of by CPU removal every frame. CPU-side cleanup is amortized to a ~1 Hz

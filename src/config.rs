@@ -290,7 +290,7 @@ impl Default for TrailConfig {
             // Visual Appearance
             base_width: 1.0,
             width_relative_to_body: true,
-            body_size_multiplier: 2.0,
+            body_size_multiplier: 0.7,
 
             // Fading & Transparency
             enable_fading: true,
@@ -300,8 +300,8 @@ impl Default for TrailConfig {
 
             // Width Tapering
             enable_tapering: true,
-            taper_curve: TaperCurve::Linear,
-            min_width_ratio: 0.2,
+            taper_curve: TaperCurve::SmoothStep,
+            min_width_ratio: 0.6,
 
             // Bloom Effect
             bloom_factor: 1.0,

@@ -192,7 +192,7 @@ The `[trails]` section controls the visual trails behind moving bodies.
 |-------|------|---------|-------------|
 | `base_width` | `f32` | `1.0` | Base trail width |
 | `width_relative_to_body` | `bool` | `true` | Scale trail width relative to body size |
-| `body_size_multiplier` | `f32` | `2.0` | Trail width multiplier when `width_relative_to_body` is true |
+| `body_size_multiplier` | `f32` | `0.7` | Trail width multiplier when `width_relative_to_body` is true |
 | `bloom_factor` | `f32` | `1.0` | Trail bloom intensity multiplier |
 | `use_additive_blending` | `bool` | `true` | Use additive blending for glowing effect |
 
@@ -218,9 +218,9 @@ The `[trails]` section controls the visual trails behind moving bodies.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `enable_tapering` | `bool` | `true` | Enable trail width tapering |
-| `taper_curve` | `string` | `"linear"` | Taper curve type |
-| `min_width_ratio` | `f32` | `0.2` | Width ratio at trail end (0.2 = 20% of base width) |
+| `enable_tapering` | `bool` | `true` | Enable trail width tapering (driven by point age toward expiry, so young trails stay uniform width) |
+| `taper_curve` | `string` | `"smooth_step"` | Taper curve type |
+| `min_width_ratio` | `f32` | `0.6` | Width ratio at full point age (0.6 = 60% of base width) |
 
 **Taper curve types:** `"linear"`, `"exponential"`, `"smooth_step"`
 
