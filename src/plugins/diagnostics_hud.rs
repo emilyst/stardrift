@@ -31,6 +31,12 @@ struct BhErrorL2TextNode;
 struct BhErrorMaxTextNode;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct BhMomentumTextNode;
+
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct BhBarycenterTextNode;
+
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
 struct BhChurnTextNode;
 
 #[derive(Component)]
@@ -214,6 +220,20 @@ impl DiagnosticsHudPlugin {
                                 &extra_bold_text_font,
                             ));
                             hud.spawn(hud_row(
+                                "BH net force",
+                                "-".into(),
+                                BhMomentumTextNode,
+                                &regular_text_font,
+                                &extra_bold_text_font,
+                            ));
+                            hud.spawn(hud_row(
+                                "BH drift",
+                                "-".into(),
+                                BhBarycenterTextNode,
+                                &regular_text_font,
+                                &extra_bold_text_font,
+                            ));
+                            hud.spawn(hud_row(
                                 "BH churn",
                                 "-".into(),
                                 BhChurnTextNode,
@@ -297,6 +317,34 @@ impl DiagnosticsHudPlugin {
         }
     }
 
+    fn update_bh_momentum_text(
+        diagnostics: Res<DiagnosticsStore>,
+        mut text: Single<&mut Text, With<BhMomentumTextNode>>,
+        state: Res<DiagnosticsHudState>,
+    ) {
+        if state.refresh_timer.is_finished()
+            && let Some(value) = diagnostics
+                .get(&SimulationDiagnosticsPlugin::BH_MOMENTUM_ASYMMETRY)
+                .and_then(|d| d.value())
+        {
+            ***text = format!("{value:.2e}");
+        }
+    }
+
+    fn update_bh_barycenter_text(
+        diagnostics: Res<DiagnosticsStore>,
+        mut text: Single<&mut Text, With<BhBarycenterTextNode>>,
+        state: Res<DiagnosticsHudState>,
+    ) {
+        if state.refresh_timer.is_finished()
+            && let Some(value) = diagnostics
+                .get(&SimulationDiagnosticsPlugin::BH_BARYCENTER_SPEED_RATIO)
+                .and_then(|d| d.value())
+        {
+            ***text = format!("{value:.2e}");
+        }
+    }
+
     fn update_bh_churn_text(
         diagnostics: Res<DiagnosticsStore>,
         mut text: Single<&mut Text, With<BhChurnTextNode>>,
@@ -341,6 +389,8 @@ impl Plugin for DiagnosticsHudPlugin {
                 Self::update_body_count_text,
                 Self::update_bh_error_l2_text,
                 Self::update_bh_error_max_text,
+                Self::update_bh_momentum_text,
+                Self::update_bh_barycenter_text,
                 Self::update_bh_churn_text,
                 Self::update_diagnostics_hud_visibility,
             ),

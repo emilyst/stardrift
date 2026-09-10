@@ -55,14 +55,23 @@ impl SimulationDiagnosticsPlugin {
     /// Barnes-Hut probe: floored per-body relative maximum
     pub const BH_ACCEL_ERROR_MAX: DiagnosticPath =
         DiagnosticPath::const_new("simulation/barnes_hut/accel_error_max");
+    /// Barnes-Hut probe: net force on the system from asymmetric
+    /// acceptance, over the total exact force magnitude
+    pub const BH_MOMENTUM_ASYMMETRY: DiagnosticPath =
+        DiagnosticPath::const_new("simulation/barnes_hut/momentum_asymmetry");
+    /// Barnes-Hut probe: barycenter speed over the RMS body speed
+    pub const BH_BARYCENTER_SPEED_RATIO: DiagnosticPath =
+        DiagnosticPath::const_new("simulation/barnes_hut/barycenter_speed_ratio");
     /// Barnes-Hut probe: fraction of surviving bodies whose octant path
     /// changed since the previous sample
     pub const BH_TOPOLOGY_CHURN: DiagnosticPath =
         DiagnosticPath::const_new("simulation/barnes_hut/topology_churn");
 
-    const BH_PATHS: [DiagnosticPath; 3] = [
+    const BH_PATHS: [DiagnosticPath; 5] = [
         Self::BH_ACCEL_ERROR_L2,
         Self::BH_ACCEL_ERROR_MAX,
+        Self::BH_MOMENTUM_ASYMMETRY,
+        Self::BH_BARYCENTER_SPEED_RATIO,
         Self::BH_TOPOLOGY_CHURN,
     ];
 
@@ -117,21 +126,27 @@ impl SimulationDiagnosticsPlugin {
         };
         diagnostics.add_measurement(&Self::BH_ACCEL_ERROR_L2, || sample.accel_error_l2);
         diagnostics.add_measurement(&Self::BH_ACCEL_ERROR_MAX, || sample.accel_error_max);
+        diagnostics.add_measurement(&Self::BH_MOMENTUM_ASYMMETRY, || sample.momentum_asymmetry);
+        diagnostics.add_measurement(&Self::BH_BARYCENTER_SPEED_RATIO, || {
+            sample.barycenter_speed_ratio
+        });
         if let Some(churn) = sample.topology_churn {
             diagnostics.add_measurement(&Self::BH_TOPOLOGY_CHURN, || churn);
         }
-        match sample.topology_churn {
-            Some(churn) => info!(
-                target: "stardrift::bh_probe",
-                "bh_probe sample={} bodies={} accel_error_l2={:.3e} accel_error_max={:.3e} topology_churn={:.4}",
-                probe.sample_id, sample.bodies, sample.accel_error_l2, sample.accel_error_max, churn
-            ),
-            None => info!(
-                target: "stardrift::bh_probe",
-                "bh_probe sample={} bodies={} accel_error_l2={:.3e} accel_error_max={:.3e} topology_churn=n/a",
-                probe.sample_id, sample.bodies, sample.accel_error_l2, sample.accel_error_max
-            ),
-        }
+        let churn = sample
+            .topology_churn
+            .map_or_else(|| "n/a".to_string(), |churn| format!("{churn:.4}"));
+        info!(
+            target: "stardrift::bh_probe",
+            "bh_probe sample={} bodies={} accel_error_l2={:.3e} accel_error_max={:.3e} momentum_asymmetry={:.3e} barycenter_speed_ratio={:.3e} topology_churn={}",
+            probe.sample_id,
+            sample.bodies,
+            sample.accel_error_l2,
+            sample.accel_error_max,
+            sample.momentum_asymmetry,
+            sample.barycenter_speed_ratio,
+            churn
+        );
     }
 
     fn update_timer_ticks(mut state: ResMut<SimulationDiagnosticsState>, time: Res<Time>) {

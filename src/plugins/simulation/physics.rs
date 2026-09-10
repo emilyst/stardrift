@@ -49,6 +49,8 @@ pub struct StepBuffers {
     /// Barnes-Hut probe state (reference buffers, previous leaf paths);
     /// idle unless `BhProbeState` is present and enabled.
     bh_probe: BhProbe,
+    /// Start-of-step velocities, gathered only for a probed step
+    probe_velocities: Vec<Vector>,
 }
 
 /// Integrate positions and velocities for all bodies, stage-synchronized.
@@ -200,6 +202,8 @@ pub fn integrate_motions(
                 probed_this_step = observe_barnes_hut(
                     state,
                     &mut buffers.bh_probe,
+                    &mut buffers.probe_velocities,
+                    &buffers.states,
                     octree,
                     snapshot,
                     &buffers.accels,
@@ -252,9 +256,12 @@ pub fn integrate_motions(
 /// multi-stage integrators probe once per step. The tree was built from
 /// exactly `snapshot` and `accels` holds its output, which is all the probe
 /// needs; the O(N²) reference pass is the only cost.
+#[allow(clippy::too_many_arguments)]
 fn observe_barnes_hut(
     state: &mut BhProbeState,
     probe: &mut BhProbe,
+    velocities: &mut Vec<Vector>,
+    states: &[StepState],
     octree: &Octree,
     snapshot: &[OctreeBody],
     accels: &[Vector],
@@ -266,7 +273,11 @@ fn observe_barnes_hut(
     {
         return false;
     }
-    state.latest = Some(probe.observe(octree, snapshot, accels, g));
+    // Committed start-of-step velocities: the barycenter-speed figure is
+    // about the trajectory, not an integrator's intermediate stage.
+    velocities.clear();
+    velocities.extend(states.iter().map(|s| s.initial_velocity));
+    state.latest = Some(probe.observe(octree, snapshot, accels, velocities, g));
     state.sample_id += 1;
     true
 }

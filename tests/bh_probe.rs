@@ -8,6 +8,10 @@
 //!   reimplementing it;
 //! - at theta > 0 the error is nonzero, bracketed, and grows with theta on a
 //!   scene where Barnes-Hut actually approximates;
+//! - the net Barnes-Hut force on the system vanishes at theta = 0 (pairwise
+//!   forces cancel, clamps included) and does not at theta > 0;
+//! - the barycenter speed ratio is 0 in the centre-of-momentum frame and 1
+//!   for a uniformly boosted system;
 //! - churn is 0 for an identical or uniformly translated rebuild (the
 //!   translation-equivariance the FSAL cache and drift correction rely on),
 //!   positive for a body crossing an octant boundary, and absent on the
@@ -69,14 +73,27 @@ fn ball(
         .collect()
 }
 
-/// Build the tree, evaluate the production field, and observe it.
-fn observe(probe: &mut BhProbe, octree: &mut Octree, snapshot: &[OctreeBody]) -> BhSample {
+/// Build the tree, evaluate the production field, and observe it with the
+/// given velocities.
+fn observe_with_velocities(
+    probe: &mut BhProbe,
+    octree: &mut Octree,
+    snapshot: &[OctreeBody],
+    velocities: &[Vector],
+) -> BhSample {
     octree.build_from_slice(snapshot);
     let accels: Vec<Vector> = snapshot
         .iter()
         .map(|b| octree.calculate_force_at_position(b.position, b.mass, b.entity, G) / b.mass)
         .collect();
-    probe.observe(octree, snapshot, &accels, G)
+    probe.observe(octree, snapshot, &accels, velocities, G)
+}
+
+/// Build the tree, evaluate the production field, and observe it (bodies at
+/// rest).
+fn observe(probe: &mut BhProbe, octree: &mut Octree, snapshot: &[OctreeBody]) -> BhSample {
+    let velocities = vec![Vector::ZERO; snapshot.len()];
+    observe_with_velocities(probe, octree, snapshot, &velocities)
 }
 
 #[test]
@@ -94,6 +111,11 @@ fn exact_tree_matches_reference_to_roundoff() {
         sample.accel_error_max < ROUNDOFF,
         "max {}",
         sample.accel_error_max
+    );
+    assert!(
+        sample.momentum_asymmetry < ROUNDOFF,
+        "exact pairwise forces must cancel: {}",
+        sample.momentum_asymmetry
     );
     assert_eq!(
         sample.topology_churn, None,
@@ -136,6 +158,12 @@ fn reference_shares_clamp_semantics() {
         "max {}",
         sample.accel_error_max
     );
+    // The clamps are symmetric in the pair, so Newton's third law survives them
+    assert!(
+        sample.momentum_asymmetry < ROUNDOFF,
+        "{}",
+        sample.momentum_asymmetry
+    );
 
     // Sanity that the scene really engages both clamps
     let capped = tree.pairwise_force(&snapshot[62], snapshot[63].position, snapshot[63].mass, G);
@@ -177,6 +205,62 @@ fn error_is_bracketed_and_grows_with_theta() {
         fine.accel_error_l2
     );
     assert!(coarse.accel_error_max >= coarse.accel_error_l2);
+
+    // Asymmetric acceptance leaves a net force on the system at theta > 0
+    assert!(
+        coarse.momentum_asymmetry > 1e-8 && coarse.momentum_asymmetry < 1e-1,
+        "theta=1 net force {} outside bracket",
+        coarse.momentum_asymmetry
+    );
+    assert!(coarse.momentum_asymmetry > fine.momentum_asymmetry);
+}
+
+#[test]
+fn barycenter_speed_ratio_reads_the_momentum_frame() {
+    let mut rng = ChaCha8Rng::seed_from_u64(21);
+    let snapshot = ball(&mut rng, 0, 32, Vector::ZERO, 1000.0);
+    let mut tree = octree(0.5);
+
+    // Random velocities with the centre-of-momentum motion removed: ratio 0
+    let mut velocities: Vec<Vector> = (0..32)
+        .map(|_| {
+            Vector::new(
+                rng.random_range(-1.0..1.0),
+                rng.random_range(-1.0..1.0),
+                rng.random_range(-1.0..1.0),
+            )
+        })
+        .collect();
+    let total_mass: Scalar = snapshot.iter().map(|b| b.mass).sum();
+    let com_velocity = snapshot
+        .iter()
+        .zip(&velocities)
+        .fold(Vector::ZERO, |p, (b, v)| p + *v * b.mass)
+        / total_mass;
+    for v in &mut velocities {
+        *v -= com_velocity;
+    }
+    let sample =
+        observe_with_velocities(&mut BhProbe::default(), &mut tree, &snapshot, &velocities);
+    assert!(
+        sample.barycenter_speed_ratio < 1e-12,
+        "{}",
+        sample.barycenter_speed_ratio
+    );
+
+    // A uniform boost has all its kinetic energy in the barycenter: ratio 1
+    let boosted = vec![Vector::new(3.0, -4.0, 0.0); 32];
+    let sample = observe_with_velocities(&mut BhProbe::default(), &mut tree, &snapshot, &boosted);
+    assert!(
+        (sample.barycenter_speed_ratio - 1.0).abs() < 1e-12,
+        "{}",
+        sample.barycenter_speed_ratio
+    );
+
+    // Bodies at rest: 0, not NaN
+    let at_rest = vec![Vector::ZERO; 32];
+    let sample = observe_with_velocities(&mut BhProbe::default(), &mut tree, &snapshot, &at_rest);
+    assert_eq!(sample.barycenter_speed_ratio, 0.0);
 }
 
 #[test]
