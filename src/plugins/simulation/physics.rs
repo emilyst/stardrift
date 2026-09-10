@@ -2,9 +2,10 @@ use crate::config::SimulationConfig;
 use crate::physics::integrators::StepState;
 use crate::physics::math::{Scalar, Vector};
 use crate::physics::{
+    bh_probe::BhProbe,
     components::{Mass, PhysicsBody, PhysicsBodyBundle, Position, PreviousPosition, Velocity},
-    octree::OctreeBody,
-    resources::{CurrentIntegrator, PhysicsTime},
+    octree::{Octree, OctreeBody},
+    resources::{BhProbeState, CurrentIntegrator, PhysicsTime},
 };
 use crate::resources::{
     Barycenter, GravitationalConstant, GravitationalOctree, RenderingRng, SharedRng,
@@ -45,6 +46,9 @@ pub struct StepBuffers {
     fsal_masses: Vec<Scalar>,
     fsal_integrator: &'static str,
     fsal_valid: bool,
+    /// Barnes-Hut probe state (reference buffers, previous leaf paths);
+    /// idle unless `BhProbeState` is present and enabled.
+    bh_probe: BhProbe,
 }
 
 /// Integrate positions and velocities for all bodies, stage-synchronized.
@@ -70,12 +74,20 @@ pub fn integrate_motions(
     mut octree: ResMut<GravitationalOctree>,
     g: Res<GravitationalConstant>,
     mut buffers: Local<StepBuffers>,
+    mut probe_state: Option<ResMut<BhProbeState>>,
 ) {
     // Early-return before any mutable component access so a paused
     // simulation marks nothing changed.
     if physics_time.is_paused() {
         return;
     }
+    // Deref'd mutably only when enabled so a disabled probe never trips
+    // change detection.
+    let mut probe_state = probe_state.as_deref_mut().filter(|state| state.enabled);
+    if let Some(state) = probe_state.as_deref_mut() {
+        state.steps += 1;
+    }
+    let mut probed_this_step = false;
 
     let dt = physics_time.dt;
     let g = **g;
@@ -182,6 +194,18 @@ pub fn integrate_motions(
                         }
                     });
             }
+            if let Some(state) = probe_state.as_deref_mut()
+                && !probed_this_step
+            {
+                probed_this_step = observe_barnes_hut(
+                    state,
+                    &mut buffers.bh_probe,
+                    octree,
+                    snapshot,
+                    &buffers.accels,
+                    g,
+                );
+            }
         }
         first_stage = false;
 
@@ -221,6 +245,30 @@ pub fn integrate_motions(
             *velocity_component.value_mut() = velocity;
         }
     }
+}
+
+/// Barnes-Hut probe hook: on sampled steps, observe the first real tree
+/// build (FSAL-cached stages have none). Returns whether it observed, so
+/// multi-stage integrators probe once per step. The tree was built from
+/// exactly `snapshot` and `accels` holds its output, which is all the probe
+/// needs; the O(N²) reference pass is the only cost.
+fn observe_barnes_hut(
+    state: &mut BhProbeState,
+    probe: &mut BhProbe,
+    octree: &Octree,
+    snapshot: &[OctreeBody],
+    accels: &[Vector],
+    g: Scalar,
+) -> bool {
+    if !state
+        .steps
+        .is_multiple_of(u64::from(state.sample_every_steps))
+    {
+        return false;
+    }
+    state.latest = Some(probe.observe(octree, snapshot, accels, g));
+    state.sample_id += 1;
+    true
 }
 
 /// Synchronize Transform components from high-precision Position components

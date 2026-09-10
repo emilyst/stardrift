@@ -63,6 +63,11 @@ pub struct Args {
     #[arg(short = 'v', long)]
     pub verbose: bool,
 
+    /// Measure Barnes-Hut acceleration error and octree churn against exact
+    /// summation (O(N²) sampled a few times per second; overrides config file)
+    #[arg(long)]
+    pub bh_probe: bool,
+
     /// List available integrators and exit
     #[arg(long)]
     pub list_integrators: bool,
@@ -191,6 +196,11 @@ pub fn load_and_apply_config(args: &Args) -> Result<SimulationConfig, CliError> 
     if let Some(color_scheme) = args.color_scheme {
         println!("Using color scheme: {color_scheme:?}");
         config.rendering.color_scheme = color_scheme;
+    }
+
+    if args.bh_probe {
+        println!("Enabling Barnes-Hut probe");
+        config.physics.bh_probe.enabled = true;
     }
 
     // With overrides_with, at most one of the pair survives parsing

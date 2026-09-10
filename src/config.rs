@@ -97,6 +97,8 @@ pub struct PhysicsConfig {
     pub barycentric_drift_correction: bool,
     #[serde(default)]
     pub collisions: CollisionsConfig,
+    #[serde(default)]
+    pub bh_probe: BhProbeConfig,
 }
 
 impl Default for PhysicsConfig {
@@ -131,6 +133,29 @@ impl Default for PhysicsConfig {
             // Barnes-Hut force asymmetry (a useful diagnostic).
             barycentric_drift_correction: false,
             collisions: CollisionsConfig::default(),
+            bh_probe: BhProbeConfig::default(),
+        }
+    }
+}
+
+/// Barnes-Hut probe: compares the approximate field against exact pairwise
+/// summation on the live snapshot and reports the error plus octree
+/// topology churn (see `physics::bh_probe`). The reference pass is O(N²),
+/// so it is off by default and rate-limited when on.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
+pub struct BhProbeConfig {
+    pub enabled: bool,
+    /// Probe the first tree build of every Nth physics step (60 Hz steps,
+    /// so 15 is ~4 samples per second)
+    pub sample_every_steps: u32,
+}
+
+impl Default for BhProbeConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            sample_every_steps: 15,
         }
     }
 }

@@ -1,6 +1,8 @@
 //! Physics resources for simulation
 
+use super::bh_probe::BhSample;
 use super::integrators::Integrator;
+use crate::config::BhProbeConfig;
 use crate::physics::math::Scalar;
 use bevy::prelude::*;
 
@@ -48,5 +50,35 @@ impl PhysicsTime {
 
     pub fn is_paused(&self) -> bool {
         self.paused
+    }
+}
+
+/// Barnes-Hut probe switch, sampling counters, and the latest observation.
+///
+/// Written by the integration driver (which alone holds the stage snapshot
+/// the probe needs), read by the diagnostics and HUD plugins. Optional in
+/// the driver's signature so bare test worlds need not insert it.
+#[derive(Resource, Debug, Clone)]
+pub struct BhProbeState {
+    pub enabled: bool,
+    /// Probe the first tree build of every Nth non-paused step
+    pub sample_every_steps: u32,
+    /// Non-paused steps seen while enabled
+    pub steps: u64,
+    /// Increments with every observation; readers use it to detect a new
+    /// sample rather than re-reporting `latest`
+    pub sample_id: u64,
+    pub latest: Option<BhSample>,
+}
+
+impl BhProbeState {
+    pub fn from_config(config: &BhProbeConfig) -> Self {
+        Self {
+            enabled: config.enabled,
+            sample_every_steps: config.sample_every_steps.max(1),
+            steps: 0,
+            sample_id: 0,
+            latest: None,
+        }
     }
 }

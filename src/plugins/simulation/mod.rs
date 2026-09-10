@@ -13,7 +13,7 @@ pub mod physics;
 
 use crate::physics::integrators::VelocityVerlet;
 use crate::physics::integrators::registry::IntegratorRegistry;
-use crate::physics::resources::CurrentIntegrator;
+use crate::physics::resources::{BhProbeState, CurrentIntegrator};
 use actions::{handle_restart_simulation_event, handle_toggle_pause_simulation_event};
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use physics::{
@@ -106,6 +106,7 @@ impl Plugin for SimulationPlugin {
             crate::physics::resources::PHYSICS_TICK_HZ,
         ));
         app.init_resource::<crate::physics::resources::PhysicsTime>();
+        app.insert_resource(BhProbeState::from_config(&config.physics.bh_probe));
 
         // New unified command event
         app.add_message::<SimulationCommand>();
