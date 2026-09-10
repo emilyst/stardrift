@@ -186,8 +186,11 @@ impl Octree {
     ///   - 0.0 for exact N-body calculations
     ///   - 0.5 for good accuracy/performance balance (recommended)
     ///   - 1.0 for maximum speed with acceptable visual accuracy
-    /// * `min_distance` - Minimum distance between bodies to prevent force singularities.
-    ///   Forces are calculated as if bodies are at least this far apart.
+    /// * `min_distance` - Softening radius. Outside it the force is inverse
+    ///   square; inside it the force ramps linearly to zero at coincidence
+    ///   (`|F| = G·m₁·m₂·|Δx| / min_distance³`, the interior-of-a-uniform-
+    ///   sphere law), which keeps the pair potential C1 — see
+    ///   [`Octree::pairwise_force`].
     /// * `max_force` - Maximum allowed force magnitude. Forces exceeding this are clamped.
     ///
     /// # Example
@@ -469,8 +472,21 @@ impl Octree {
         }
     }
 
+    /// Force on `body` from a point mass, under this tree's clamps.
+    ///
+    /// This is the single place the force law lives: every Barnes-Hut
+    /// evaluation (leaf bodies and accepted aggregates alike) goes through
+    /// it, so a caller summing it over all other bodies reproduces exact
+    /// pairwise summation with identical clamp semantics. The Barnes-Hut
+    /// probe (`bh_probe`) relies on that to isolate pure approximation
+    /// error.
+    ///
+    /// Outside `min_distance` this is inverse square, capped at `max_force`.
+    /// Inside `min_distance` the direction is divided by the *clamped*
+    /// distance, so the magnitude is `G·m₁·m₂·|Δx| / min_distance³` — a
+    /// linear ramp to zero at coincidence rather than a constant.
     #[inline]
-    fn calculate_force_from_point(
+    pub fn pairwise_force(
         &self,
         body: &OctreeBody,
         point_position: Vector,
@@ -536,6 +552,32 @@ impl Octree {
         self.traverse_tree_for_force(&temp_body, self.root.as_ref(), g)
     }
 
+    /// Visits every leaf with its root-to-leaf path key.
+    ///
+    /// The key starts at 1 and appends the child index (the octant index,
+    /// 3 bits) per level, so it is prefix-free and unique per leaf; at
+    /// `MAX_OCTREE_DEPTH` it needs 73 bits, hence `u128`. Two builds that
+    /// produce the same topology assign the same key to the same leaf,
+    /// which is what makes the keys comparable across builds (see
+    /// `bh_probe`'s topology-churn metric). An empty tree visits nothing.
+    pub fn for_each_leaf_path(&self, mut visit: impl FnMut(u128, &[OctreeBody])) {
+        fn walk(node: &OctreeNode, key: u128, visit: &mut impl FnMut(u128, &[OctreeBody])) {
+            match node {
+                OctreeNode::Internal { children, .. } => {
+                    for (index, child) in children.iter().enumerate() {
+                        if let Some(child) = child {
+                            walk(child, (key << 3) | index as u128, visit);
+                        }
+                    }
+                }
+                OctreeNode::External { bodies, .. } => visit(key, bodies),
+            }
+        }
+        if let Some(root) = &self.root {
+            walk(root, 1, &mut visit);
+        }
+    }
+
     /// Recursively traverses the octree to calculate forces using Barnes-Hut approximation.
     ///
     /// This is the core of the Barnes-Hut algorithm. For each node, it decides whether to:
@@ -585,7 +627,7 @@ impl Octree {
                 if size_squared < distance_squared * self.theta * self.theta
                     && !bounds.contains(body.position)
                 {
-                    self.calculate_force_from_point(body, *center_of_mass, *total_mass, g)
+                    self.pairwise_force(body, *center_of_mass, *total_mass, g)
                 } else {
                     let mut force = Vector::ZERO;
                     children.iter().for_each(|child| {
@@ -600,12 +642,7 @@ impl Octree {
                 bodies.iter().for_each(|other_body| {
                     // Exclude the specified entity from force calculation
                     if other_body.entity != body.entity {
-                        force += self.calculate_force_from_point(
-                            body,
-                            other_body.position,
-                            other_body.mass,
-                            g,
-                        );
+                        force += self.pairwise_force(body, other_body.position, other_body.mass, g);
                     }
                 });
                 force
@@ -661,5 +698,97 @@ impl OctreeNode {
                 child.collect_bounds(bounds);
             });
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn body(position: Vector, mass: Scalar) -> OctreeBody {
+        OctreeBody {
+            position,
+            mass,
+            entity: Entity::PLACEHOLDER,
+        }
+    }
+
+    /// Pins the three regimes of the force law: inverse square, the
+    /// `max_force` cap, and the linear ramp inside `min_distance`. The
+    /// Barnes-Hut probe's "exact" reference is a sum of this function, so
+    /// these are the semantics it inherits.
+    #[test]
+    fn pairwise_force_closed_forms() {
+        let g = 100.0;
+        let min_distance = 2.0;
+        let max_force = 1e4;
+        let octree = Octree::new(0.0, min_distance, max_force);
+        let probe = body(Vector::ZERO, 3.0);
+
+        // Inverse square, well outside the softening radius and under the cap
+        let far = octree.pairwise_force(&probe, Vector::new(10.0, 0.0, 0.0), 5.0, g);
+        let expected = g * 3.0 * 5.0 / 100.0;
+        assert!((far.length() - expected).abs() < 1e-12 * expected);
+        assert!((far.normalize() - Vector::X).length() < 1e-15);
+
+        // Cap: exactly max_force, direction preserved
+        let capped = octree.pairwise_force(&probe, Vector::new(0.0, 3.0, 0.0), 1e6, g);
+        assert_eq!(capped.length(), max_force);
+        assert!((capped.normalize() - Vector::Y).length() < 1e-15);
+
+        // Inside min_distance: linear ramp G·m₁·m₂·|Δx| / min_distance³
+        let offset = Vector::new(0.0, 0.0, 0.5);
+        let inside = octree.pairwise_force(&probe, offset, 5.0, g);
+        let expected = g * 3.0 * 5.0 * 0.5 / min_distance.powi(3);
+        assert!((inside.length() - expected).abs() < 1e-12 * expected);
+        assert!((inside.normalize() - Vector::Z).length() < 1e-15);
+
+        // Coincident bodies attract with zero force, not NaN
+        let coincident = octree.pairwise_force(&probe, Vector::ZERO, 5.0, g);
+        assert_eq!(coincident, Vector::ZERO);
+    }
+
+    #[test]
+    fn leaf_paths_are_prefix_free_and_unique_per_leaf() {
+        let mut octree = Octree::new(0.5, 1.0, 1e7).with_leaf_threshold(1);
+        octree.build([
+            body(Vector::new(-10.0, -10.0, -10.0), 1.0),
+            body(Vector::new(10.0, 10.0, 10.0), 1.0),
+            body(Vector::new(9.0, 9.0, 9.0), 1.0),
+        ]);
+        let mut keys = Vec::new();
+        octree.for_each_leaf_path(|key, bodies| {
+            assert_eq!(bodies.len(), 1);
+            keys.push(key);
+        });
+        assert_eq!(keys.len(), 3);
+        keys.sort_unstable();
+        keys.dedup();
+        assert_eq!(keys.len(), 3, "leaf keys must be unique");
+        assert!(
+            keys.iter().all(|&k| k > 1),
+            "every leaf below the root carries a prefix"
+        );
+
+        // Threshold 2 keeps the two close bodies in one leaf sharing a key
+        let mut octree = Octree::new(0.5, 1.0, 1e7).with_leaf_threshold(2);
+        octree.build([
+            body(Vector::new(-10.0, -10.0, -10.0), 1.0),
+            body(Vector::new(10.0, 10.0, 10.0), 1.0),
+            body(Vector::new(9.0, 9.0, 9.0), 1.0),
+        ]);
+        let mut leaves = Vec::new();
+        octree.for_each_leaf_path(|key, bodies| leaves.push((key, bodies.len())));
+        leaves.sort_unstable();
+        assert_eq!(leaves.iter().map(|(_, n)| n).sum::<usize>(), 3);
+        assert!(leaves.iter().any(|&(_, n)| n == 2));
+    }
+
+    #[test]
+    fn empty_tree_visits_no_leaves() {
+        let octree = Octree::new(0.5, 1.0, 1e7);
+        let mut visited = 0;
+        octree.for_each_leaf_path(|_, _| visited += 1);
+        assert_eq!(visited, 0);
     }
 }
