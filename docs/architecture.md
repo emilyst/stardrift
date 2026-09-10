@@ -195,7 +195,20 @@ Systems are scheduled to run in specific states — physics updates stop while p
 
 - **dev**: Fast compilation; dependencies still optimized at level 2
 - **release**: Full optimization — LTO, single codegen unit, stripped symbols
+- **perf**: Near-release performance (thin LTO, incremental) with much faster
+  rebuilds, for local measurement (`cargo build --profile perf`)
 - **bench**: Inherits from release
+
+### Frame-Time Measurement
+
+`--bench-mode` (see [Usage](usage.md#command-line-options)) is the supported
+way to measure whole-app frame times: it uses built-in defaults, goes
+borderless fullscreen with vsync off (windowed macOS pins to the display
+refresh rate regardless of present mode), and logs `fps`/`frame_time` at
+info level. It takes over the screen for the run; for unattended timed runs
+add `--screenshot-after N --exit-after-screenshots`. Thermal drift makes
+cross-session absolutes unreliable — interleave builds and compare
+within-session deltas only.
 
 ### Parallel Processing
 
