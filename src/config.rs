@@ -378,16 +378,31 @@ impl Default for ScreenshotConfig {
     }
 }
 
+/// How the primary window is presented on desktop platforms. Ignored on
+/// WASM, where the canvas fills its parent and browser fullscreen needs a
+/// user gesture.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowModeConfig {
+    /// Borderless fullscreen on the monitor the window opens on
+    #[default]
+    BorderlessFullscreen,
+    /// A regular decorated window
+    Windowed,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct SystemConfig {
     pub prevent_screen_sleep: bool,
+    pub window_mode: WindowModeConfig,
 }
 
 impl Default for SystemConfig {
     fn default() -> Self {
         Self {
             prevent_screen_sleep: true,
+            window_mode: WindowModeConfig::default(),
         }
     }
 }

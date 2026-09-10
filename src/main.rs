@@ -11,6 +11,7 @@ use bevy::window::{MonitorSelection, PresentMode, WindowMode};
 use bevy::{app::TaskPoolThreadAssignmentPolicy, tasks::available_parallelism};
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
 use stardrift::cli;
+use stardrift::config::WindowModeConfig;
 use stardrift::plugins::keep_awake::KeepAwakePlugin;
 use stardrift::plugins::screenshot::ScreenshotPlugin;
 use stardrift::plugins::trails::TrailsPlugin;
@@ -52,13 +53,19 @@ fn main() {
     // reflect the workload rather than the display's refresh rate. Windowed
     // macOS pins to refresh regardless of present mode; borderless fullscreen
     // with Immediate is the combination that actually uncaps there.
+    //
+    // WASM always runs windowed: the canvas already fills its parent, and
+    // browser fullscreen can only be entered from a user gesture.
+    let fullscreen = WindowMode::BorderlessFullscreen(MonitorSelection::Current);
     let (window_mode, present_mode) = if args.bench_mode {
-        (
-            WindowMode::BorderlessFullscreen(MonitorSelection::Current),
-            PresentMode::Immediate,
-        )
+        (fullscreen, PresentMode::Immediate)
     } else {
-        (WindowMode::Windowed, PresentMode::Fifo)
+        let mode = match config.system.window_mode {
+            _ if cfg!(target_arch = "wasm32") => WindowMode::Windowed,
+            WindowModeConfig::BorderlessFullscreen => fullscreen,
+            WindowModeConfig::Windowed => WindowMode::Windowed,
+        };
+        (mode, PresentMode::Fifo)
     };
 
     let mut app = App::new();

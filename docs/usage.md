@@ -54,6 +54,7 @@ descriptions. The most commonly used:
 | `-i, --integrator NAME` | Numerical integrator (see [Integrators Guide](integrators.md)) |
 | `--color-scheme NAME` | Color scheme for bodies (see [Color Schemes](color-schemes.md)) |
 | `-p, --paused` | Start paused |
+| `--windowed` / `--fullscreen` | Regular window or borderless fullscreen (the default); Escape quits either way |
 | `-c, --config FILE` | Use a specific config file |
 | `-v, --verbose` | Debug logging (includes a dump of the effective configuration) |
 | `--bh-probe` | Measure Barnes-Hut error and octree churn against exact summation; logged and shown in the diagnostics HUD (see [Integration](integration.md#instrumented-what-theta-costs)) |

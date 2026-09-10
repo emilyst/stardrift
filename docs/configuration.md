@@ -280,6 +280,7 @@ The `[system]` section controls system-level behavior.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `prevent_screen_sleep` | `bool` | `true` | Prevent display from sleeping during simulation. Override per run with `--prevent-screen-sleep` / `--no-prevent-screen-sleep` |
+| `window_mode` | `string` | `"borderless_fullscreen"` | `"borderless_fullscreen"` or `"windowed"`. Override per run with `--fullscreen` / `--windowed`. Ignored on WASM, which always runs windowed |
 
 ## Complete Example
 
@@ -325,6 +326,7 @@ filename_prefix = "capture"
 
 [system]
 prevent_screen_sleep = true
+window_mode = "windowed"
 ```
 
 ## Command-Line Overrides

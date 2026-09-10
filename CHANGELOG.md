@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Stardrift now opens in borderless fullscreen by default on desktop. Set
+  `window_mode = "windowed"` under `[system]` in the config file, or pass
+  `--windowed`, for a regular window; `--fullscreen` overrides the config
+  the other way. Escape quits as before. WASM is unaffected and always
+  runs in its canvas.
+
 ### Added
 
 - `--bench-mode` flag for performance measurement: starts from the built-in

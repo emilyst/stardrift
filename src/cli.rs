@@ -3,7 +3,7 @@
 use clap::Parser;
 use std::fmt;
 
-use crate::config::{ColorScheme, IntegratorConfig, SimulationConfig};
+use crate::config::{ColorScheme, IntegratorConfig, SimulationConfig, WindowModeConfig};
 use crate::physics::integrators::registry::IntegratorRegistry;
 use crate::plugins::screenshot::{AutomatedScreenshotNaming, AutomatedScreenshotSchedule};
 
@@ -129,6 +129,15 @@ pub struct Args {
     /// Allow the screen to sleep during simulation (overrides config file)
     #[arg(long, overrides_with = "prevent_screen_sleep")]
     pub no_prevent_screen_sleep: bool,
+
+    /// Run in a regular window instead of borderless fullscreen (overrides
+    /// config file)
+    #[arg(long, overrides_with = "fullscreen")]
+    pub windowed: bool,
+
+    /// Run borderless fullscreen (overrides config file)
+    #[arg(long, overrides_with = "windowed")]
+    pub fullscreen: bool,
 }
 
 /// Handles the --list-integrators flag by printing available integrators and exiting
@@ -219,6 +228,14 @@ pub fn load_and_apply_config(args: &Args) -> Result<SimulationConfig, CliError> 
     } else if args.no_prevent_screen_sleep {
         println!("Disabling screen sleep prevention");
         config.system.prevent_screen_sleep = false;
+    }
+
+    if args.windowed {
+        println!("Running windowed");
+        config.system.window_mode = WindowModeConfig::Windowed;
+    } else if args.fullscreen {
+        println!("Running borderless fullscreen");
+        config.system.window_mode = WindowModeConfig::BorderlessFullscreen;
     }
 
     Ok(config)

@@ -51,8 +51,11 @@ For WebAssembly builds, see the [Usage Guide](docs/usage.md#platform-specific-no
 ## Quick Start
 
 ```bash
-# Basic run
+# Basic run (borderless fullscreen; Escape quits)
 stardrift
+
+# Run in a regular window instead
+stardrift --windowed
 
 # Customize body count and seed
 stardrift --bodies 150 --seed 42
