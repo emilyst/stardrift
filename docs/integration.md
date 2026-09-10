@@ -178,17 +178,19 @@ two at any moment. Theta = 1.0 is an order of magnitude worse in L2 and
 lets individual bodies (near a field null, or where a coarse node covering
 a close pair is accepted) run 10–20 % off.
 
-The error is not stationary. The **opening 30 s is the worst window for
-L2** — the fresh spawn shell presents every body with many equidistant
-groups that pass the acceptance test, and the L2 figure then falls by
-4–10× over the first two minutes as bodies merge, mass concentrates, and
-each body's field comes to be dominated by near neighbours that are always
-evaluated exactly (n = 1000, theta = 0.5: 2.3e-4 in the first 30 s,
-1.1e-4 at 2–3 min, 9.5e-5 at 4–5 min). The per-body maximum does **not**
-fall with it (same run: 1.0e-2 → 1.8e-2 → 1.4e-2): as the field gets
-lumpier, some body is always next to an accepted node that misrepresents
-it. A short run therefore overstates the typical error and understates
-the worst case.
+The error is noisy but roughly stationary at n ≥ 1000: sampled in 15 s
+windows, the n = 1000, theta = 0.5 L2 figure wanders between 7e-5 and
+2.6e-4 for the whole five minutes with no trend, and n = 5000 settles
+near 1e-4 after a higher first 15 s. The n = 25 run does fall by two
+orders of magnitude, but that is the body count collapsing from 25 to 12
+— with a dozen bodies the tree accepts almost nothing and the field is
+nearly exact — not the approximation improving. The per-body maximum
+stays at the percent level throughout; at theta = 1.0, n = 1000 one body
+sat at a steady 23 % for the first 25 s (the scene is quasi-static that
+early) before dropping to 6–12 %, which is what a coarse node hiding a
+near neighbour, or a body near a field null, looks like. A single short
+run is therefore representative of L2 at large n but not of the worst
+case, which needs the run to explore the field.
 
 Churn is a property of the trajectory, not of theta, and it grows as the
 system evolves: at n = 25 it climbs from ~2 % per sample interval in the
