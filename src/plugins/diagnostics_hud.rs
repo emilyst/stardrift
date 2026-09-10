@@ -5,6 +5,8 @@
 //! independent features that can be cleanly added or removed without affecting
 //! other systems.
 
+use crate::physics::resources::BhProbeState;
+use crate::plugins::simulation_diagnostics::SimulationDiagnosticsPlugin;
 use crate::resources::BodyCount;
 use bevy::asset::AssetPath;
 use bevy::asset::io::AssetSourceId;
@@ -21,6 +23,15 @@ struct FpsTextNode;
 
 #[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
 struct BodyCountTextNode;
+
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct BhErrorL2TextNode;
+
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct BhErrorMaxTextNode;
+
+#[derive(Component, Copy, Clone, Default, PartialEq, Debug)]
+struct BhChurnTextNode;
 
 #[derive(Component)]
 pub struct DiagnosticsHudRoot;
@@ -58,6 +69,45 @@ impl Default for DiagnosticsHudState {
     }
 }
 
+/// One label/value HUD row; `marker` tags the value text for updates.
+fn hud_row(
+    label: &str,
+    initial: String,
+    marker: impl Component,
+    regular_font: &TextFont,
+    bold_font: &TextFont,
+) -> impl Bundle {
+    (
+        Node {
+            display: Display::Flex,
+            justify_content: JustifyContent::Center,
+            column_gap: Val::Px(5.0),
+            ..default()
+        },
+        children![
+            (
+                Text::new(label),
+                Node {
+                    min_width: Val::Px(100.0),
+                    ..default()
+                },
+                TextLayout::justify(Justify::Right),
+                regular_font.clone(),
+            ),
+            (
+                marker,
+                Node {
+                    min_width: Val::Px(100.0),
+                    ..default()
+                },
+                TextLayout::justify(Justify::Left),
+                Text::new(initial),
+                bold_font.clone(),
+            ),
+        ],
+    )
+}
+
 pub struct DiagnosticsHudPlugin;
 
 impl DiagnosticsHudPlugin {
@@ -66,6 +116,7 @@ impl DiagnosticsHudPlugin {
         asset_server: Res<AssetServer>,
         settings: Res<DiagnosticsHudSettings>,
         body_count: Res<BodyCount>,
+        bh_probe: Res<BhProbeState>,
     ) {
         let embedded_asset_source = &AssetSourceId::from("embedded");
 
@@ -119,95 +170,59 @@ impl DiagnosticsHudPlugin {
             border_radius: BorderRadius::all(Val::Px(5.0)),
             ..default()
         };
-        let hud_row_node = Node {
-            display: Display::Flex,
-            justify_content: JustifyContent::Center,
-            column_gap: Val::Px(5.0),
-            ..default()
-        };
 
-        commands.spawn((
-            container_node,
-            DiagnosticsHudRoot,
-            children![(
-                hud_node,
-                background_color,
-                children![
-                    (
-                        hud_row_node.clone(),
-                        children![
-                            (
-                                Text::new("FPS"),
-                                Node {
-                                    min_width: Val::Px(100.0),
-                                    ..default()
-                                },
-                                TextLayout::justify(Justify::Right),
-                                regular_text_font.clone(),
-                            ),
-                            (
-                                FpsTextNode,
-                                Node {
-                                    min_width: Val::Px(100.0),
-                                    ..default()
-                                },
-                                TextLayout::justify(Justify::Left),
-                                Text::new("-"),
-                                extra_bold_text_font.clone(),
-                            ),
-                        ],
-                    ),
-                    (
-                        hud_row_node.clone(),
-                        children![
-                            (
-                                Text::new("Frame count"),
-                                Node {
-                                    min_width: Val::Px(100.0),
-                                    ..default()
-                                },
-                                TextLayout::justify(Justify::Right),
-                                regular_text_font.clone(),
-                            ),
-                            (
-                                FrameCountTextNode,
-                                Node {
-                                    min_width: Val::Px(100.0),
-                                    ..default()
-                                },
-                                TextLayout::justify(Justify::Left),
-                                Text::new("-"),
-                                extra_bold_text_font.clone(),
-                            ),
-                        ],
-                    ),
-                    (
-                        hud_row_node.clone(),
-                        children![
-                            (
-                                Text::new("Body count"),
-                                Node {
-                                    min_width: Val::Px(100.0),
-                                    ..default()
-                                },
-                                TextLayout::justify(Justify::Right),
-                                regular_text_font.clone(),
-                            ),
-                            (
-                                BodyCountTextNode,
-                                Text::new(format!("{}", **body_count)),
-                                Node {
-                                    min_width: Val::Px(100.0),
-                                    ..default()
-                                },
-                                TextLayout::justify(Justify::Left),
-                                extra_bold_text_font.clone(),
-                            ),
-                        ],
-                    ),
-                ],
-            )],
-        ));
+        commands
+            .spawn((container_node, DiagnosticsHudRoot))
+            .with_children(|container| {
+                container
+                    .spawn((hud_node, background_color))
+                    .with_children(|hud| {
+                        hud.spawn(hud_row(
+                            "FPS",
+                            "-".into(),
+                            FpsTextNode,
+                            &regular_text_font,
+                            &extra_bold_text_font,
+                        ));
+                        hud.spawn(hud_row(
+                            "Frame count",
+                            "-".into(),
+                            FrameCountTextNode,
+                            &regular_text_font,
+                            &extra_bold_text_font,
+                        ));
+                        hud.spawn(hud_row(
+                            "Body count",
+                            format!("{}", **body_count),
+                            BodyCountTextNode,
+                            &regular_text_font,
+                            &extra_bold_text_font,
+                        ));
+                        if bh_probe.enabled {
+                            hud.spawn(hud_row(
+                                "BH error L2",
+                                "-".into(),
+                                BhErrorL2TextNode,
+                                &regular_text_font,
+                                &extra_bold_text_font,
+                            ));
+                            hud.spawn(hud_row(
+                                "BH error max",
+                                "-".into(),
+                                BhErrorMaxTextNode,
+                                &regular_text_font,
+                                &extra_bold_text_font,
+                            ));
+                            hud.spawn(hud_row(
+                                "BH churn",
+                                "-".into(),
+                                BhChurnTextNode,
+                                &regular_text_font,
+                                &extra_bold_text_font,
+                            ));
+                        }
+                    });
+            });
     }
 
     fn advance_refresh_timer(mut state: ResMut<DiagnosticsHudState>, time: Res<Time>) {
@@ -252,6 +267,50 @@ impl DiagnosticsHudPlugin {
         }
     }
 
+    /// The probe rows exist only when the probe is enabled; `Single` skips
+    /// these systems otherwise.
+    fn update_bh_error_l2_text(
+        diagnostics: Res<DiagnosticsStore>,
+        mut text: Single<&mut Text, With<BhErrorL2TextNode>>,
+        state: Res<DiagnosticsHudState>,
+    ) {
+        if state.refresh_timer.is_finished()
+            && let Some(value) = diagnostics
+                .get(&SimulationDiagnosticsPlugin::BH_ACCEL_ERROR_L2)
+                .and_then(|d| d.value())
+        {
+            ***text = format!("{value:.2e}");
+        }
+    }
+
+    fn update_bh_error_max_text(
+        diagnostics: Res<DiagnosticsStore>,
+        mut text: Single<&mut Text, With<BhErrorMaxTextNode>>,
+        state: Res<DiagnosticsHudState>,
+    ) {
+        if state.refresh_timer.is_finished()
+            && let Some(value) = diagnostics
+                .get(&SimulationDiagnosticsPlugin::BH_ACCEL_ERROR_MAX)
+                .and_then(|d| d.value())
+        {
+            ***text = format!("{value:.2e}");
+        }
+    }
+
+    fn update_bh_churn_text(
+        diagnostics: Res<DiagnosticsStore>,
+        mut text: Single<&mut Text, With<BhChurnTextNode>>,
+        state: Res<DiagnosticsHudState>,
+    ) {
+        if state.refresh_timer.is_finished()
+            && let Some(value) = diagnostics
+                .get(&SimulationDiagnosticsPlugin::BH_TOPOLOGY_CHURN)
+                .and_then(|d| d.value())
+        {
+            ***text = format!("{:.1}%", value * 100.0);
+        }
+    }
+
     fn update_diagnostics_hud_visibility(
         settings: Res<DiagnosticsHudSettings>,
         mut root_query: Query<&mut Node, With<DiagnosticsHudRoot>>,
@@ -280,6 +339,9 @@ impl Plugin for DiagnosticsHudPlugin {
                 Self::update_frame_count_text,
                 Self::update_fps_text,
                 Self::update_body_count_text,
+                Self::update_bh_error_l2_text,
+                Self::update_bh_error_max_text,
+                Self::update_bh_churn_text,
                 Self::update_diagnostics_hud_visibility,
             ),
         );
