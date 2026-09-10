@@ -7,7 +7,8 @@ use bevy::diagnostic::{
     SystemInformationDiagnosticsPlugin,
 };
 use bevy::log::{Level, LogPlugin};
-use bevy::{app::TaskPoolThreadAssignmentPolicy, tasks::available_parallelism, window::WindowMode};
+use bevy::window::{MonitorSelection, PresentMode, WindowMode};
+use bevy::{app::TaskPoolThreadAssignmentPolicy, tasks::available_parallelism};
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
 use stardrift::cli;
 use stardrift::plugins::keep_awake::KeepAwakePlugin;
@@ -47,6 +48,19 @@ fn main() {
         }
     };
 
+    // Benchmark mode takes the whole screen and drops vsync so frame times
+    // reflect the workload rather than the display's refresh rate. Windowed
+    // macOS pins to refresh regardless of present mode; borderless fullscreen
+    // with Immediate is the combination that actually uncaps there.
+    let (window_mode, present_mode) = if args.bench_mode {
+        (
+            WindowMode::BorderlessFullscreen(MonitorSelection::Current),
+            PresentMode::Immediate,
+        )
+    } else {
+        (WindowMode::Windowed, PresentMode::Fifo)
+    };
+
     let mut app = App::new();
 
     app.add_plugins(
@@ -64,9 +78,9 @@ fn main() {
                 primary_window: Some(Window {
                     fit_canvas_to_parent: true,
                     fullsize_content_view: true,
-                    mode: WindowMode::Windowed,
+                    mode: window_mode,
                     prevent_default_event_handling: true,
-                    present_mode: bevy::window::PresentMode::Fifo,
+                    present_mode,
                     title: "Stardrift".to_string(),
                     titlebar_transparent: true,
                     ..default()
@@ -93,7 +107,9 @@ fn main() {
         EmbeddedAssetsPlugin,
         DiagnosticsHudPlugin,
         LogDiagnosticsPlugin {
-            debug: true,
+            // Benchmark mode surfaces frame-time diagnostics at info level
+            // so they land in the default log output.
+            debug: !args.bench_mode,
             ..default()
         },
         EntityCountDiagnosticsPlugin::default(),

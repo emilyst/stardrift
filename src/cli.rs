@@ -63,6 +63,12 @@ pub struct Args {
     #[arg(short = 'v', long)]
     pub verbose: bool,
 
+    /// Benchmark mode: ignore the user configuration file (built-in defaults
+    /// only, other flags still apply), run borderless fullscreen with vsync
+    /// off, and log frame-time diagnostics at info level
+    #[arg(long, conflicts_with = "config")]
+    pub bench_mode: bool,
+
     /// Measure Barnes-Hut acceleration error and octree churn against exact
     /// summation (O(N²) sampled a few times per second; overrides config file)
     #[arg(long)]
@@ -157,7 +163,10 @@ pub fn handle_print_default_config() {
 /// Loads configuration from file or defaults, then applies command-line overrides
 pub fn load_and_apply_config(args: &Args) -> Result<SimulationConfig, CliError> {
     // Load configuration
-    let mut config = if let Some(config_path) = &args.config {
+    let mut config = if args.bench_mode {
+        println!("Benchmark mode: using built-in default configuration");
+        SimulationConfig::default()
+    } else if let Some(config_path) = &args.config {
         println!("Loading configuration from: {config_path}");
         SimulationConfig::load_or_default(config_path)
     } else {

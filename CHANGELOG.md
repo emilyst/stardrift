@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `--bench-mode` flag for performance measurement: starts from the built-in
+  default configuration (ignoring the user config file; other flags such as
+  `--bodies` and `--seed` still apply), runs borderless fullscreen with
+  `PresentMode::Immediate` so frame times are not pinned to the display
+  refresh rate, and logs frame-time diagnostics at info level. Conflicts
+  with `--config`.
 - Barnes-Hut probe (`--bh-probe`, or `[physics.bh_probe]` in the config
   file): measures the approximate field against exact pairwise summation on
   the live simulation and reports a scale-free L2 acceleration error, a

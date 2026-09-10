@@ -57,6 +57,7 @@ descriptions. The most commonly used:
 | `-c, --config FILE` | Use a specific config file |
 | `-v, --verbose` | Debug logging (includes a dump of the effective configuration) |
 | `--bh-probe` | Measure Barnes-Hut error and octree churn against exact summation; logged and shown in the diagnostics HUD (see [Integration](integration.md#instrumented-what-theta-costs)) |
+| `--bench-mode` | Benchmarking: ignore the user config file (other flags still apply), borderless fullscreen with vsync off, frame-time diagnostics logged at info level. Conflicts with `--config` |
 | `--list-integrators` | List available integrators and aliases, then exit |
 | `--print-default-config` | Print the default configuration as TOML, then exit |
 
@@ -78,6 +79,11 @@ stardrift --paused --bodies 200
 for scheme in viridis plasma inferno turbo; do
     stardrift --seed 42 --bodies 50 --color-scheme $scheme
 done
+
+# Measure frame times at 1000 bodies from a known baseline (takes over the
+# screen; windowed macOS pins to the display refresh rate regardless of
+# present mode, which is why bench mode goes fullscreen)
+cargo run --profile perf -p stardrift -- --bench-mode --seed 42 --bodies 1000
 ```
 
 ## Screenshots
