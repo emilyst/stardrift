@@ -12,9 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Barnes-Hut probe (`--bh-probe`, or `[physics.bh_probe]` in the config
   file): measures the approximate field against exact pairwise summation on
   the live simulation and reports a scale-free L2 acceleration error, a
-  floored per-body relative maximum, and octree topology churn. Logged
-  under `stardrift::bh_probe`, registered as Bevy diagnostics, and shown as
-  three rows in the diagnostics HUD. Off by default; the O(N²) reference
+  floored per-body relative maximum, the net force on the system from the
+  asymmetric acceptance test, the barycenter speed relative to the RMS
+  body speed (the integrated momentum leak), and octree topology churn.
+  Logged under `stardrift::bh_probe`, registered as Bevy diagnostics, and
+  shown as five rows in the diagnostics HUD. Off by default; the O(N²) reference
   pass is sampled every 15th step when on. Measured figures for theta 0,
   0.5 and 1.0 at 25, 1000 and 5000 bodies are recorded in
   `docs/integration.md`.

@@ -140,7 +140,7 @@ runs; the Euler methods remain educational.
 `--bh-probe` (or `[physics.bh_probe] enabled = true`) measures the
 Barnes-Hut field against exact pairwise summation on the live stage snapshot,
 through the same force law, so the numbers isolate pure approximation error
-(`src/physics/bh_probe.rs`; tests in `tests/bh_probe.rs`). Three figures,
+(`src/physics/bh_probe.rs`; tests in `tests/bh_probe.rs`). Five figures,
 sampled on the first octree build of every 15th step by default, logged
 under `stardrift::bh_probe` and shown in the diagnostics HUD:
 
@@ -149,6 +149,20 @@ under `stardrift::bh_probe` and shown in the diagnostics HUD:
 - `accel_error_max` — largest per-body relative error, with the denominator
   floored at 1e-3 of the RMS exact acceleration so field nulls cannot
   dominate it.
+- `momentum_asymmetry` — `|Σ m_i·a_bh_i| / Σ m_i·|a_ref_i|`, the net force
+  on the whole system relative to the total exact force magnitude. Exact
+  pairwise forces cancel in pairs, clamps included, so this is zero to
+  roundoff at theta = 0. Barnes-Hut evaluates acceptance from each body's
+  own side, so body i may see j through a node's centre of mass while j
+  sees i directly; the pair no longer cancels and the system feels a net
+  force. This is the mechanism behind "momentum conserved only to
+  O(epsilon_BH)" above.
+- `barycenter_speed_ratio` — barycenter speed over the mass-weighted RMS
+  body speed. Bodies spawn in the centre-of-momentum frame and merges
+  conserve momentum, so this is the momentum asymmetry integrated over the
+  run: the fraction of the system's motion that has leaked into a drift of
+  the whole. A restart resets it; barycentric drift correction moves
+  positions only, so it does not.
 - `topology_churn` — fraction of bodies (among those present in both
   samples) whose root-to-leaf octant path changed since the previous sample.
   The build is translation- and scale-equivariant, so uniform drift and pure
@@ -161,15 +175,19 @@ Measured 2026-09-09, seed 42, velocity Verlet, all other settings default
 at the end), five minutes of wall time per run, 1200 samples each. Mean
 over all samples with the per-sample maximum in parentheses:
 
-| n | theta | `accel_error_l2` | `accel_error_max` | `topology_churn` | bodies |
-|---|-------|------------------|-------------------|------------------|--------|
-| 25 | 0.0 | 1.5e-16 (3.8e-16) | 3.2e-16 (2.2e-15) | 6.0 % (57 %) | 12 |
-| 25 | 0.5 | 1.2e-4 (2.0e-3) | 4.1e-3 (8.8e-2) | 7.3 % (47 %) | 12 |
-| 25 | 1.0 | 1.5e-3 (3.1e-2) | 1.8e-2 (2.0e-1) | 5.8 % (69 %) | 9 |
-| 1000 | 0.0 | 9.4e-16 (5.0e-15) | 3.6e-15 (7.5e-15) | 0.32 % (1.6 %) | 870 |
-| 1000 | 0.5 | 1.3e-4 (8.8e-4) | 1.5e-2 (3.9e-2) | 0.31 % (1.5 %) | 870 |
-| 1000 | 1.0 | 9.4e-4 (8.2e-3) | 9.9e-2 (2.3e-1) | 0.32 % (1.4 %) | 870 |
-| 5000 | 0.5 | 8.4e-5 (4.0e-4) | 2.5e-2 (4.4e-2) | 0.11 % (0.4 %) | 4796 |
+| n | theta | `accel_error_l2` | `accel_error_max` | `momentum_asymmetry` | `barycenter_speed_ratio` at 5 min | `topology_churn` | bodies |
+|---|-------|------------------|-------------------|----------------------|-----------------------------------|------------------|--------|
+| 25 | 0.0 | 1.5e-16 (3.8e-16) | 3.2e-16 (2.2e-15) | 7.3e-17 (3.1e-16) | 6.3e-15 | 6.0 % (57 %) | 12 |
+| 25 | 0.5 | 1.2e-4 (2.0e-3) | 4.1e-3 (8.8e-2) | 5.9e-5 (1.2e-3) | 7.9e-4 | 7.3 % (47 %) | 12 |
+| 25 | 1.0 | 1.5e-3 (3.1e-2) | 1.8e-2 (2.0e-1) | 4.7e-4 (8.5e-3) | 3.9e-3 | 5.8 % (69 %) | 9 |
+| 1000 | 0.0 | 9.4e-16 (5.0e-15) | 3.6e-15 (7.5e-15) | 1.4e-16 (1.1e-15) | 3.0e-16 | 0.32 % (1.6 %) | 870 |
+| 1000 | 0.5 | 1.3e-4 (8.8e-4) | 1.5e-2 (3.9e-2) | 2.5e-5 (2.6e-4) | 3.4e-5 | 0.31 % (1.5 %) | 870 |
+| 1000 | 1.0 | 9.4e-4 (8.2e-3) | 9.9e-2 (2.3e-1) | 1.8e-4 (1.1e-3) | 2.8e-4 | 0.32 % (1.4 %) | 870 |
+| 5000 | 0.5 | 8.4e-5 (4.0e-4) | 2.5e-2 (4.4e-2) | 1.5e-5 (3.3e-5) | 7.7e-6 | 0.11 % (0.4 %) | 4796 |
+
+The error columns are bitwise identical to an earlier run of the same
+seeds without the momentum figures, which is the probe's read-only
+guarantee holding across a code change.
 
 Reading it: theta = 0 sits at roundoff, which is the probe's own sanity
 check. The default theta = 0.5 costs about one part in 10⁴ in the L2 sense
@@ -191,6 +209,20 @@ early) before dropping to 6–12 %, which is what a coarse node hiding a
 near neighbour, or a body near a field null, looks like. A single short
 run is therefore representative of L2 at large n but not of the worst
 case, which needs the run to explore the field.
+
+Momentum: the net force from asymmetric acceptance runs at a fifth to a
+third of the L2 error, and it is zero to roundoff at theta = 0 — the
+clamps are symmetric in the pair, so Newton's third law survives them. The
+integrated drift is small and grows sub-linearly (n = 25, theta = 0.5:
+1.1e-4 of the RMS speed at 30 s, 4.6e-4 at 150 s, 7.9e-4 at 300 s): the
+per-sample net force changes direction as the tree changes, so it
+accumulates like a random walk rather than a steady push. It also falls
+with body count — 8e-4 at n = 25, 3e-5 at n = 1000, 8e-6 at n = 5000 for
+theta = 0.5 — because the asymmetric residuals of many independent
+acceptances average out. At theta = 1.0 the drift is 5–8× larger. None
+of this is visible on screen at these sizes; it is what "momentum
+conserved only to O(epsilon_BH)" above amounts to in numbers, and it is
+the figure a symmetric dual-tree traversal would drive to roundoff.
 
 Churn is a property of the trajectory, not of theta, and it grows as the
 system evolves: at n = 25 it climbs from ~2 % per sample interval in the
