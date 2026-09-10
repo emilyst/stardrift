@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Barnes-Hut probe (`--bh-probe`, or `[physics.bh_probe]` in the config
+  file): measures the approximate field against exact pairwise summation on
+  the live simulation and reports a scale-free L2 acceleration error, a
+  floored per-body relative maximum, and octree topology churn. Logged
+  under `stardrift::bh_probe`, registered as Bevy diagnostics, and shown as
+  three rows in the diagnostics HUD. Off by default; the O(N²) reference
+  pass is sampled every 15th step when on. Measured figures for theta 0,
+  0.5 and 1.0 at 25 and 1000 bodies are recorded in `docs/integration.md`.
+
+### Fixed
+
+- The `Octree::new` doc comment described the `min_distance` softening as
+  "as if bodies were at least this far apart"; the force is a linear ramp
+  to zero inside that radius (the interior-of-a-uniform-sphere law, which
+  is what keeps the pair potential C1). A unit test now pins all three
+  regimes of the force law.
+
 ## [0.0.75] - 2026-08-28
 
 ### Changed

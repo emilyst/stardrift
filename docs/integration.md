@@ -135,6 +135,57 @@ build per step via FSAL). PEFRL now genuinely earns its 4 builds per step
 when accuracy matters and theta is small. RK4 is competitive only for short
 runs; the Euler methods remain educational.
 
+## Instrumented: what theta costs
+
+`--bh-probe` (or `[physics.bh_probe] enabled = true`) measures the
+Barnes-Hut field against exact pairwise summation on the live stage snapshot,
+through the same force law, so the numbers isolate pure approximation error
+(`src/physics/bh_probe.rs`; tests in `tests/bh_probe.rs`). Three figures,
+sampled on the first octree build of every 15th step by default, logged
+under `stardrift::bh_probe` and shown in the diagnostics HUD:
+
+- `accel_error_l2` — `sqrt(Σ|a_bh − a_ref|² / Σ|a_ref|²)`, the standard
+  scale-free treecode figure; the headline.
+- `accel_error_max` — largest per-body relative error, with the denominator
+  floored at 1e-3 of the RMS exact acceleration so field nulls cannot
+  dominate it.
+- `topology_churn` — fraction of bodies (among those present in both
+  samples) whose root-to-leaf octant path changed since the previous sample.
+  The build is translation- and scale-equivariant, so uniform drift and pure
+  dispersal do not register; relative motion does, and so does a hull body
+  shifting the root box, which can rekey the whole population at once. That
+  amplification is what the quantized-root-box item below is about.
+
+Measured 2026-09-09, seed 42, velocity Verlet, all other settings default
+(collisions on, so the body count declines), 30 s wall per run, 120 samples
+each, mean over samples with the per-sample maximum in parentheses:
+
+| n | theta | `accel_error_l2` | `accel_error_max` | `topology_churn` |
+|---|-------|------------------|-------------------|------------------|
+| 25 | 0.0 | 1.8e-16 (3.1e-16) | 3.8e-16 (7.0e-16) | 2.4 % (17.4 %) |
+| 25 | 0.5 | 4.8e-4 (1.8e-3) | 4.4e-3 (1.7e-2) | 2.4 % (17.4 %) |
+| 25 | 1.0 | 8.1e-3 (3.1e-2) | 5.2e-2 (1.5e-1) | 2.4 % (17.4 %) |
+| 1000 | 0.0 | 8.6e-16 (2.1e-15) | 3.7e-15 (5.5e-15) | 0.24 % (1.0 %) |
+| 1000 | 0.5 | 2.3e-4 (6.5e-4) | 1.0e-2 (1.3e-2) | 0.24 % (1.0 %) |
+| 1000 | 1.0 | 1.7e-3 (4.9e-3) | 2.3e-1 (2.3e-1) | 0.24 % (1.0 %) |
+
+Reading it: theta = 0 sits at roundoff, which is the probe's own sanity
+check. The default theta = 0.5 costs a few parts in 10⁴ in the L2 sense at
+either body count, with individual bodies occasionally off by a percent.
+Theta = 1.0 is an order of magnitude worse in L2 and lets single bodies
+(near a field null or a close pair, where a coarse node is accepted) run
+20 % off at n = 1000. Churn is a property of the trajectory rather than of
+theta over this window: the three theta runs diverge too little in 30 s to
+change any octant assignment. The default scene's churn is small and
+bursty — a hull body or a merge rekeying a cluster — which is evidence
+against, not for, spending effort on a quantized root box at these sizes.
+
+Cost: one extra O(N²) pass per sample, parallelised across the compute
+task pool — measured at 0.2 ms per sample at n = 1000 and 3 ms at n = 5000
+on an 18-thread machine, four samples per second. Off by default; with it
+off the driver pays one branch per build and seeded frame-based
+screenshots are byte-identical.
+
 ## Accepted losses
 
 Named here so they are decisions, not accidents:
@@ -155,10 +206,6 @@ Named here so they are decisions, not accidents:
   breaks exact translation equivariance — which both barycentric drift
   correction and the FSAL cache silently depend on. Revisit only as a
   package deal.
-- **epsilon_BH / topology-churn instrumentation.** Two cheap `--verbose`
-  numbers (max relative acceleration error vs direct summation; bodies whose
-  octant assignment changed per build) would turn the theta > 0 claims above
-  from estimates into per-configuration facts.
 - **Symmetric (dual-tree) traversal**, falcON-style: the known route to exact
   momentum conservation at theta > 0, at the cost of replacing the per-body
   traversal wholesale.

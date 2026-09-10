@@ -56,6 +56,7 @@ descriptions. The most commonly used:
 | `-p, --paused` | Start paused |
 | `-c, --config FILE` | Use a specific config file |
 | `-v, --verbose` | Debug logging (includes a dump of the effective configuration) |
+| `--bh-probe` | Measure Barnes-Hut error and octree churn against exact summation; logged and shown in the diagnostics HUD (see [Integration](integration.md#instrumented-what-theta-costs)) |
 | `--list-integrators` | List available integrators and aliases, then exit |
 | `--print-default-config` | Print the default configuration as TOML, then exit |
 

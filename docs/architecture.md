@@ -28,6 +28,7 @@ src/
 │   ├── components.rs    # Physics components (Mass, Velocity, etc.)
 │   ├── resources.rs     # Physics resources (timing, current integrator)
 │   ├── octree.rs        # Barnes-Hut octree implementation
+│   ├── bh_probe.rs      # Barnes-Hut error and topology-churn probe (opt-in)
 │   ├── aabb3d.rs        # Axis-aligned bounding box
 │   ├── math.rs          # Type aliases (Scalar, Vector) and math utilities
 │   └── integrators/     # Numerical integration methods + registry

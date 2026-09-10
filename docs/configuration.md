@@ -65,6 +65,21 @@ The simulation uses the Barnes-Hut algorithm for efficient O(N log N) force calc
 - `0.8` - Faster, lower accuracy
 - `1.0+` - Fast but may show artifacts
 
+Measured error figures for these settings are in
+[Integration](integration.md#instrumented-what-theta-costs).
+
+The `[physics.bh_probe]` subsection controls the Barnes-Hut probe, which
+compares the approximate field against exact pairwise summation on the live
+simulation and reports the error and octree topology churn (logged under
+`stardrift::bh_probe` and shown in the diagnostics HUD). The reference pass
+is O(N²), so it is off by default and sampled rather than continuous;
+`--bh-probe` enables it from the command line.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `false` | Run the probe |
+| `sample_every_steps` | `u32` | `15` | Probe the first octree build of every Nth physics step (about four samples per second at the 60 Hz step) |
+
 ### Body Generation
 
 | Field | Type | Default | Description |
