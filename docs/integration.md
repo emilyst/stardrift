@@ -157,28 +157,47 @@ under `stardrift::bh_probe` and shown in the diagnostics HUD:
   amplification is what the quantized-root-box item below is about.
 
 Measured 2026-09-09, seed 42, velocity Verlet, all other settings default
-(collisions on, so the body count declines), 30 s wall per run, 120 samples
-each, mean over samples with the per-sample maximum in parentheses:
+(collisions on, so the body count declines — the last column is the count
+at the end), five minutes of wall time per run, 1200 samples each. Mean
+over all samples with the per-sample maximum in parentheses:
 
-| n | theta | `accel_error_l2` | `accel_error_max` | `topology_churn` |
-|---|-------|------------------|-------------------|------------------|
-| 25 | 0.0 | 1.8e-16 (3.1e-16) | 3.8e-16 (7.0e-16) | 2.4 % (17.4 %) |
-| 25 | 0.5 | 4.8e-4 (1.8e-3) | 4.4e-3 (1.7e-2) | 2.4 % (17.4 %) |
-| 25 | 1.0 | 8.1e-3 (3.1e-2) | 5.2e-2 (1.5e-1) | 2.4 % (17.4 %) |
-| 1000 | 0.0 | 8.6e-16 (2.1e-15) | 3.7e-15 (5.5e-15) | 0.24 % (1.0 %) |
-| 1000 | 0.5 | 2.3e-4 (6.5e-4) | 1.0e-2 (1.3e-2) | 0.24 % (1.0 %) |
-| 1000 | 1.0 | 1.7e-3 (4.9e-3) | 2.3e-1 (2.3e-1) | 0.24 % (1.0 %) |
+| n | theta | `accel_error_l2` | `accel_error_max` | `topology_churn` | bodies |
+|---|-------|------------------|-------------------|------------------|--------|
+| 25 | 0.0 | 1.5e-16 (3.8e-16) | 3.2e-16 (2.2e-15) | 6.0 % (57 %) | 12 |
+| 25 | 0.5 | 1.2e-4 (2.0e-3) | 4.1e-3 (8.8e-2) | 7.3 % (47 %) | 12 |
+| 25 | 1.0 | 1.5e-3 (3.1e-2) | 1.8e-2 (2.0e-1) | 5.8 % (69 %) | 9 |
+| 1000 | 0.0 | 9.4e-16 (5.0e-15) | 3.6e-15 (7.5e-15) | 0.32 % (1.6 %) | 870 |
+| 1000 | 0.5 | 1.3e-4 (8.8e-4) | 1.5e-2 (3.9e-2) | 0.31 % (1.5 %) | 870 |
+| 1000 | 1.0 | 9.4e-4 (8.2e-3) | 9.9e-2 (2.3e-1) | 0.32 % (1.4 %) | 870 |
+| 5000 | 0.5 | 8.4e-5 (4.0e-4) | 2.5e-2 (4.4e-2) | 0.11 % (0.4 %) | 4796 |
 
 Reading it: theta = 0 sits at roundoff, which is the probe's own sanity
-check. The default theta = 0.5 costs a few parts in 10⁴ in the L2 sense at
-either body count, with individual bodies occasionally off by a percent.
-Theta = 1.0 is an order of magnitude worse in L2 and lets single bodies
-(near a field null or a close pair, where a coarse node is accepted) run
-20 % off at n = 1000. Churn is a property of the trajectory rather than of
-theta over this window: the three theta runs diverge too little in 30 s to
-change any octant assignment. The default scene's churn is small and
-bursty — a hull body or a merge rekeying a cluster — which is evidence
-against, not for, spending effort on a quantized root box at these sizes.
+check. The default theta = 0.5 costs about one part in 10⁴ in the L2 sense
+at every body count, while the worst single body is off by a percent or
+two at any moment. Theta = 1.0 is an order of magnitude worse in L2 and
+lets individual bodies (near a field null, or where a coarse node covering
+a close pair is accepted) run 10–20 % off.
+
+The error is not stationary. The **opening 30 s is the worst window for
+L2** — the fresh spawn shell presents every body with many equidistant
+groups that pass the acceptance test, and the L2 figure then falls by
+4–10× over the first two minutes as bodies merge, mass concentrates, and
+each body's field comes to be dominated by near neighbours that are always
+evaluated exactly (n = 1000, theta = 0.5: 2.3e-4 in the first 30 s,
+1.1e-4 at 2–3 min, 9.5e-5 at 4–5 min). The per-body maximum does **not**
+fall with it (same run: 1.0e-2 → 1.8e-2 → 1.4e-2): as the field gets
+lumpier, some body is always next to an accepted node that misrepresents
+it. A short run therefore overstates the typical error and understates
+the worst case.
+
+Churn is a property of the trajectory, not of theta, and it grows as the
+system evolves: at n = 25 it climbs from ~2 % per sample interval in the
+opening window to 6–7 % later, with bursts above 30 % whenever a hull body
+or a merge rekeys a cluster; the theta runs only separate once their
+trajectories have diverged (they are identical for the first 30 s). At
+n = 1000 it stays near 0.3 % with 1.5 % bursts, and at n = 5000 near
+0.1 %. Small and bursty at every size — evidence against, not for,
+spending effort on a quantized root box.
 
 Cost: one extra O(N²) pass per sample, parallelised across the compute
 task pool — measured at 0.2 ms per sample at n = 1000 and 3 ms at n = 5000

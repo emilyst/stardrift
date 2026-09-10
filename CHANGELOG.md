@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   under `stardrift::bh_probe`, registered as Bevy diagnostics, and shown as
   three rows in the diagnostics HUD. Off by default; the O(N²) reference
   pass is sampled every 15th step when on. Measured figures for theta 0,
-  0.5 and 1.0 at 25 and 1000 bodies are recorded in `docs/integration.md`.
+  0.5 and 1.0 at 25, 1000 and 5000 bodies are recorded in
+  `docs/integration.md`.
 
 ### Fixed
 
