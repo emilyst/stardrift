@@ -57,7 +57,7 @@ features = [
     "multi_threaded",
     "sysinfo_plugin",
     "tonemapping_luts",
-    "webgl2",
+    "webgpu",
     "x11",
     "png",
 ]
