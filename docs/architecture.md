@@ -178,16 +178,19 @@ All physics calculations use `f64` (double precision) floating-point arithmetic,
 
 **Location**: `src/states.rs`
 
-The application uses Bevy's state system with a two-state machine:
+The application uses Bevy's state system with a three-state machine:
 
 ```rust
 pub enum AppState {
-    Running,    // Active simulation (default)
+    Loading,    // Startup (default): render pipelines compiling, physics held
+    Running,    // Active simulation
     Paused,     // Simulation paused
 }
 ```
 
-Systems are scheduled to run in specific states — physics updates stop while paused, for example.
+`PhysicsTime` follows the state via `OnEnter` hooks in the simulation plugin: held in `Loading` and `Paused`, released in `Running`. The physics systems themselves check only `PhysicsTime`, so bare test worlds work without states.
+
+The loading screen plugin (`src/plugins/loading_screen.rs`) owns the `Loading` state. It draws an opaque overlay and mirrors the render world's pipeline-cache idleness into the main world each extract (the pattern from Bevy's `loading_screen` example); once the cache has been idle for several consecutive frames it transitions to the state named by `PostLoadingState` (`Running`, or `Paused` under `--paused`). This exists for WebGPU in the browser, where shader compilation can take seconds; on native it lasts a few frames. A 15 s timeout guards against a stuck pipeline.
 
 ## Performance
 
@@ -229,7 +232,8 @@ Full feature support with optimal performance. Uses native windowing and input h
 ### WebAssembly
 
 Browser-based version with some limitations:
-- WebGL2 for rendering
+- WebGPU for rendering (no WebGL2 fallback; Bevy's `webgpu` feature is
+  exclusive)
 - No configuration file or command line
 - Some features (like screen sleep prevention and quitting) unavailable
 

@@ -56,21 +56,26 @@ pub fn handle_toggle_pause_simulation_event(
     mut commands_reader: MessageReader<SimulationCommand>,
     current_state: Res<State<AppState>>,
     mut next_state: ResMut<NextState<AppState>>,
-    mut physics_time: ResMut<PhysicsTime>,
 ) {
     for command in commands_reader.read() {
         if !matches!(command, SimulationCommand::TogglePause) {
             continue;
         }
         match current_state.get() {
-            AppState::Running => {
-                next_state.set(AppState::Paused);
-                physics_time.pause();
-            }
-            AppState::Paused => {
-                next_state.set(AppState::Running);
-                physics_time.unpause();
-            }
+            // Startup hold; the loading screen releases it.
+            AppState::Loading => {}
+            AppState::Running => next_state.set(AppState::Paused),
+            AppState::Paused => next_state.set(AppState::Running),
         }
     }
+}
+
+/// `PhysicsTime` follows `AppState`: held in `Loading` and `Paused`, released
+/// in `Running`. Runs in `OnEnter`, which precedes the frame's fixed steps.
+pub fn pause_physics(mut physics_time: ResMut<PhysicsTime>) {
+    physics_time.pause();
+}
+
+pub fn unpause_physics(mut physics_time: ResMut<PhysicsTime>) {
+    physics_time.unpause();
 }

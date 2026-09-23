@@ -13,6 +13,7 @@ use bevy_panorbit_camera::PanOrbitCameraPlugin;
 use stardrift::cli;
 use stardrift::config::WindowModeConfig;
 use stardrift::plugins::keep_awake::KeepAwakePlugin;
+use stardrift::plugins::loading_screen::{LoadingScreenPlugin, PostLoadingState};
 use stardrift::plugins::screenshot::ScreenshotPlugin;
 use stardrift::plugins::trails::TrailsPlugin;
 use stardrift::plugins::{
@@ -136,15 +137,18 @@ fn main() {
         TrailsPlugin,
         ScreenshotPlugin,
         KeepAwakePlugin,
+        LoadingScreenPlugin,
     ));
 
     // Initialize app states after DefaultPlugins (which includes StatesPlugin)
     app.init_state::<AppState>();
 
-    // Start paused if requested
-    if args.paused {
-        app.insert_resource(NextState::Pending(AppState::Paused));
-    }
+    // The app starts in AppState::Loading; this is where it goes afterwards.
+    app.insert_resource(PostLoadingState(if args.paused {
+        AppState::Paused
+    } else {
+        AppState::Running
+    }));
 
     // Set up automated screenshots if requested
     let (schedule, naming) = cli::create_screenshot_resources(&args, app.world().resource());

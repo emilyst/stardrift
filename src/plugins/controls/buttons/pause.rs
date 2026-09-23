@@ -37,7 +37,7 @@ pub fn sync_pause_button_text(
 
         for children in button_children_query.iter() {
             let dynamic_text = match state.get() {
-                AppState::Running => "Pause (Space)",
+                AppState::Loading | AppState::Running => "Pause (Space)",
                 AppState::Paused => "Resume (Space)",
             };
 

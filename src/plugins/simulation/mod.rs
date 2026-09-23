@@ -14,7 +14,10 @@ pub mod physics;
 use crate::physics::integrators::VelocityVerlet;
 use crate::physics::integrators::registry::IntegratorRegistry;
 use crate::physics::resources::{BhProbeState, CurrentIntegrator};
-use actions::{handle_restart_simulation_event, handle_toggle_pause_simulation_event};
+use actions::{
+    handle_restart_simulation_event, handle_toggle_pause_simulation_event, pause_physics,
+    unpause_physics,
+};
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use physics::{
     PhysicsSet, counteract_barycentric_drift, integrate_motions, sync_transform_from_position,
@@ -148,8 +151,9 @@ impl Plugin for SimulationPlugin {
 
         app.add_systems(Startup, physics::spawn_simulation_bodies);
 
-        // Pause is governed by PhysicsTime alone (checked inside the physics
-        // systems); AppState remains a UI-level concept. Transform sync is
+        // The physics systems check PhysicsTime (not AppState) so they stay
+        // usable in bare test worlds; the OnEnter hooks below keep PhysicsTime
+        // in lockstep with AppState in the real app. Transform sync is
         // ungated: it is a render sync whose Changed<Position> filter makes
         // it a near-no-op when nothing moved.
         app.add_systems(
@@ -161,6 +165,10 @@ impl Plugin for SimulationPlugin {
                 sync_transform_from_position.in_set(PhysicsSet::SyncTransforms),
             ),
         );
+        app.add_systems(OnEnter(AppState::Loading), pause_physics);
+        app.add_systems(OnEnter(AppState::Paused), pause_physics);
+        app.add_systems(OnEnter(AppState::Running), unpause_physics);
+
         // Core simulation command handlers
         app.add_systems(
             Update,

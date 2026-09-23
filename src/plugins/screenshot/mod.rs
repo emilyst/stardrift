@@ -28,10 +28,17 @@ impl Plugin for ScreenshotPlugin {
             (handle_take_screenshot_event, process_screenshot_capture).chain(),
         );
 
-        // Automated screenshot system - runs only if resource exists
+        // Automated screenshot system - runs only if resource exists. Held
+        // during loading so frame/time delays count from simulation start
+        // rather than from process start (keeps `--screenshot-after N`
+        // captures comparable across platforms with different shader
+        // compile times).
         app.add_systems(
             Update,
-            process_automated_screenshots.run_if(resource_exists::<AutomatedScreenshotSchedule>),
+            process_automated_screenshots.run_if(
+                resource_exists::<AutomatedScreenshotSchedule>
+                    .and_then(not(in_state(AppState::Loading))),
+            ),
         );
     }
 }

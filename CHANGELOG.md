@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A loading state at startup: an overlay reading "Compiling shaders…"
+  covers the window and physics is held until the render pipelines have
+  compiled, then the simulation starts. This matters on WebGPU in the
+  browser (Safari can take several seconds); on native it lasts a few
+  frames. Automated screenshot delays count from the end of loading.
+
+### Fixed
+
+- `--paused` now actually pauses physics at startup. Previously it only
+  switched the UI to the paused state while bodies kept moving, so the first
+  Space press "resumed" a simulation that had never stopped.
+
+### Changed
+
+- The WASM build now renders with WebGPU instead of WebGL2. Browsers
+  without WebGPU (older Safari and Firefox releases) can no longer run it;
+  there is no WebGL2 fallback.
+
 ## [0.0.76] - 2026-09-10
 
 ### Changed

@@ -172,12 +172,16 @@ cargo run -p stardrift --release
 
 ### WebAssembly (Browser)
 
-The WASM version runs in modern browsers with WebGL2 support (Chrome 57+,
-Firefox 52+, Safari 15+, Edge 79+). Differences from desktop:
+The WASM version requires a browser with WebGPU support (Chrome/Edge 113+,
+Safari 26+, Firefox 141+ on Windows and later releases elsewhere). There is
+no WebGL2 fallback. Differences from desktop:
 
 - Performance may be lower than native builds
 - No configuration file or command line; built-in defaults are used
 - No quit control or screen sleep prevention
+- A "Compiling shaders…" screen shows while WebGPU compiles the render
+  pipelines; on Safari this can take several seconds on a cold start. The
+  simulation does not advance until it finishes.
 
 ## See Also
 

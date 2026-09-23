@@ -153,7 +153,7 @@ impl TrailsPlugin {
     ) {
         let now = time.elapsed_secs();
         match app_state.get() {
-            AppState::Paused => clock.pause(now),
+            AppState::Loading | AppState::Paused => clock.pause(now),
             AppState::Running => clock.unpause(now),
         }
     }
